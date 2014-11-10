@@ -15,6 +15,7 @@ function varargout = roiInspector(varargin)
 % Questions: cdeister@brown.edu
 
 
+
 % Last Modified by GUIDE v2.5 19-Jul-2014 22:25:04
 
 % Begin initialization code - DO NOT EDIT
@@ -36,6 +37,7 @@ else
 end
 % End initialization code - DO NOT EDIT
 
+% TODO List:
 
 % --- Executes just before roiInspector is made visible.
 function roiInspector_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -355,7 +357,7 @@ set(handles.extractButton,'string','running','ForegroundColor','red','enable','o
 if get(handles.somaExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','somaticROIs');
-    dStack=double(evalin('base','registeredStack'));
+    dStack=double(evalin('base','importedStack'));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -371,7 +373,7 @@ end
 if get(handles.neuropilExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','neuropilROIs');
-    dStack=double(evalin('base','registeredStack'));
+    dStack=double(evalin('base','importedStack'));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -403,7 +405,7 @@ end
 if get(handles.dendriteExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','dendriticROIs');
-    dStack=double(evalin('base','registeredStack'));
+    dStack=double(evalin('base','importedStack'));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -444,16 +446,12 @@ set(handles.displayedROICounter,'String', num2str(sliderValue));
 
 if sTr
     traces=evalin('base','somaticF');
-    traces=traces';
 elseif nTr
     traces=evalin('base','neuropilF');
-    traces=traces';
 elseif bTr
     traces=evalin('base','boutonF');
-    traces=traces';
 elseif dTr
     traces=evalin('base','dendriticF');
-    traces=traces';
 end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
@@ -493,16 +491,12 @@ set(handles.roiDisplaySlider,'Value',input);
 
 if sTr
     traces=evalin('base','somaticF')';
-    traces=traces';
 elseif nTr
     traces=evalin('base','neuropilF')';
-    traces=traces';
 elseif bTr
     traces=evalin('base','boutonF')';
-    traces=traces';
 elseif dTr
     traces=evalin('base','dendriticF')';
-    traces=traces';
 end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
@@ -544,7 +538,6 @@ set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
 
 
 traces=evalin('base','somaticF');
-traces=traces';
 tnum=str2double(get(handles.displayedROICounter,'String'));
 
 
@@ -566,7 +559,7 @@ else
 end
 
 axes(handles.traceDisplay);
-plot(traces(tnum,:)');
+plot(traces(tnum,:));
 
 
 % Update handles structure
@@ -590,7 +583,6 @@ set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
 
 traces=evalin('base','dendriticF');
-traces=traces';
 
 tnum=str2double(get(handles.displayedROICounter,'String'));
 

@@ -1,28 +1,14 @@
 function varargout = importer(varargin)
 % IMPORTER MATLAB code for importer.fig
-%      IMPORTER, by itself, creates a new IMPORTER or raises the existing
-%      singleton*.
-%
-%      H = IMPORTER returns the handle to a new IMPORTER or the handle to
-%      the existing singleton*.
-%
-%      IMPORTER('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in IMPORTER.M with the given input arguments.
-%
-%      IMPORTER('Property','Value',...) creates a new IMPORTER or raises the
-%      existing singleton*.  Starting from the left, property value pairs are
-%      applied to the GUI before importer_OpeningFcn gets called.  An
-%      unrecognized property name or invalid value makes property application
-%      stop.  All inputs are passed to importer_OpeningFcn via varargin.
-%
-%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
-%      instance to run (singleton)".
-%
-% See also: GUIDE, GUIDATA, GUIHANDLES
 
-% Edit the above text to modify the response to help importer
+% IMPORTER is a simple gui for importing image files into matlab
+% 
+%
+%
+% cdeister@brown.edu with any questions
+% last modified: CAD 11/8/2014
 
-% Last Modified by GUIDE v2.5 19-Aug-2014 16:46:06
+% Last Modified by GUIDE v2.5 08-Nov-2014 14:18:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -81,22 +67,39 @@ function importButton_Callback(hObject, eventdata, handles)
 
 tTS=get(handles.tiffSelectToggle, 'Value');
 pTS=get(handles.pngSelectToggle, 'Value');
+mPF=get(handles.multiPageFlag, 'Value');
 
+% Check to see if the user imported something already and/or wants to
+% import a multi-page Tif. 
 g=evalin('base','exist(''importPath'')');
-if g==1
+if g==1 && mPF==0
     imPath=evalin('base','importPath');
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
-elseif g==0
+elseif g==0 && mPF==0
     imPath=uigetdir;
-%    assignin('base','importPath',imPath);
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
+elseif g==1 && mPF==1
+    imPath=evalin('base','importPath');
+    tifFile=evalin('base','tifFile');
+    mpTifInfo=evalin('base','mpTifInfo');
+    firstIm=str2num(get(handles.firstImageEntry,'string'));
+    endIm=str2num(get(handles.endImageEntry,'string'));
+elseif g==0 && mPF==1
+    [tifFile,imPath]=uigetfile('*.','Select your tif file');
+    mpTifInfo=imfinfo([imPath tifFile]);
+    imageCount=length(mpTifInfo);
+    firstIm=str2num(get(handles.firstImageEntry,'string'));
+    endIm=str2num(get(handles.endImageEntry,'string'));
+    assignin('base','mpTifInfo',mpTifInfo);
+    assignin('base','tifFile',tifFile);
+    assignin('base','imPath',imPath);
 end
-    
 
-% if there is a string to filter on:
-
+if mPF==0
+% todo: auto-detect x and y dimensions and bitdepth!This was stupid to
+% leave out in the first place. 
     filterString={get(handles.fileFilterString,'String')};
     if tTS
         imageType={'.tif'};
@@ -116,7 +119,27 @@ end
     assignin('base',['importedStack_' filterString{1}],uint16(importedImages))
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
+else
 
+    bitD=mpTifInfo(1).BitDepth;
+    mImage=mpTifInfo(1).Width;
+    nImage=mpTifInfo(1).Height;
+    NumberImages=length(mpTifInfo);
+    if bitD==16
+        imType='unit16';
+    elseif bitD==32
+        imType='uint32';
+    else
+        imType='Double';
+    end
+ 
+    importedStack=zeros(nImage,mImage,NumberImages,imType);
+    for i=1:NumberImages
+        importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
+    end
+    assignin('base','importedStack',importedStack)
+    assignin('base','importedBitDepth',bitD)
+end
 
 
 % Update handles structure
@@ -267,12 +290,15 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
 % hObject    handle to setDirectoryButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-imPath=uigetdir;
-assignin('base','importPath',imPath);
+
 
 tTS=get(handles.tiffSelectToggle, 'Value');
 pTS=get(handles.pngSelectToggle, 'Value');
+mPF=get(handles.multiPageFlag, 'Value');
 
+if mPF==0
+    imPath=uigetdir;
+    assignin('base','importPath',imPath);
     filterString={get(handles.fileFilterString,'String')};
     if tTS
         imageType={'.tif'};
@@ -282,7 +308,16 @@ pTS=get(handles.pngSelectToggle, 'Value');
     filteredFiles = dir([imPath filesep '*' filterString{1} '*' imageType{1}]);
     eNum=numel(filteredFiles);
     set(handles.endImageEntry,'string',num2str(eNum))
-
+elseif mPF==1
+    % todo: all files flag
+    [tifFile,imPath]=uigetfile('*.','Select your tif file');
+    mpTifInfo=imfinfo([imPath tifFile]);
+    imageCount=length(mpTifInfo);
+    set(handles.endImageEntry,'string',num2str(imageCount));
+    assignin('base','mpTifInfo',mpTifInfo);
+    assignin('base','importPath',imPath);
+    assignin('base','tifFile',tifFile);
+end
 
 
 
@@ -815,3 +850,12 @@ function appendProjTextEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in multiPageFlag.
+function multiPageFlag_Callback(hObject, eventdata, handles)
+% hObject    handle to multiPageFlag (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of multiPageFlag
