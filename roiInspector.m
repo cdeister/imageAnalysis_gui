@@ -16,7 +16,7 @@ function varargout = roiInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 19-Jul-2014 22:25:04
+% Last Modified by GUIDE v2.5 30-Nov-2014 10:32:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -49,6 +49,9 @@ function roiInspector_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for roiInspector
 handles.output = hObject;
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -354,10 +357,14 @@ function extractButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.extractButton,'string','running','ForegroundColor','red','enable','off');
 
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
 if get(handles.somaExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','somaticROIs');
-    dStack=double(evalin('base','importedStack'));
+    dStack=double(evalin('base',selectStack));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -373,7 +380,7 @@ end
 if get(handles.neuropilExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','neuropilROIs');
-    dStack=double(evalin('base','importedStack'));
+    dStack=double(evalin('base',selectStack));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -389,7 +396,7 @@ end
 if get(handles.boutonExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','boutonROIs');
-    dStack=double(evalin('base','registeredStack'));
+    dStack=double(evalin('base',selectStack));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -405,7 +412,7 @@ end
 if get(handles.dendriteExtractCheck, 'Value')==1;
     tic
     sRois=evalin('base','dendriticROIs');
-    dStack=double(evalin('base','importedStack'));
+    dStack=double(evalin('base',selectStack));
     sED=zeros(numel(sRois),size(dStack,3));
     for n=1:size(dStack,3)
         for q=1:numel(sRois)
@@ -861,6 +868,29 @@ function endImageEntry_CreateFcn(hObject, eventdata, handles)
 % handles    empty - handles not created until after all CreateFcns called
 
 % Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in workspaceVarBox.
+function workspaceVarBox_Callback(hObject, eventdata, handles)
+% hObject    handle to workspaceVarBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns workspaceVarBox contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from workspaceVarBox
+
+
+% --- Executes during object creation, after setting all properties.
+function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to workspaceVarBox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: listbox controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');

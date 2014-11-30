@@ -1,15 +1,18 @@
 function varargout = importer(varargin)
 % IMPORTER MATLAB code for importer.fig
 
-% IMPORTER is a simple gui for importing image files into matlab
+% IMPORTER is a simple gui for importing image files into matlab and
+% performing some basic pre-processing.
 % 
-%
+% Known issues: single images from disk assume 512 x 512 (will fix)
 %
 % cdeister@brown.edu with any questions
-% last modified: CAD 11/8/2014
-
-% Last Modified by GUIDE v2.5 08-Nov-2014 14:18:42
-
+% last modified: CAD 11/30/2014
+%
+%
+%
+% Last Modified by GUIDE v2.5 30-Nov-2014 09:05:34
+%
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -41,6 +44,9 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for importer
 handles.output = hObject;
 
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -68,26 +74,34 @@ function importButton_Callback(hObject, eventdata, handles)
 tTS=get(handles.tiffSelectToggle, 'Value');
 pTS=get(handles.pngSelectToggle, 'Value');
 mPF=get(handles.multiPageFlag, 'Value');
+pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
 % Check to see if the user imported something already and/or wants to
 % import a multi-page Tif. 
 g=evalin('base','exist(''importPath'')');
+disp('importing images ...')
 if g==1 && mPF==0
     imPath=evalin('base','importPath');
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
+    
+    
 elseif g==0 && mPF==0
     imPath=uigetdir;
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
+    
+    
 elseif g==1 && mPF==1
     imPath=evalin('base','importPath');
     tifFile=evalin('base','tifFile');
     mpTifInfo=evalin('base','mpTifInfo');
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
+    
+    
 elseif g==0 && mPF==1
-    [tifFile,imPath]=uigetfile('*.','Select your tif file');
+    [tifFile,imPath]=uigetfile('*.*','Select your tif file');
     mpTifInfo=imfinfo([imPath tifFile]);
     imageCount=length(mpTifInfo);
     firstIm=str2num(get(handles.firstImageEntry,'string'));
@@ -110,15 +124,25 @@ if mPF==0
     filteredFiles=resortImageFileMap(filteredFiles);
     assignin('base','filteredFiles',filteredFiles)
     importCount=endIm-firstIm;
-    importedImages=zeros(512,512,importCount,'uint16');
+    canaryImport=imread([imPath filesep filteredFiles(1,1).name],'tif');
+    imageSize=size(canaryImport);
+    importedImages=zeros(imageSize(1),imageSize(2),importCount,'uint16');    
+    
     tic
-    parfor n=firstIm:endIm;
-        importedImages(:,:,n)=imread([imPath filesep filteredFiles(n,1).name],'tif');
+    if pImport==1
+        parfor n=firstIm:endIm;
+            importedImages(:,:,n)=imread([imPath filesep filteredFiles(n,1).name],'tif');
+        end
+    elseif pImport==0
+        for n=firstIm:endIm;
+            importedImages(:,:,n)=imread([imPath filesep filteredFiles(n,1).name],'tif');
+        end
     end
-    toc
+    iT=toc;
     assignin('base',['importedStack_' filterString{1}],uint16(importedImages))
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
+    
 else
 
     bitD=mpTifInfo(1).BitDepth;
@@ -126,7 +150,7 @@ else
     nImage=mpTifInfo(1).Height;
     NumberImages=length(mpTifInfo);
     if bitD==16
-        imType='unit16';
+        imType='uint16';
     elseif bitD==32
         imType='uint32';
     else
@@ -134,14 +158,26 @@ else
     end
  
     importedStack=zeros(nImage,mImage,NumberImages,imType);
-    for i=1:NumberImages
-        importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
+    tic
+    if pImport==1
+        parfor i=1:NumberImages
+            importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
+        end
+    elseif pImport==0
+        for i=1:NumberImages
+            importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
+        end
     end
     assignin('base','importedStack',importedStack)
     assignin('base','importedBitDepth',bitD)
+    iT=toc;
+    
+    % update var box
+    vars = evalin('base','who');
+    set(handles.workspaceVarBox,'String',vars)
 end
 
-
+disp(['*** done with import, which took ' num2str(iT) ' seconds'])
 % Update handles structure
 guidata(hObject, handles);
 
@@ -310,7 +346,7 @@ if mPF==0
     set(handles.endImageEntry,'string',num2str(eNum))
 elseif mPF==1
     % todo: all files flag
-    [tifFile,imPath]=uigetfile('*.','Select your tif file');
+    [tifFile,imPath]=uigetfile('*.*','Select your tif file');
     mpTifInfo=imfinfo([imPath tifFile]);
     imageCount=length(mpTifInfo);
     set(handles.endImageEntry,'string',num2str(imageCount));
@@ -424,28 +460,6 @@ set(handles.workspaceVarBox,'String',vars)
 guidata(hObject, handles);
 
 
-% --- Executes on button press in setSecondaryRegStacksButton.
-function setSecondaryRegStacksButton_Callback(hObject, eventdata, handles)
-% hObject    handle to setSecondaryRegStacksButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-selections = get(handles.workspaceVarBox,'String');
-selectionsIndex = get(handles.workspaceVarBox,'Value');
-if numel(selectionsIndex)>0
-    for n=1
-        s{n}=selections{selectionsIndex(n)};
-        assignin('base','stacksCoregistered',s);
-    end
-else
-end
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-
-    
-
-
-% Update handles structure
-guidata(hObject, handles);
 
 
 
@@ -458,14 +472,8 @@ function registerButton_Callback(hObject, eventdata, handles)
 % get the string for the stack you want to register; this will be a string
 regStackString=evalin('base','stackToRegister');
 
-% check to see if there are stacks to coreg (if so it will be a cell)
-g=evalin('base','exist(''stacksCoregistered'')');
-if g
-    coregStackStrings=evalin('base','stacksCoregistered');
-else
-end
-
 % todo: allow user to crop what they want
+% the way I do the registration rotates the image, here I offset that
 
 
 regTemp=evalin('base','regTemplate');
@@ -473,48 +481,28 @@ rStack=evalin('base',regStackString);
 subpixelFactor=100;
 totalImagesPossible=size(rStack,3);
 
-% if matlabpool('size')==0
-%     matlabpool open
-% else
-% end
+% pre-allocate, because ... matlab ...
+
+registeredImages=zeros(size(rStack,1),size(rStack,2),totalImagesPossible,'uint16');
 registeredTransformations=zeros(4,totalImagesPossible);
-if g && numel(coregStackStrings)==1
-    rStack2=evalin('base',coregStackStrings{1});
-    registeredImages=zeros(size(rStack,1),size(rStack,2),totalImagesPossible);
-    coregisteredImages=zeros(size(rStack,1),size(rStack,2),totalImagesPossible,'uint16');
-    tic
-    parfor n=1:totalImagesPossible,
-    [out1,out2,out3]=dftregistration(fft2(regTemp(256-75:256+75,256-75:256+75)),fft2(rStack(256-75:256+75,256-75:256+75,n)),subpixelFactor,ifft2(rStack(256-75:256+75,256-75:256+75,n)));
-        % registeredImages(:,:,n)=uint16(round(abs(ifft2(out2))*65535));
-        coregisteredImages(:,:,n)=uint16(round(abs(ifft2(out3))*65535));
-        registeredTransformations(:,n)=out1;
-        registeredImages(:,:,n)=applyRegTransforms(im2uint16(ifft2(out2),'Indexed'),out1);
-     
-    end
-    toc
-    assignin('base','registeredStack',uint16(registeredImages))
-    assignin('base','coregisteredStack',uint16(coregisteredImages))
-    assignin('base','registeredTransforms',registeredTransformations)
-    
-else
-    registeredImages=zeros(size(rStack,1),size(rStack,2),totalImagesPossible,'uint16');
-    tic
-    regTempC=regTemp;
+
+disp('registration started ...')
+
+tic
+regTempC=regTemp;
     parfor n=1:totalImagesPossible,
         imReg=rStack(:,:,n);
         [out1,out2]=dftregistration(ifft2(regTempC),ifft2(imReg),subpixelFactor);
         registeredTransformations(:,n)=out1;
-        registeredImages(:,:,n)=uint16(round(abs(ifft2(out2))*65535));
-        %registeredImages(:,:,n)=uint16(round(abs(ifft2(out2))*65535));
-        %registeredImages(:,:,n)=uint16(round(applyRegTransforms(imReg,out1)*65535));
+        registeredImages(:,:,n)=imrotate(uint16(round(abs(ifft2(out2))*65535)),180);
     end
-    toc
-    mean2(registeredImages(:,:,1))
+t=toc;
+disp(['done with registration. it took ' num2str(t) ' seconds'])
+assignin('base',[regStackString '_registered'],uint16(registeredImages))
+assignin('base','registeredTransforms',registeredTransformations)
 
-    assignin('base','registeredStack',uint16(registeredImages))
-    assignin('base','registeredTransforms',registeredTransformations)
-end
 
+% update var box
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 
@@ -859,3 +847,266 @@ function multiPageFlag_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of multiPageFlag
+
+
+
+function stackSplit_textAppend_Callback(hObject, eventdata, handles)
+% hObject    handle to stackSplit_textAppend (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of stackSplit_textAppend as text
+%        str2double(get(hObject,'String')) returns contents of stackSplit_textAppend as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function stackSplit_textAppend_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to stackSplit_textAppend (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in stackSplit_everyOtherToggle.
+function stackSplit_everyOtherToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to stackSplit_everyOtherToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of stackSplit_everyOtherToggle
+
+set(handles.stackSplit_serialToggle,'Value',0);
+set(handles.stackSplit_everyOtherToggle,'Value',1);
+
+% Update handles structure
+guidata(hObject, handles);
+
+% --- Executes on button press in stackSplit_serialToggle.
+function stackSplit_serialToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to stackSplit_serialToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of stackSplit_serialToggle
+
+set(handles.stackSplit_serialToggle,'Value',1);
+set(handles.stackSplit_everyOtherToggle,'Value',0);
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+
+function splitStackCountEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to splitStackCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of splitStackCountEntry as text
+%        str2double(get(hObject,'String')) returns contents of splitStackCountEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function splitStackCountEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to splitStackCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in splitStackButton.
+function splitStackButton_Callback(hObject, eventdata, handles)
+% hObject    handle to splitStackButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% First determine where to split and by how much.
+splitCount=str2num(get(handles.splitStackCountEntry,'String'));
+
+if get(handles.stackSplit_serialToggle,'Value')==1
+    splitType=0;
+elseif get(handles.stackSplit_everyOtherToggle,'Value')==1
+    splitType=1;
+end
+
+deleteOG=get(handles.deleteOGStack_toggle,'Value');
+
+
+% Now apply to the selected stack (keep in workspace).
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+ogStackSize=evalin('base',['size(' selectStack ',3)']);
+ab=get(handles.stackSplit_textAppend,'String');
+stackStrings=strsplit(ab,',');
+
+if splitType==1
+    for n=1:splitCount;
+        evalin('base',[stackStrings{n} '=' selectStack '(:,:,' num2str(n) ':' num2str(splitCount) ':' num2str(ogStackSize-(splitCount-n)) ');'])
+    end
+    if deleteOG==1
+        evalin('base',['clear ' selectStack])
+        vars = evalin('base','who');
+        set(handles.workspaceVarBox,'String',vars)
+    else
+        vars = evalin('base','who');
+        set(handles.workspaceVarBox,'String',vars)
+    end
+elseif splitType==0
+    chunkSize=fix(ogStackSize/splitCount);
+    for n=1:splitCount;
+        evalin('base',[stackStrings{n} '=' selectStack '(:,:,1+' num2str((n-1)*chunkSize) ':' num2str((n)*chunkSize) ');'])
+    end
+    if deleteOG==1
+        evalin('base',['clear ' selectStack])
+        vars = evalin('base','who');
+        set(handles.workspaceVarBox,'String',vars)
+    else
+        vars = evalin('base','who');
+        set(handles.workspaceVarBox,'String',vars)
+    end
+end
+
+
+
+    
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in deleteOGStack_toggle.
+function deleteOGStack_toggle_Callback(hObject, eventdata, handles)
+% hObject    handle to deleteOGStack_toggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of deleteOGStack_toggle
+
+
+% --- Executes on button press in applyTransformsButton.
+function applyTransformsButton_Callback(hObject, eventdata, handles)
+% hObject    handle to applyTransformsButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+disp('applying transforms ...')
+evalin('base',[selectStack '_registered=applyTransformsToStack(' selectStack ',registeredTransforms);'])
+disp('*** done applying transforms')
+
+% update var box
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in inspectImageButton.
+function inspectImageButton_Callback(hObject, eventdata, handles)
+% hObject    handle to inspectImageButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+imageToPlot=selections{selectionsIndex};
+
+evalin('base',['figure,imagesc(' imageToPlot '),axis square,colormap(''jet''),title ' imageToPlot])
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in inspectStackButton.
+function inspectStackButton_Callback(hObject, eventdata, handles)
+% hObject    handle to inspectStackButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+stackToPlot=selections{selectionsIndex};
+
+evalin('base',['figure,playMov(' stackToPlot ')'])
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in parallelizeImportToggle.
+function parallelizeImportToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to parallelizeImportToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of parallelizeImportToggle
+
+
+
+function importWorkerEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to importWorkerEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of importWorkerEntry as text
+%        str2double(get(hObject,'String')) returns contents of importWorkerEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function importWorkerEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to importWorkerEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in parallelizeRegistrationToggle.
+function parallelizeRegistrationToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to parallelizeRegistrationToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of parallelizeRegistrationToggle
+
+
+
+function registrationWorkerEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to registrationWorkerEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of registrationWorkerEntry as text
+%        str2double(get(hObject,'String')) returns contents of registrationWorkerEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to registrationWorkerEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

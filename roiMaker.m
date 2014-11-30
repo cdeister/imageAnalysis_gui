@@ -9,8 +9,10 @@ function varargout = roiMaker(varargin)
 % You have to refresh the workspace variables when you first load.
 % No Documentation (yet)
 %
-% Latest Update: 10/19/2014 (more user friendly)
+% Latest Update: 11/30/2014 (more user friendly)
 % Most Code: Chris Deister & Jakob Voigts
+% Global XCor Code: Spencer Smith
+%
 % Questions: cdeister@brown.edu
 
 % 
@@ -46,6 +48,9 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for roiMaker
 handles.output = hObject;
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1135,66 +1140,34 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
 filterState=get(handles.gXCorSmoothToggle,'Value');
 imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
 
-% Go Get Some Files From Memory or Disk 
-% The way I am doing memory import seems stupid, but there is some logic. 
-% If you have a small stack the slowness of the loop won't matter, but If you have a
-% large stack, I'd rather save you the headache and slowness from its duplication.
-stackInMem=evalin('base','exist(''importedStack'')');
-if stackInMem==0
-    readInDirectory=uigetdir;
-    filteredFiles = dir([readInDirectory filesep '*'  '*.tif']);
-    filteredFiles=resortImageFileMap(filteredFiles);
-    numImages=numel(filteredFiles);
-elseif stackInMem==1  % assume it is named importedStack for now
-    numImages=evalin('base','size(importedStack,3)');
-end
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+numImages=evalin('base',['size(' selectStack ',3)']);
+
     
-
-
 sstack= [];
 c=0;
 ff=fspecial('gaussian',11,0.5);
 
 nstack=min(imsToCor,numImages);
 
-if stackInMem==0
-    for i=1:nstack;
-        c=c+1;
+for n=1:nstack;
+    c=c+1;
     
-        if (rem(i,100)==0)
-            fprintf('%d/%d (%d%%)\n',i,numImages,round(100*(i./nstack)));
-        end;
-
-        fnum=i;
-    
-        I=imread([readInDirectory filesep filteredFiles(fnum,1).name],'tif');
-        I=conv2(double(I),ff,'same');
-    
-    
-        sstack(:,:,i)=I;
+    if (rem(n,100)==0)
+        fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./nstack)));
     end
-    assignin('base','sstack',sstack);
 
-elseif stackInMem==1
-    for i=1:nstack;
-        c=c+1;
-    
-        if (rem(i,100)==0)
-            fprintf('%d/%d (%d%%)\n',i,numImages,round(100*(i./nstack)));
-        end;
-
-        fnum=i;
-        evalStr=['double(importedStack(:,:,' num2str(i) '))'];
-        I=evalin('base',evalStr);
-        I=conv2(double(I),ff,'same');
-    
-    
-        sstack(:,:,i)=I;
-    end
-    assignin('base','sstack',sstack);
+    fnum=n;
+    evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
+    I=evalin('base',evalStr);
+    I=conv2(double(I),ff,'same');
+    sstack(:,:,n)=I;
 end
-    
-    
+assignin('base','sstack',sstack);
+
 % make local Xcorr and/or PCA (CAD: I removed PCA for now, I will give option to users if someone asks)
 % xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
 
@@ -1241,6 +1214,9 @@ ccimage(:,end)=m;
 
 assignin('base','ccimage',ccimage);
 disp('! done with xcor');
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
 
 % ---- end xcor image code
 
