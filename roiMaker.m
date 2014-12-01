@@ -16,7 +16,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 19-Oct-2014 22:21:23
+% Last Modified by GUIDE v2.5 30-Nov-2014 16:44:14
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -110,6 +110,51 @@ else
     assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
     assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
     assignin('base','somaticRoiCounter',h)
+end
+
+% Update handles structure
+guidata(hObject, handles);
+
+% --- Executes on button press in redSomaButton.
+function redSomaButton_Callback(hObject, eventdata, handles)
+% hObject    handle to redSomaButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+g=evalin('base','exist(''redSomaticRoiCounter'')');
+if g==1
+    h=evalin('base','redSomaticRoiCounter');
+    r=evalin('base','redSomaticROIs');
+    c=evalin('base','redSomaticROICenters');
+    b=evalin('base','redSomaticROIBoundaries');
+    pl=evalin('base','redSomaticROI_PixelLists');
+    
+    h=h+1;
+    a=imfreehand;
+    mask=a.createMask;
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','redSomaticROIs',r)
+    assignin('base','redSomaticROICenters',c)
+    assignin('base','redSomaticROIBoundaries',b)
+    assignin('base','redSomaticRoiCounter',h)
+    assignin('base','redSomaticROI_PixelLists',pl)
+    
+else
+    h=1;
+    a=imfreehand;
+    mask=a.createMask;
+    
+    assignin('base','redSomaticROIs',{mask})
+    assignin('base','redSomaticROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','redSomaticROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','redSomaticROIBoundaries',{bwboundaries(mask)})
+    assignin('base','redSomaticRoiCounter',h)
 end
 
 % Update handles structure
@@ -354,6 +399,7 @@ function deleteROIButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 sTr=get(handles.somaRoisDisplayToggle, 'Value');
+rSTr=get(handles.redSomaRoisDisplayToggle, 'Value');
 dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
 aTr=get(handles.axonRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
@@ -381,6 +427,25 @@ if sTr
     assignin('base','somaticROI_PixelLists',pl)
     somaRoisDisplayToggle_Callback(handles.somaRoisDisplayToggle,eventdata,handles)
 
+elseif rSTr
+    h=evalin('base','redSomaticRoiCounter');
+    r=evalin('base','redSomaticROIs');
+    c=evalin('base','redSomaticROICenters');
+    b=evalin('base','redSomaticROIBoundaries');
+    pl=evalin('base','redSomaticROI_PixelLists');
+    
+    h=h-1;
+    r(roiNumber)=[];
+    c(roiNumber)=[];
+    b(roiNumber)=[];
+    pl(roiNumber)=[];
+    
+    assignin('base','redSomaticROIs',r)
+    assignin('base','redSomaticROICenters',c)
+    assignin('base','redSomaticROIBoundaries',b)
+    assignin('base','redSomaticRoiCounter',h)
+    assignin('base','redSomaticROI_PixelLists',pl)
+    redSomaRoisDisplayToggle_Callback(handles.redSomaRoisDisplayToggle,eventdata,handles)
     
     
 elseif dTr
@@ -462,6 +527,7 @@ function somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 
 set(handles.somaRoisDisplayToggle, 'Value', 1);
+set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
@@ -509,6 +575,64 @@ hold off
 % Update handles structure
 guidata(hObject, handles);
 
+
+% --- Executes on button press in redSomaRoisDisplayToggle.
+function redSomaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to redSomaRoisDisplayToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of redSomaRoisDisplayToggle
+set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaRoisDisplayToggle, 'Value', 1);
+set(handles.dendriteRoisDisplayToggle, 'Value', 0);
+set(handles.axonRoisDisplayToggle, 'Value', 0);
+set(handles.boutonRoisDisplayToggle, 'Value', 0);
+set(handles.vesselRoisDisplayToggle, 'Value', 0);
+
+
+% --- Plot the image again
+axes(handles.imageWindow);
+imageP=evalin('base','currentImage');
+
+aa = get(handles.lowCutEntry,'String');
+bb = get(handles.highCutEntry,'String');
+lowCut=str2num(aa)/65535;
+highCut=str2num(bb)/65535;
+
+adjImage=imadjust(imageP,[lowCut highCut]);
+
+axes(handles.imageWindow);
+imshow(adjImage);
+% --- end image plot
+
+h=evalin('base','redSomaticRoiCounter');
+c=evalin('base','redSomaticROICenters');
+b=evalin('base','redSomaticROIBoundaries');
+
+% Populate the box:
+for n=1:h
+    roisList{n}=n;
+end
+set(handles.roiSelector, 'String', '');
+set(handles.roiSelector,'String',roisList);
+set(handles.roiSelector,'Value',1)
+
+% Plot
+hold all 
+for n=1:numel(b)
+    axes(handles.imageWindow);
+    plot(b{1,n}{1,1}(:,2),b{1,n}{1,1}(:,1),'r','LineWidth',1)
+    text(c{1,n}.Centroid(1)-1, c{1,n}.Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[1 0 0]);
+end
+
+hold off
+
+        
+% Update handles structure
+guidata(hObject, handles);
+
+
 % --- Executes on button press in dendriteRoisDisplayToggle.
 function dendriteRoisDisplayToggle_Callback(hObject, eventdata, handles)
 % hObject    handle to dendriteRoisDisplayToggle (see GCBO)
@@ -518,6 +642,7 @@ function dendriteRoisDisplayToggle_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of dendriteRoisDisplayToggle
 
 set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 1);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
@@ -573,6 +698,7 @@ function axonRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of axonRoisDisplayToggle
 set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 1);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
@@ -628,6 +754,7 @@ function boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of boutonRoisDisplayToggle
 set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 1);
@@ -683,6 +810,7 @@ function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of vesselRoisDisplayToggle
 set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
@@ -1212,6 +1340,7 @@ ccimage(:,1)=m;
 ccimage(:,end)=m;
 
 
+assignin('base',['ccimage_' selectStack],ccimage);
 assignin('base','ccimage',ccimage);
 disp('! done with xcor');
 
@@ -1351,3 +1480,4 @@ daspect([1 1 1]);
 
 % Update handles structure
 guidata(hObject, handles);
+

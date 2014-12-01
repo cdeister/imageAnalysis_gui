@@ -357,6 +357,8 @@ function extractButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.extractButton,'string','running','ForegroundColor','red','enable','off');
 
+disp('*** extracting now, wait a bit ...')
+
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 selectStack=selections{selectionsIndex};
@@ -425,6 +427,8 @@ if get(handles.dendriteExtractCheck, 'Value')==1;
     toc    
 end
 
+disp('*** done extracting now, go have fun')
+
 set(handles.extractButton,'string','Extract','ForegroundColor','black','enable','on');
 
 % Update handles structure
@@ -463,6 +467,7 @@ end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
+
 
 % Update handles structure
 guidata(hObject, handles);

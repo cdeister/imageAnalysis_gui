@@ -11,7 +11,7 @@ function varargout = importer(varargin)
 %
 %
 %
-% Last Modified by GUIDE v2.5 30-Nov-2014 09:05:34
+% Last Modified by GUIDE v2.5 30-Nov-2014 16:25:06
 %
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -74,7 +74,7 @@ function importButton_Callback(hObject, eventdata, handles)
 tTS=get(handles.tiffSelectToggle, 'Value');
 pTS=get(handles.pngSelectToggle, 'Value');
 mPF=get(handles.multiPageFlag, 'Value');
-pImport=get(handles.parallelizeRegistrationToggle,'Value');
+pImport=get(handles.parallelizeImportToggle,'Value');
 
 % Check to see if the user imported something already and/or wants to
 % import a multi-page Tif. 
@@ -1110,3 +1110,85 @@ function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in inferRunningButton.
+function inferRunningButton_Callback(hObject, eventdata, handles)
+% hObject    handle to inferRunningButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+evalin('base','inferedRunningData=inferRunFromRegistration(registeredTransforms(3,:));')
+evalin('base','figure,plot(inferedRunningData),title(''normalized running data infered from reg data'')')
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in getLuminanceButton.
+function getLuminanceButton_Callback(hObject, eventdata, handles)
+% hObject    handle to getLuminanceButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+stackToPlot=selections{selectionsIndex};
+
+evalin('base',['for n=1:size(' stackToPlot ',3),' stackToPlot '_meanLuminance(:,n)=mean2(' stackToPlot '(:,:,n));,end'])
+
+evalin('base',['figure,plot(' stackToPlot '_meanLuminance),title ' stackToPlot ''': mean lum.'''])
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+
+function constrainedMeanEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to constrainedMeanEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of constrainedMeanEntry as text
+%        str2double(get(hObject,'String')) returns contents of constrainedMeanEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function constrainedMeanEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to constrainedMeanEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in contrainedMeanProjectButton.
+function contrainedMeanProjectButton_Callback(hObject, eventdata, handles)
+% hObject    handle to contrainedMeanProjectButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+ab=get(handles.constrainedMeanEntry,'String');
+constrainedFrames=strsplit(ab,',');
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+s=evalin('base',[selectStack '(:,:,' constrainedFrames{1} ':' constrainedFrames{2} ');']);
+mP=mean(s,3);
+assignin('base',['consMeanProj_' selectStack],uint16(mP));
+
+
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
+
+
+
+% Update handles structure
+guidata(hObject, handles);
