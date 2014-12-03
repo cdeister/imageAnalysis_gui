@@ -16,7 +16,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 30-Nov-2014 16:44:14
+% Last Modified by GUIDE v2.5 02-Dec-2014 19:32:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -381,8 +381,11 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 imageP=evalin('base',selections{selectionsIndex});
 adjImage=imadjust(imageP,[lowCut highCut]);
 
+cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
 imshow(adjImage);
+colormap(cMap)
+
 
 set(handles.lowCutEntry,'String',a)
 set(handles.highCutEntry,'String',b)
@@ -535,8 +538,10 @@ set(handles.vesselRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
+cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
+
 
 aa = get(handles.lowCutEntry,'String');
 bb = get(handles.highCutEntry,'String');
@@ -547,6 +552,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
+colormap(cMap),colorbar
 % --- end image plot
 
 h=evalin('base','somaticRoiCounter');
@@ -562,11 +568,21 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
+if strcmp(cMap,'jet')
+    outColor='k';
+    txtColor=[0 0 0];
+else
+    outColor='g';
+    txtColor=[0 1 1];
+end
+axes(handles.imageWindow);
 hold all 
 for n=1:numel(b)
-    axes(handles.imageWindow);
-    plot(b{1,n}{1,1}(:,2),b{1,n}{1,1}(:,1),'g','LineWidth',1)
-    text(c{1,n}.Centroid(1)-1, c{1,n}.Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 1 1]);
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+
+    end
 end
 
 hold off
@@ -882,7 +898,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-% axes(handles.axes2);
+% axes(handles.cdfWindow);
 % imhist(adjImage,100);
 % --- end 
 
@@ -925,7 +941,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-% axes(handles.axes2);
+% axes(handles.cdfWindow);
 % imhist(adjImage,100);
 % --- end 
 
@@ -972,7 +988,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-% axes(handles.axes2);
+% axes(handles.cdfWindow);
 % imhist(adjImage,100);
 % --- end 
 
@@ -1020,7 +1036,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-% axes(handles.axes2);
+% axes(handles.cdfWindow);
 % imhist(adjImage,100);
 % --- end 
 
@@ -1453,7 +1469,7 @@ sstack=evalin('base','sstack');
 %iterative region growing
 ref= (squeeze(sstack(ceil(y),ceil(x),:) ));
 xc=I.*0;
-xc(ceil(y),ceil(x))=0.11; % seed
+xc(ceil(y),ceil(x))=0.9; % seed
 it=1;
     while it<50
         sig=find(xc>0.04);
@@ -1471,13 +1487,152 @@ it=1;
         it=it+1;
     end
 
-localCorMaskPlot=(1-mask).*I./10+ ((xc*200));
+localCorMaskPlot=(1-mask).*I./10+ ((xc*1));
 imagesc(localCorMaskPlot),axis off, colorbar
 colormap jet
 currentImage=localCorMaskPlot;
-assignin('base','currentImage',uint16(localCorMaskPlot))
+assignin('base','currentImage',double(localCorMaskPlot))
 daspect([1 1 1]);
+
+axes(handles.cdfWindow);
+cdfplot(reshape(localCorMaskPlot,256*256,1))
+
+roiTh=str2num(get(handles.roiThresholdEntry,'String'));
+axes(handles.roiPreviewWindow);
+imagesc(im2bw(currentImage,roiTh)),colormap('jet')
+assignin('base','candidateRoi',im2bw(currentImage,roiTh))
+evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
 
 % Update handles structure
 guidata(hObject, handles);
 
+
+
+function roiThresholdEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to roiThresholdEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of roiThresholdEntry as text
+%        str2double(get(hObject,'String')) returns contents of roiThresholdEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function roiThresholdEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to roiThresholdEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in addToSomasButton.
+function addToSomasButton_Callback(hObject, eventdata, handles)
+% hObject    handle to addToSomasButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+g=evalin('base','exist(''somaticRoiCounter'')');
+if g==1
+    h=evalin('base','somaticRoiCounter');
+    r=evalin('base','somaticROIs');
+    c=evalin('base','somaticROICenters');
+    b=evalin('base','somaticROIBoundaries');
+    pl=evalin('base','somaticROI_PixelLists');
+    
+    h=h+1;
+    mask=evalin('base','scratch.candidateRoi');
+   
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','somaticROIs',r)
+    assignin('base','somaticROICenters',c)
+    assignin('base','somaticROIBoundaries',b)
+    assignin('base','somaticRoiCounter',h)
+    assignin('base','somaticROI_PixelLists',pl)
+    
+else
+    h=1;
+    mask=evalin('base','scratch.candidateRoi');
+    assignin('base','somaticROIs',{mask})
+    assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
+    assignin('base','somaticRoiCounter',h)
+end
+
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in pcaButton.
+function pcaButton_Callback(hObject, eventdata, handles)
+% hObject    handle to pcaButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+
+stack=evalin('base',[selections{selectionsIndex}]);
+pcaimage=evalin('base','ccimage');
+
+disp('computing PCA ROI prediction');
+    % make PCA composite, this seems to display good roi candidates
+stack_v=zeros(1000,size(stack,1)*size(stack,2));
+for i=1:1000;
+    x=stack(:,:,i);
+    stack_v(i,:)=x(:);
+end
+stack_v=stack_v-mean(stack_v(:));
+[coeff, score] = pca(stack_v,'Economy','on','NumComponents',100);
+imcomponents=reshape(coeff',100,size(stack,1),size(stack,2));
+pcaimage=(squeeze(mean(abs(imcomponents(:,:,:)))));
+
+assignin('base','pcaimage',pcaimage./max(max(pcaimage)))
+
+disp('done');
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
+
+
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+
+function colormapTextEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to colormapTextEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of colormapTextEntry as text
+%        str2double(get(hObject,'String')) returns contents of colormapTextEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function colormapTextEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to colormapTextEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

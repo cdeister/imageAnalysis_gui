@@ -16,7 +16,7 @@ function varargout = roiInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 30-Nov-2014 10:32:04
+% Last Modified by GUIDE v2.5 02-Dec-2014 20:41:50
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -450,7 +450,8 @@ sTr=get(handles.somaRoisDisplayToggle, 'Value');
 nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
 dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
-
+npTr=get(handles.dfDisplayToggle,'Value');
+cnpTr=get(handles.npCorDfDispToggle,'Value');
 
 sliderValue = get(handles.roiDisplaySlider,'Value');
 set(handles.displayedROICounter,'String', num2str(sliderValue));
@@ -463,11 +464,19 @@ elseif bTr
     traces=evalin('base','boutonF');
 elseif dTr
     traces=evalin('base','dendriticF');
+elseif npTr
+    traces=evalin('base','traces.dfs');
+elseif cnpTr
+    traces=evalin('base','traces.dfs_npc');
 end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-
+if npTr || cnpTr 
+    ylim([-0.5 10.5])
+else
+    ylim([0 9000])
+end
 
 % Update handles structure
 guidata(hObject, handles);
@@ -547,6 +556,8 @@ set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 1);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
 
 
 traces=evalin('base','somaticF');
@@ -572,7 +583,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-
+ylim([0 9000])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -593,6 +604,8 @@ set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 1);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
 
 traces=evalin('base','dendriticF');
 
@@ -618,6 +631,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
+ylim([0 9000])
 
 
 
@@ -641,29 +655,10 @@ set(handles.axonRoisDisplayToggle, 'Value', 1);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
 
-% Update handles structure
-guidata(hObject, handles);
-
-
-% --- Executes on button press in boutonRoisDisplayToggle.
-function boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to boutonRoisDisplayToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of boutonRoisDisplayToggle
-set(handles.neuropilRoisDisplayToggle, 'Value', 0);
-set(handles.filledSomaRoisDisplayToggle, 'Value', 0);
-set(handles.vascularRoisDisplayToggle, 'Value', 0);
-set(handles.boutonRoisDisplayToggle, 'Value', 1);
-set(handles.axonRoisDisplayToggle, 'Value', 0);
-set(handles.dendriteRoisDisplayToggle, 'Value', 0);
-set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
-
-traces=evalin('base','boutonF');
-traces=traces';
+traces=evalin('base','axonalF');
 tnum=str2double(get(handles.displayedROICounter,'String'));
 
 
@@ -685,7 +680,55 @@ else
 end
 
 axes(handles.traceDisplay);
-plot(traces(:,end));
+plot(traces(tnum,:));
+ylim([0 9000])
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in boutonRoisDisplayToggle.
+function boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to boutonRoisDisplayToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of boutonRoisDisplayToggle
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
+set(handles.filledSomaRoisDisplayToggle, 'Value', 0);
+set(handles.vascularRoisDisplayToggle, 'Value', 0);
+set(handles.boutonRoisDisplayToggle, 'Value', 1);
+set(handles.axonRoisDisplayToggle, 'Value', 0);
+set(handles.dendriteRoisDisplayToggle, 'Value', 0);
+set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
+
+traces=evalin('base','boutonF');
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([0 9000])
 
 
 % Update handles structure
@@ -707,6 +750,33 @@ set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
+
+traces=evalin('base','vascularF');
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([0 9000])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -728,6 +798,33 @@ set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
+
+traces=evalin('base','filledSomaticF');
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([0 9000])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -749,6 +846,33 @@ set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.filledNeuropilRoisDisplayToggle, 'Value', 1);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
+
+traces=evalin('base','filledNeuropilF');
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([0 9000])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -769,14 +893,19 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.filledNeuropilRoisDisplayToggle, 'Value', 1);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',0);
+
 
 traces=evalin('base','neuropilF');
-traces=traces';
 tnum=str2double(get(handles.displayedROICounter,'String'));
+
 
 sliderMin = 1;
 sliderMax = size(traces,1); % this is variable
 sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
 
 set(handles.roiDisplaySlider, 'Min', sliderMin);
 set(handles.roiDisplaySlider, 'Max', sliderMax);
@@ -792,7 +921,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-
+ylim([0 9000])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -900,3 +1029,108 @@ function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in dfDisplayToggle.
+function dfDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to dfDisplayToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of dfDisplayToggle
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
+set(handles.filledSomaRoisDisplayToggle, 'Value', 0);
+set(handles.vascularRoisDisplayToggle, 'Value', 0);
+set(handles.boutonRoisDisplayToggle, 'Value', 0);
+set(handles.axonRoisDisplayToggle, 'Value', 0);
+set(handles.dendriteRoisDisplayToggle, 'Value', 0);
+set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 1);
+set(handles.npCorDfDispToggle,'Value',0);
+
+traces=evalin('base','somaticF');
+traces=batchDeltaF(batchSmooth(traces'),0.2);
+traces=traces';
+assignin('base','dfs_fp',traces);
+evalin('base','traces.dfs=dfs_fp;,clear dfs_fp')
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([-0.5 10.5])
+
+
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in npCorDfDispToggle.
+function npCorDfDispToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to npCorDfDispToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of npCorDfDispToggle
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
+set(handles.filledSomaRoisDisplayToggle, 'Value', 0);
+set(handles.vascularRoisDisplayToggle, 'Value', 0);
+set(handles.boutonRoisDisplayToggle, 'Value', 0);
+set(handles.axonRoisDisplayToggle, 'Value', 0);
+set(handles.dendriteRoisDisplayToggle, 'Value', 0);
+set(handles.somaRoisDisplayToggle, 'Value', 0);
+set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.dfDisplayToggle, 'Value', 0);
+set(handles.npCorDfDispToggle,'Value',1);
+
+somaF=evalin('base','somaticF');
+neuropilF=evalin('base','neuropilF');
+traces=batchDeltaF(batchSmooth(somaF'-(0.7*neuropilF')),0.2);
+traces=traces';
+assignin('base','npdfs_fp',traces);
+evalin('base','traces.dfs_npc=npdfs_fp;,clear npdfs_fp')
+tnum=str2double(get(handles.displayedROICounter,'String'));
+
+
+sliderMin = 1;
+sliderMax = size(traces,1); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.roiDisplaySlider, 'Min', sliderMin);
+set(handles.roiDisplaySlider, 'Max', sliderMax);
+set(handles.roiDisplaySlider, 'SliderStep', sliderStep);
+if tnum<=sliderMax
+    set(handles.roiDisplaySlider, 'Value', tnum); % set to beginning of sequence
+    set(handles.displayedROICounter,'String', num2str(tnum));
+else
+    set(handles.roiDisplaySlider, 'Value', sliderMin); % set to beginning of sequence
+    tnum=1;
+    set(handles.displayedROICounter,'String', '1');
+end
+
+axes(handles.traceDisplay);
+plot(traces(tnum,:));
+ylim([-0.5 10.5])
+
+% Update handles structure
+guidata(hObject, handles);
