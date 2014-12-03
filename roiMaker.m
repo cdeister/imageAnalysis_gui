@@ -16,7 +16,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 02-Dec-2014 19:32:01
+% Last Modified by GUIDE v2.5 02-Dec-2014 21:38:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -552,7 +552,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-colormap(cMap),colorbar
+colormap(cMap)
 % --- end image plot
 
 h=evalin('base','somaticRoiCounter');
@@ -1414,7 +1414,32 @@ assignin('base','playState',playState)
 
 
 % play the movie
-sstack=evalin('base','sstack');
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+playStack=evalin('base',[selections{selectionsIndex}]);
+
+% This helps you start from where you left off.
+startFrame=str2num(get(handles.frameTextEntry,'String'));
+if startFrame==size(playStack,3)
+    startFrame=1;
+else
+end
+
+
+% --- begin slider junk
+sliderMin = 1;
+sliderMax = size(playStack,3); % this is variable
+sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+
+set(handles.frameSlider, 'Min', sliderMin);
+set(handles.frameSlider, 'Max', sliderMax);
+set(handles.frameSlider, 'SliderStep', sliderStep);
+set(handles.frameSlider, 'Value', startFrame); % set to beginning of sequence
+
+% --- end slider junk
+
+
 axes(handles.imageWindow);
 mfactor=.35;
 
@@ -1422,20 +1447,22 @@ a = get(handles.lowCutEntry,'String');
 b = get(handles.highCutEntry,'String');
 lowCut=str2double(a);
 highCut=str2double(b);
+cMap=get(handles.colormapTextEntry,'String');
 
-
-
+% This makes the movie
 ii=1;
-    for i=1:size(sstack,3)
+    for i=startFrame:size(playStack,3)
         pS=evalin('base','playState');
         if pS==1
-            ii=(ii.*(1-mfactor))+sstack(:,:,i).*mfactor;
+            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            set(handles.frameTextEntry,'String',num2str(i));
+            set(handles.frameSlider, 'Value', i);
             h=imagesc(ii,[lowCut highCut]);
-            % axis off;
+            colormap(cMap)
             drawnow;
             delete(h);
         elseif pS==0
-            ii=(ii.*(1-mfactor))+sstack(:,:,i).*mfactor;
+            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
             imagesc(ii,[lowCut highCut]);
             % axes(handles.imageWindow);
             assignin('base','currentImage',im2uint16(ii,'Indexed'))
@@ -1488,7 +1515,7 @@ it=1;
     end
 
 localCorMaskPlot=(1-mask).*I./10+ ((xc*1));
-imagesc(localCorMaskPlot),axis off, colorbar
+imagesc(localCorMaskPlot),axis off
 colormap jet
 currentImage=localCorMaskPlot;
 assignin('base','currentImage',double(localCorMaskPlot))
@@ -1571,7 +1598,7 @@ else
     assignin('base','somaticRoiCounter',h)
 end
 
-loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+
 somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
@@ -1628,6 +1655,75 @@ function colormapTextEntry_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function colormapTextEntry_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to colormapTextEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on slider movement.
+function frameSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to frameSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function frameSlider_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to frameSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+
+function frameTextEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to frameTextEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of frameTextEntry as text
+%        str2double(get(hObject,'String')) returns contents of frameTextEntry as a double
+
+frame=get(hObject,'String');
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+frameFromStack=evalin('base',[selections{selectionsIndex} '(:,:,' frame ')']);
+axes(handles.imageWindow);
+
+
+a = get(handles.lowCutEntry,'String');
+b = get(handles.highCutEntry,'String');
+lowCut=str2double(a);
+highCut=str2double(b);
+cMap=get(handles.colormapTextEntry,'String');
+
+imagesc(frameFromStack,[lowCut highCut]);
+colormap(cMap)
+
+assignin('base','currentImage',im2uint16(frameFromStack,'Indexed'))
+
+
+
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function frameTextEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to frameTextEntry (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
