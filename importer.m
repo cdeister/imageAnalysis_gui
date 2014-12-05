@@ -4,7 +4,6 @@ function varargout = importer(varargin)
 % IMPORTER is a simple gui for importing image files into matlab and
 % performing some basic pre-processing.
 % 
-% Known issues: single images from disk assume 512 x 512 (will fix)
 %
 % cdeister@brown.edu with any questions
 % last modified: CAD 11/30/2014

@@ -1,6 +1,6 @@
-function sem=standardError(dataaa)
+function sem=standardError(dataaa,dim)
 
-c=numel(dataaa);
-s=std(dataaa);
+c=size(dataaa,dim);
+s=std(dataaa,1,dim);
 sem=s./sqrt(c-1);
 end

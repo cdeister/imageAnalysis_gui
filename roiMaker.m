@@ -1598,7 +1598,7 @@ else
     assignin('base','somaticRoiCounter',h)
 end
 
-
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure

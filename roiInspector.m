@@ -16,7 +16,7 @@ function varargout = roiInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 02-Dec-2014 20:41:50
+% Last Modified by GUIDE v2.5 04-Dec-2014 13:14:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -473,7 +473,7 @@ tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
 if npTr || cnpTr 
-    ylim([-0.5 10.5])
+    ylim([-0.5 6.5])
 else
     ylim([0 9000])
 end
@@ -1076,7 +1076,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([-0.5 10.5])
+ylim([-0.5 6.5])
 
 
 
@@ -1130,7 +1130,45 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([-0.5 10.5])
+ylim([-0.5 6.5])
 
 % Update handles structure
 guidata(hObject, handles);
+
+
+% --- Executes on button press in flagROIButton.
+function flagROIButton_Callback(hObject, eventdata, handles)
+% hObject    handle to flagROIButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+npS=get(handles.neuropilRoisDisplayToggle, 'Value');
+fsS=get(handles.filledSomaRoisDisplayToggle, 'Value');
+vS=get(handles.vascularRoisDisplayToggle, 'Value');
+bS=get(handles.boutonRoisDisplayToggle, 'Value');
+aS=get(handles.axonRoisDisplayToggle, 'Value');
+dS=get(handles.dendriteRoisDisplayToggle, 'Value');
+sS=get(handles.somaRoisDisplayToggle, 'Value');
+fnpS=get(handles.filledNeuropilRoisDisplayToggle, 'Value');
+dfS=get(handles.dfDisplayToggle, 'Value');
+sS=get(handles.npCorDfDispToggle,'Value');
+
+if dfS || sS
+    sROI=str2num(get(handles.displayedROICounter,'String'));
+%    lP=evalin('base','exist somaticROIS_flagged');
+lP=1;
+    disp('lP')
+    if lP==1
+        somaticROIS_flagged=evalin('base','somaticROIS_flagged');
+        somaticROIS_flagged=[somaticROIS_flagged sROI];
+        assignin('base','somaticROIS_flagged',somaticROIS_flagged);
+        disp('1')
+    else
+        somaticROIS_flagged=sROI;
+        assignin('base','somaticROIS_flagged',somaticROIS_flagged);
+        disp('0')
+    end
+else
+end
+
+
