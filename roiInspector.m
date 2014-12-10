@@ -1155,8 +1155,7 @@ sS=get(handles.npCorDfDispToggle,'Value');
 
 if dfS || sS
     sROI=str2num(get(handles.displayedROICounter,'String'));
-%    lP=evalin('base','exist somaticROIS_flagged');
-lP=1;
+    lP=1;
     disp('lP')
     if lP==1
         somaticROIS_flagged=evalin('base','somaticROIS_flagged');

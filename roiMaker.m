@@ -16,7 +16,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 02-Dec-2014 21:38:15
+% Last Modified by GUIDE v2.5 06-Dec-2014 11:18:24
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -666,17 +666,21 @@ set(handles.vesselRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
+cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
+
 aa = get(handles.lowCutEntry,'String');
 bb = get(handles.highCutEntry,'String');
 lowCut=str2num(aa)/65535;
 highCut=str2num(bb)/65535;
 
+
 adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
+colormap(cMap)
 % --- end image plot
 
 h=evalin('base','dendriticRoiCounter');
@@ -692,12 +696,23 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-
-hold all    
-for n=1:numel(b)
-    plot(b{1,n}{1,1}(:,2),b{1,n}{1,1}(:,1),'g','LineWidth',1)
-    text(c{1,n}.Centroid(1)-1, c{1,n}.Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 1 1]);
+if strcmp(cMap,'jet')
+    outColor='k';
+    txtColor=[0 0 0];
+else
+    outColor='g';
+    txtColor=[0 1 1];
 end
+axes(handles.imageWindow);
+hold all 
+for n=1:numel(b)
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+
+    end
+end
+
 hold off
 
         
@@ -1449,6 +1464,10 @@ lowCut=str2double(a);
 highCut=str2double(b);
 cMap=get(handles.colormapTextEntry,'String');
 
+% 	sN=evalin('base','somaticRoiCounter');
+% 	sC=evalin('base','somaticROICenters');
+% 	sB=evalin('base','somaticROIBoundaries');
+
 % This makes the movie
 ii=1;
     for i=startFrame:size(playStack,3)
@@ -1459,11 +1478,27 @@ ii=1;
             set(handles.frameSlider, 'Value', i);
             h=imagesc(ii,[lowCut highCut]);
             colormap(cMap)
+%             hold all
+%             for n=1:numel(sB)
+%                 for k=1:numel(sC{1,n})
+%                     plot(sB{1,n}{k,1}(:,2),sB{1,n}{k,1}(:,1),'red','LineWidth',2)
+%                     text(sC{1,n}(k).Centroid(1)-1, sC{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 0 0]);
+%                 end
+%             end
+%             hold off
             drawnow;
             delete(h);
         elseif pS==0
             ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
             imagesc(ii,[lowCut highCut]);
+%             hold all
+%             for n=1:numel(sB)
+%                 for k=1:numel(sC{1,n})
+%                     plot(sB{1,n}{k,1}(:,2),sB{1,n}{k,1}(:,1),'red','LineWidth',2)
+%                     text(sC{1,n}(k).Centroid(1)-1, sC{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 0 0]);
+%                 end
+%             end
+%             hold off
             % axes(handles.imageWindow);
             assignin('base','currentImage',im2uint16(ii,'Indexed'))
             break
@@ -1522,13 +1557,16 @@ assignin('base','currentImage',double(localCorMaskPlot))
 daspect([1 1 1]);
 
 axes(handles.cdfWindow);
-cdfplot(reshape(localCorMaskPlot,256*256,1))
+cdfplot(reshape(localCorMaskPlot,numel(I),1))
 
 roiTh=str2num(get(handles.roiThresholdEntry,'String'));
 axes(handles.roiPreviewWindow);
 imagesc(im2bw(currentImage,roiTh)),colormap('jet')
 assignin('base','candidateRoi',im2bw(currentImage,roiTh))
+assignin('base','candidateRoi_rawVals',currentImage)
 evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
+evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;,clear ''candidateRoi_rawVals'' ')
+
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1542,7 +1580,22 @@ function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of roiThresholdEntry as text
 %        str2double(get(hObject,'String')) returns contents of roiThresholdEntry as a double
+prevAt=evalin('base','exist(''scratch'',''var'')');
+if prevAt
+    currentROI=evalin('base','scratch.candidateRoi_rawVals');
+    
+    roiTh=str2num(get(handles.roiThresholdEntry,'String'));
+    axes(handles.roiPreviewWindow);
+    imagesc(im2bw(currentROI,roiTh)),colormap('jet')
+    assignin('base','candidateRoi',im2bw(currentROI,roiTh))
+    assignin('base','candidateRoi_rawVals',currentROI)
+    evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
+    evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;,clear ''candidateRoi_rawVals'' ')
+end
+    
 
+% Update handles structure
+guidata(hObject, handles);
 
 % --- Executes during object creation, after setting all properties.
 function roiThresholdEntry_CreateFcn(hObject, eventdata, handles)
@@ -1614,13 +1667,14 @@ function pcaButton_Callback(hObject, eventdata, handles)
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 
+imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
 stack=evalin('base',[selections{selectionsIndex}]);
 pcaimage=evalin('base','ccimage');
 
 disp('computing PCA ROI prediction');
     % make PCA composite, this seems to display good roi candidates
-stack_v=zeros(1000,size(stack,1)*size(stack,2));
-for i=1:1000;
+stack_v=zeros(imsToCor,size(stack,1)*size(stack,2));
+for i=1:imsToCor;
     x=stack(:,:,i);
     stack_v(i,:)=x(:);
 end
@@ -1673,6 +1727,7 @@ function frameSlider_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1732,3 +1787,57 @@ function frameTextEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in addToDendritesButton.
+function addToDendritesButton_Callback(hObject, eventdata, handles)
+% hObject    handle to addToDendritesButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+g=evalin('base','exist(''dendriticRoiCounter'')');
+if g==1
+    h=evalin('base','dendriticRoiCounter');
+    r=evalin('base','dendriticROIs');
+    c=evalin('base','dendriticROICenters');
+    b=evalin('base','dendriticROIBoundaries');
+    pl=evalin('base','dendriticROI_PixelLists');
+    
+    h=h+1;
+    mask=evalin('base','scratch.candidateRoi');
+   
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','dendriticROIs',r)
+    assignin('base','dendriticROICenters',c)
+    assignin('base','dendriticROIBoundaries',b)
+    assignin('base','dendriticRoiCounter',h)
+    assignin('base','dendriticROI_PixelLists',pl)
+    
+else
+    h=1;
+    mask=evalin('base','scratch.candidateRoi');
+    assignin('base','dendriticROIs',{mask})
+    assignin('base','dendriticROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','dendriticROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','dendriticROIBoundaries',{bwboundaries(mask)})
+    assignin('base','dendriticRoiCounter',h)
+end
+
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+dendriticRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in addToBoutonsButton.
+function addToBoutonsButton_Callback(hObject, eventdata, handles)
+% hObject    handle to addToBoutonsButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
