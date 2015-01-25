@@ -1261,8 +1261,7 @@ imPath=evalin('base','importPath');
 fileList=evalin('base','filteredFiles');
 numImages=numel(fileList);  %todo: this is a place holder to fix the entry.
 
-% took a parloop 20.9 min for 124800 images (10 ms/image; slower than
-% usual) 17.8339 with a for loop.
+% took a parloop 20.9 min for 124800 images (10 ms 
 
 disp(['about to extract, this should take ~ ' num2str((0001*numImages)./60) ' minutes'])
 cc=clock;
@@ -1270,8 +1269,9 @@ disp(['started at ' num2str(cc(4)) ':'  num2str(cc(5))])
 tic
 disp('extracting')
 diskLuminance=zeros(1,numImages);
-for n=1:numImages
-    diskLuminance(:,n)=mean2(imread([imPath filesep fileList(n).name]));
+parfor n=1:numImages
+    impImage=imread([imPath filesep fileList(n).name]);
+    diskLuminance(:,n)=mean2(impImage);
 end
 eT=toc;
 assignin('base','diskLuminance',diskLuminance);

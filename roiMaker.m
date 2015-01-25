@@ -1610,52 +1610,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in addToSomasButton.
-function addToSomasButton_Callback(hObject, eventdata, handles)
-% hObject    handle to addToSomasButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-g=evalin('base','exist(''somaticRoiCounter'')');
-if g==1
-    h=evalin('base','somaticRoiCounter');
-    r=evalin('base','somaticROIs');
-    c=evalin('base','somaticROICenters');
-    b=evalin('base','somaticROIBoundaries');
-    pl=evalin('base','somaticROI_PixelLists');
-    
-    h=h+1;
-    mask=evalin('base','scratch.candidateRoi');
-   
-    
-    
-    r{h}=mask;
-    b{h}=bwboundaries(mask);
-    c{h}=regionprops(mask,'Centroid');
-    pl{h}=regionprops(mask,'PixelList');
-    
-    
-    assignin('base','somaticROIs',r)
-    assignin('base','somaticROICenters',c)
-    assignin('base','somaticROIBoundaries',b)
-    assignin('base','somaticRoiCounter',h)
-    assignin('base','somaticROI_PixelLists',pl)
-    
-else
-    h=1;
-    mask=evalin('base','scratch.candidateRoi');
-    assignin('base','somaticROIs',{mask})
-    assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
-    assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
-    assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
-    assignin('base','somaticRoiCounter',h)
-end
-
-loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
-
-% Update handles structure
-guidata(hObject, handles);
 
 
 % --- Executes on button press in pcaButton.
@@ -1663,6 +1617,7 @@ function pcaButton_Callback(hObject, eventdata, handles)
 % hObject    handle to pcaButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -1788,6 +1743,52 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
+% --- Executes on button press in addToSomasButton.
+function addToSomasButton_Callback(hObject, eventdata, handles)
+% hObject    handle to addToSomasButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+g=evalin('base','exist(''somaticRoiCounter'')');
+if g==1
+    h=evalin('base','somaticRoiCounter');
+    r=evalin('base','somaticROIs');
+    c=evalin('base','somaticROICenters');
+    b=evalin('base','somaticROIBoundaries');
+    pl=evalin('base','somaticROI_PixelLists');
+    
+    h=h+1;
+    mask=evalin('base','scratch.candidateRoi');
+   
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','somaticROIs',r)
+    assignin('base','somaticROICenters',c)
+    assignin('base','somaticROIBoundaries',b)
+    assignin('base','somaticRoiCounter',h)
+    assignin('base','somaticROI_PixelLists',pl)
+    
+else
+    h=1;
+    mask=evalin('base','scratch.candidateRoi');
+    assignin('base','somaticROIs',{mask})
+    assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
+    assignin('base','somaticRoiCounter',h)
+end
+
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
 
 % --- Executes on button press in addToDendritesButton.
 function addToDendritesButton_Callback(hObject, eventdata, handles)

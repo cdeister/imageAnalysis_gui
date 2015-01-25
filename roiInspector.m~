@@ -119,16 +119,16 @@ imPath=evalin('base','importPath');
 fileList=evalin('base','filteredFiles');
 
 % poll selected extracted roi types
-% roiTypesSelected=[get(handles.somaExtractCheck, 'Value'), get(handles.dendriteExtractCheck, 'Value'),get(handles.boutonExtractCheck, 'Value'),...
-%     get(handles.filledSomaExtractCheck, 'Value'),get(handles.redSomaExtractCheck, 'Value'),get(handles.filledNeuropilExtractCheck, 'Value'),...
-%     get(handles.neuropilExtractCheck, 'Value'),get(handles.vascularExtractCheck, 'Value')];
-% roiTypesMap=['somaticROIs','dendriticROIs','boutonROIs','filledSomaticROIs','redSomaticROIs','filledNeuropilROIs','neuropilROIs','vascularROIs'];
+roiTypesSelected=[get(handles.somaExtractCheck, 'Value'), get(handles.dendriteExtractCheck, 'Value'),get(handles.boutonExtractCheck, 'Value'),...
+    get(handles.filledSomaExtractCheck, 'Value'),get(handles.redSomaExtractCheck, 'Value'),get(handles.filledNeuropilExtractCheck, 'Value'),...
+    get(handles.neuropilExtractCheck, 'Value'),get(handles.vascularExtractCheck, 'Value')];
+roiTypesMap=['somaticROIs','dendriticROIs','boutonROIs','filledSomaticROIs','redSomaticROIs','filledNeuropilROIs','neuropilROIs','vascularROIs'];
 
-% for n=1:numel(find(roiTypesSelected==1));
-%     concacatenatedROIs=
+for n=1/:numel(
+concacatenatedROIs=
 
-if get(handles.somaExtractCheck,'Value')==1;
-    rois=[evalin('base','somaticROIs') evalin('base','dendriticROIs') evalin('base','redSomaticROIs')];
+if roiTypes(1)==1;
+    rois=evalin('base','somaticROIs');
 else
     disp('no rois')
 end
@@ -152,7 +152,6 @@ for n=1:numImages
     end
 end
 eT=toc;
-assignin('base','diskLuminance',diskLuminance);
 disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
 elseif regFlag==1
