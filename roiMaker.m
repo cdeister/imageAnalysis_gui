@@ -296,6 +296,103 @@ function roiSelector_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns roiSelector contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from roiSelector
+
+roiNumber=get(handles.roiSelector,'Value');
+
+% Figure out what roi type is selected
+sTr=get(handles.somaRoisDisplayToggle, 'Value');
+rSTr=get(handles.redSomaRoisDisplayToggle, 'Value');
+dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
+aTr=get(handles.axonRoisDisplayToggle, 'Value');
+bTr=get(handles.boutonRoisDisplayToggle, 'Value');
+vTr=get(handles.vesselRoisDisplayToggle, 'Value');
+
+% --- Plot the image again
+cMap=get(handles.colormapTextEntry,'String');
+axes(handles.imageWindow);
+imageP=evalin('base','currentImage');
+
+
+aa = get(handles.lowCutEntry,'String');
+bb = get(handles.highCutEntry,'String');
+lowCut=str2num(aa)/65535;
+highCut=str2num(bb)/65535;
+
+adjImage=imadjust(imageP,[lowCut highCut]);
+
+axes(handles.imageWindow);
+imshow(adjImage);
+colormap(cMap)
+% --- end image plot
+
+% If somatic
+if sTr==1;
+    h=evalin('base','somaticRoiCounter');
+    c=evalin('base','somaticROICenters');
+    b=evalin('base','somaticROIBoundaries');
+elseif rSTr==1;
+    h=evalin('base','redSomaticRoiCounter');
+    c=evalin('base','redSomaticROICenters');
+    b=evalin('base','redSomaticROIBoundaries');
+elseif dTr==1;
+    h=evalin('base','dendriticRoiCounter');
+    c=evalin('base','dendriticROICenters');
+    b=evalin('base','dendriticROIBoundaries');
+elseif aTr==1;
+    h=evalin('base','axonalRoiCounter');
+    c=evalin('base','axonalROICenters');
+    b=evalin('base','axonalROIBoundaries');
+elseif bTr==1;
+    h=evalin('base','boutonRoiCounter');
+    c=evalin('base','boutonROICenters');
+    b=evalin('base','boutonROIBoundaries');
+elseif vTr==1;
+    h=evalin('base','vesselRoiCounter');
+    c=evalin('base','vesselROICenters');
+    b=evalin('base','vesselROIBoundaries');
+else
+end
+
+% Populate the box:
+for n=1:h
+    roisList{n}=n;
+end
+set(handles.roiSelector, 'String', '');
+set(handles.roiSelector,'String',roisList);
+set(handles.roiSelector,'Value',1)
+
+% Plot
+if strcmp(cMap,'jet')
+    outColor='k';
+    txtColor=[0 0 0];
+else
+    outColor='g';
+    txtColor=[0 1 1];
+end
+axes(handles.imageWindow);
+hold all 
+for n=1:numel(b)
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+    end
+end
+hold all
+n=roiNumber;
+outColor='r';
+txtColor=[1 0 0];
+for k=1:numel(c{1,n})
+    plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+    text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+end
+
+hold off
+
+set(handles.roiSelector,'Value',roiNumber);
+
+% Update handles structure
+guidata(hObject, handles);
+
     
 
 
@@ -793,8 +890,11 @@ set(handles.vesselRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
+cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
+
+
 aa = get(handles.lowCutEntry,'String');
 bb = get(handles.highCutEntry,'String');
 lowCut=str2num(aa)/65535;
@@ -804,6 +904,7 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
+colormap(cMap)
 % --- end image plot
 
 h=evalin('base','boutonRoiCounter');
@@ -819,12 +920,23 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-
-hold all    
-for n=1:numel(b)
-    plot(b{1,n}{1,1}(:,2),b{1,n}{1,1}(:,1),'g','LineWidth',1)
-    text(c{1,n}.Centroid(1)-1, c{1,n}.Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 1 1]);
+if strcmp(cMap,'jet')
+    outColor='k';
+    txtColor=[0 0 0];
+else
+    outColor='g';
+    txtColor=[0 1 1];
 end
+axes(handles.imageWindow);
+hold all 
+for n=1:numel(b)
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+
+    end
+end
+
 hold off
 
         
@@ -1259,36 +1371,6 @@ set(handles.workspaceVarBox,'String',vars)
 guidata(hObject, handles);
 
 
-
-function edit4_Callback(hObject, eventdata, handles)
-% hObject    handle to edit4 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit4 as text
-%        str2double(get(hObject,'String')) returns contents of edit4 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit4_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit4 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes on button press in pushbutton14.
-function pushbutton14_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton14 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
 % --- Executes on button press in getGXcorButton.
 function getGXcorButton_Callback(hObject, eventdata, handles)
 % hObject    handle to getGXcorButton (see GCBO)
@@ -1327,8 +1409,9 @@ for n=1:nstack;
 end
 assignin('base','sstack',sstack);
 
-% make local Xcorr and/or PCA (CAD: I removed PCA for now, I will give option to users if someone asks)
-% xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
+% make local Xcorr and/or PCA
+% global xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
+% local xcor region growing Jakob Voigts
 
 
 disp('computing local xcorr');
@@ -1831,7 +1914,7 @@ else
 end
 
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-dendriticRoisDisplayToggle_Callback(hObject, eventdata, handles)
+dendriteRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1842,3 +1925,44 @@ function addToBoutonsButton_Callback(hObject, eventdata, handles)
 % hObject    handle to addToBoutonsButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+g=evalin('base','exist(''boutonRoiCounter'')');
+if g==1
+    h=evalin('base','boutonRoiCounter');
+    r=evalin('base','boutonROIs');
+    c=evalin('base','boutonROICenters');
+    b=evalin('base','boutonROIBoundaries');
+    pl=evalin('base','boutonROI_PixelLists');
+    
+    h=h+1;
+    mask=evalin('base','scratch.candidateRoi');
+   
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','boutonROIs',r)
+    assignin('base','boutonROICenters',c)
+    assignin('base','boutonROIBoundaries',b)
+    assignin('base','boutonRoiCounter',h)
+    assignin('base','boutonROI_PixelLists',pl)
+    
+else
+    h=1;
+    mask=evalin('base','scratch.candidateRoi');
+    assignin('base','boutonROIs',{mask})
+    assignin('base','boutonROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','boutonROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','boutonROIBoundaries',{bwboundaries(mask)})
+    assignin('base','boutonRoiCounter',h)
+end
+
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);

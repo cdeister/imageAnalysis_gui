@@ -6,11 +6,11 @@ function varargout = importer(varargin)
 % 
 %
 % cdeister@brown.edu with any questions
-% last modified: CAD 11/30/2014
+% last modified: CAD 1/25/2015
 %
 %
 %
-% Last Modified by GUIDE v2.5 25-Jan-2015 10:38:15
+% Last Modified by GUIDE v2.5 26-Jan-2015 08:32:54
 %
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,8 +70,6 @@ function importButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-tTS=get(handles.tiffSelectToggle, 'Value');
-pTS=get(handles.pngSelectToggle, 'Value');
 mPF=get(handles.multiPageFlag, 'Value');
 pImport=get(handles.parallelizeImportToggle,'Value');
 
@@ -79,18 +77,20 @@ pImport=get(handles.parallelizeImportToggle,'Value');
 % import a multi-page Tif. 
 g=evalin('base','exist(''importPath'')');
 disp('importing images ...')
+
+% User has set a path, but doesn't want multi-page tif.
 if g==1 && mPF==0
     imPath=evalin('base','importPath');
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
     
-    
+% User has not set a path, and doesn't want multi-page tif.    
 elseif g==0 && mPF==0
     imPath=uigetdir;
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
     
-    
+% User has set a path, but wants multi-page tif.    
 elseif g==1 && mPF==1
     imPath=evalin('base','importPath');
     tifFile=evalin('base','tifFile');
@@ -98,7 +98,7 @@ elseif g==1 && mPF==1
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
     
-    
+% User has set not path, and does want multi-page tif.    
 elseif g==0 && mPF==1
     [tifFile,imPath]=uigetfile('*.*','Select your tif file');
     mpTifInfo=imfinfo([imPath tifFile]);
@@ -110,16 +110,11 @@ elseif g==0 && mPF==1
     assignin('base','imPath',imPath);
 end
 
+% This loads a file list that has characters that match the filter string.
+% It should detect the bit depth and dimensions.
 if mPF==0
-% todo: auto-detect x and y dimensions and bitdepth!This was stupid to
-% leave out in the first place. 
     filterString={get(handles.fileFilterString,'String')};
-    if tTS
-        imageType={'tif'};
-    elseif pTS
-        imageType={'PNG'};
-    end
-    filteredFiles = dir([imPath filesep '*' filterString{1} '*']); % '*.' imageType{1}
+    filteredFiles = dir([imPath filesep '*' filterString{1} '*']);
     filteredFiles=resortImageFileMap(filteredFiles);
     assignin('base','filteredFiles',filteredFiles)
     importCount=endIm-firstIm;
@@ -146,8 +141,7 @@ if mPF==0
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
     
-else
-
+else  % The user wants multi-page tif. This import is a bit different.
     bitD=mpTifInfo(1).BitDepth;
     mImage=mpTifInfo(1).Width;
     nImage=mpTifInfo(1).Height;
@@ -156,6 +150,8 @@ else
         imType='uint16';
     elseif bitD==32
         imType='uint32';
+        % why are you using 32 bit images? I'm curious shoot me an email
+        % please.
     else
         imType='Double';
     end
@@ -330,21 +326,14 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-tTS=get(handles.tiffSelectToggle, 'Value');
-pTS=get(handles.pngSelectToggle, 'Value');
 mPF=get(handles.multiPageFlag, 'Value');
 
 if mPF==0
     imPath=uigetdir;
     assignin('base','importPath',imPath);
     filterString={get(handles.fileFilterString,'String')};
-    if tTS
-        imageType={'tif'};
-    elseif pTS
-        imageType={'png'};
-    end
     filteredFiles = dir([imPath filesep '*' filterString{1} '*']); % '*.' imageType{1}
+    assignin('base','filteredFiles',filteredFiles);
     eNum=numel(filteredFiles);
     set(handles.endImageEntry,'string',num2str(eNum))
 elseif mPF==1

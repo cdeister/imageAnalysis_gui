@@ -1,3 +1,4 @@
+
 function varargout = roiInspector(varargin)
 % ROIINSPECTOR MATLAB code for roiInspector.fig
 % roiInspector is a very simple (incomplete) but effective extraction tool.
@@ -16,7 +17,7 @@ function varargout = roiInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 21-Jan-2015 11:09:10
+% Last Modified by GUIDE v2.5 01-Feb-2015 08:58:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -117,21 +118,30 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
 % ~ .0004 per roi per image
 imPath=evalin('base','importPath');
 fileList=evalin('base','filteredFiles');
+skipImagesToggle=get(handles.diskExtractSkipByToggle,'Value');
 
-% poll selected extracted roi types
-roiTypesSelected=[get(handles.somaExtractCheck, 'Value'), get(handles.dendriteExtractCheck, 'Value'),get(handles.boutonExtractCheck, 'Value'),...
-    get(handles.filledSomaExtractCheck, 'Value'),get(handles.redSomaExtractCheck, 'Value'),get(handles.filledNeuropilExtractCheck, 'Value'),...
-    get(handles.neuropilExtractCheck, 'Value'),get(handles.vascularExtractCheck, 'Value')];
-roiTypesMap=['somaticROIs','dendriticROIs','boutonROIs','filledSomaticROIs','redSomaticROIs','filledNeuropilROIs','neuropilROIs','vascularROIs'];
+if skipImagesToggle
+    st=str2num(get(handles.diskExtractSkipByStartEntry,'String'));
+    by=str2num(get(handles.diskExtractSkipByEntry,'String'));
+    a=st;
+    if st>by
+        a=rem(st,by);
+    else
+    end
+    en=numel(fileList)-(by-a);
+    fileList=fileList(st:by:en);
+else
+end
+disp(['after skiping you will extract from ' num2str(numel(fileList)) ' images'])
 
-for n=1/:numel(
-concacatenatedROIs=
 
-if roiTypes(1)==1;
-    rois=evalin('base','somaticROIs');
+if get(handles.somaExtractCheck,'Value')==1;
+   % rois=[evalin('base','somaticROIs')];
+    rois=[evalin('base','somaticROIs') evalin('base','dendriticROIs')];
 else
     disp('no rois')
 end
+
 
 numImages=numel(fileList);  %todo: this is a place holder to fix the entry.
 sED=zeros(numel(rois),numImages);
@@ -150,8 +160,12 @@ for n=1:numImages
     for q=1:numel(rois)
         sED(q,n)=mean(impImage(rois{q}(:,:)));
     end
+    if (rem(n,100)==0)
+        fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./numImages)));
+    end
 end
 eT=toc;
+assignin('base','diskLuminance',diskLuminance);
 disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
 elseif regFlag==1
@@ -163,14 +177,17 @@ template=evalin('base','regTemplate');
 disp('extracting')
 registeredTransformations=zeros(4,numImages);
 diskLuminance=zeros(1,numImages);
-for n=1:numImages
+parfor n=1:numImages
     impImage=imread([imPath filesep fileList(n).name]);
     [out1,out2]=dftregistration(fft2(template),fft2(impImage),100);
     registeredTransformations(:,n)=out1;
     diskLuminance(:,n)=mean2(impImage);
-    regImage(:,:)=abs(ifft2(out2));
+    regImage=abs(ifft2(out2));
     for q=1:numel(rois)
         sED(q,n)=mean(regImage(rois{q}(:,:)));
+    end
+    if (rem(n,100)==0)
+        fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./numImages)));
     end
 end
 assignin('base','registeredTransformations',registeredTransformations);
@@ -1020,3 +1037,58 @@ function diskRegFlag_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of diskRegFlag
+
+
+
+function diskExtractSkipByEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to diskExtractSkipByEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of diskExtractSkipByEntry as text
+%        str2double(get(hObject,'String')) returns contents of diskExtractSkipByEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function diskExtractSkipByEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to diskExtractSkipByEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in diskExtractSkipByToggle.
+function diskExtractSkipByToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to diskExtractSkipByToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of diskExtractSkipByToggle
+
+
+
+function diskExtractSkipByStartEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to diskExtractSkipByStartEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of diskExtractSkipByStartEntry as text
+%        str2double(get(hObject,'String')) returns contents of diskExtractSkipByStartEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function diskExtractSkipByStartEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to diskExtractSkipByStartEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
