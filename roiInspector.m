@@ -136,7 +136,7 @@ disp(['after skiping you will extract from ' num2str(numel(fileList)) ' images']
 
 
 if get(handles.somaExtractCheck,'Value')==1;
-   % rois=[evalin('base','somaticROIs')];
+    %rois=[evalin('base','somaticROIs')];
     rois=[evalin('base','somaticROIs') evalin('base','dendriticROIs')];
 else
     disp('no rois')
