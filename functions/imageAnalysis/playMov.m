@@ -9,6 +9,7 @@ function playMov(stack)
         h=imagesc(ii);
         axis square
         colormap('jet')
+        daspect([1 1 1])
         drawnow;
         delete(h);
     end;

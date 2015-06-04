@@ -489,6 +489,7 @@ set(handles.highCutEntry,'String',b)
 assignin('base','currentImage',imageP)
 
 
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1561,6 +1562,7 @@ ii=1;
             set(handles.frameSlider, 'Value', i);
             h=imagesc(ii,[lowCut highCut]);
             colormap(cMap)
+            daspect([1 1 1])
 %             hold all
 %             for n=1:numel(sB)
 %                 for k=1:numel(sC{1,n})
@@ -1574,6 +1576,7 @@ ii=1;
         elseif pS==0
             ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
             imagesc(ii,[lowCut highCut]);
+            daspect([1 1 1])
 %             hold all
 %             for n=1:numel(sB)
 %                 for k=1:numel(sC{1,n})

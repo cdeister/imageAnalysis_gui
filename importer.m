@@ -124,7 +124,18 @@ if mPF==0
     imageSize=size(canaryImport);
     canaryInfo=whos('canaryImport');
     bitD=canaryInfo.class;
-    importedImages=zeros(imageSize(1),imageSize(2),importCount,bitD);    
+    importedImages=zeros(imageSize(1),imageSize(2),importCount,bitD);
+    if bitD==16
+        imType='uint16';
+    elseif bitD==32
+        imType='uint32';
+    elseif bitD==8
+        imType='uint8';
+    else
+        imType='Double';
+    end
+    disp(imType)
+ 
     
     tic
     if pImport==1
@@ -137,7 +148,16 @@ if mPF==0
         end
     end
     iT=toc;
-    assignin('base',['importedStack_' filterString{1}],uint16(importedImages))
+    
+    if bitD==16
+        assignin('base',['importedStack_' filterString{1}],uint16(importedImages));
+    elseif bitD==8
+        assignin('base',['importedStack_' filterString{1}],uint8(importedImages));
+    elseif bitD==32
+        assignin('base',['importedStack_' filterString{1}],uint32(importedImages));
+    else
+        assignin('base',['importedStack_' filterString{1}],double(importedImages));
+    end
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
     
@@ -150,8 +170,9 @@ else  % The user wants multi-page tif. This import is a bit different.
         imType='uint16';
     elseif bitD==32
         imType='uint32';
-        % why are you using 32 bit images? I'm curious shoot me an email
-        % please.
+        % why are you using 32 bit images? I'm curious shoot me an email please.
+    elseif bitD==8
+        imType='uint8';
     else
         imType='Double';
     end
