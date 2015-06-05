@@ -22,7 +22,7 @@ function varargout = annotater(varargin)
 
 % Edit the above text to modify the response to help annotater
 
-% Last Modified by GUIDE v2.5 04-Jun-2015 12:12:30
+% Last Modified by GUIDE v2.5 01-Jun-2015 10:08:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -186,25 +186,13 @@ imagesc(importStack(:,:,imageToDisplay))
 colormap gray
 daspect([1 1 1])
 
-plotF1Dots=evalin('base','exist(''tempX1'')');
-plotF2Dots=evalin('base','exist(''tempX2'')');
-plotF3Dots=evalin('base','exist(''tempX3'')');
+plotF1Dots=evalin('base',exist('tempX1'));
+plotF2Dots=evalin('base',exist('tempX2'));
+plotF3Dots=evalin('base',exist('tempX3'));
 
 if plotF1Dots
-    xDot1=evalin('base','tempX1');
-    yDot1=evalin('base','tempY1');
-    hold all,plot(xDot1,yDot1,'bo');
-end
-if plotF2Dots
-    xDot2=evalin('base','tempX2');
-    yDot2=evalin('base','tempY2');
-    hold all,plot(xDot2,yDot2,'ro');
-end
-if plotF3Dots
-    xDot3=evalin('base','tempX3');
-    yDot3=evalin('base','tempY3');
-    hold all,plot(xDot3,yDot3,'mo');
-end
+    xDot=assi('base',tempX1);
+    hold all,plot(
 
 
 
@@ -285,37 +273,3 @@ set(handles.workspaceVarBox,'String',vars)
 
 % Update handles structure
 guidata(hObject, handles);
-
-
-% --- Executes on button press in dittoButton.
-function dittoButton_Callback(hObject, eventdata, handles)
-% hObject    handle to dittoButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-plotF1Dots=evalin('base','exist(''tempX1'')');
-plotF2Dots=evalin('base','exist(''tempX2'')');
-plotF3Dots=evalin('base','exist(''tempX3'')');
-
-imageToDisplay=str2num(get(handles.imageCountEntry,'String'));
-
-if plotF1Dots
-    evalin('base',['x1_positions(' num2str(imageToDisplay) ',:)=tempX1;'])
-    evalin('base',['y1_positions(' num2str(imageToDisplay) ',:)=tempY1;'])
-end
-if plotF2Dots
-    evalin('base',['x2_positions(' num2str(imageToDisplay) ',:)=tempX2;'])
-    evalin('base',['y2_positions(' num2str(imageToDisplay) ',:)=tempY2;'])
-end
-if plotF3Dots
-    evalin('base',['x3_positions(' num2str(imageToDisplay) ',:)=tempX3;'])
-    evalin('base',['y3_positions(' num2str(imageToDisplay) ',:)=tempY3;'])
-end
-
-set(handles.imageCountEntry,'String',num2str(imageToDisplay+1))
-imageCountEntry_Callback(hObject, eventdata, handles)
-
-% Update handles structure
-guidata(hObject, handles);
-
