@@ -16,9 +16,13 @@ end
 nullPositions=find(x2_positions==0);
 for n=1:numel(nullPositions)
     x2_positions(nullPositions(n))=x2_positions(nullPositions(n)-1);
+<<<<<<< Updated upstream
     
 end
 
 %%
 figure,hold all,plot(y1_positions),hold all,plot(y2_positions),hold all,plot(y2_positions-y1_positions),hold all,plot(smooth(diff(y2_positions-y1_positions)))
 hold all,plot(dendriticF'-34)
+=======
+end
+>>>>>>> Stashed changes
