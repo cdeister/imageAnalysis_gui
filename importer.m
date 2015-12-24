@@ -123,13 +123,15 @@ if mPF==0
     canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
     imageSize=size(canaryImport);
     canaryInfo=whos('canaryImport');
+    disp('assigned canary')
     bitD=canaryInfo.class;
+    assignin('base','bitDebug',bitD); % debug 
     importedImages=zeros(imageSize(1),imageSize(2),importCount,bitD);
-    if bitD==16
+    if strcmp(bitD,'uint16')==1
         imType='uint16';
-    elseif bitD==32
+    elseif strcmp(bitD,'uint32')==1
         imType='uint32';
-    elseif bitD==8
+    elseif strcmp(bitD,'uint8')==1
         imType='uint8';
     else
         imType='Double';

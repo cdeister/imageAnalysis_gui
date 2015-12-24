@@ -54,7 +54,17 @@ for q=1:size(data,3)
         hp(n,q)=numel(find(dvH(:,q)>crit(n)))/numel(dvH(:,q));
         rp(n,q)=numel(find(dvR(:,q)>crit(n)))/numel(dvR(:,q));
     end
-    auc(:,q)=-1*trapz(rp(:,q),hp(:,q));
+    % the distributions could be flipped (fires more on misses) because
+    % this is biologically plausible we want to maximize the area above
+    % unity to determine if rp or hp should be on the ordinate. 
+ 
+    tAr=abs(trapz(rp(:,q),hp(:,q)));
+    tArR=abs(trapz(hp(:,q),rp(:,q)));
+    if tAr>=tArR
+        auc(:,q)=abs(trapz(rp(:,q),hp(:,q)));
+    elseif tAr<tArR
+        auc(:,q)=abs(trapz(hp(:,q),rp(:,q)));
+    end
 end
 
 bb=find(sort(auc,'descend')>thresh);
