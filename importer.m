@@ -117,13 +117,12 @@ if mPF==0
     filteredFiles = dir([imPath filesep '*' filterString{1} '*']);
     filteredFiles=resortImageFileMap(filteredFiles);
     assignin('base','filteredFiles',filteredFiles)
-    importCount=endIm-firstIm;
+    importCount=(endIm-firstIm)+1;
     disp(imPath)
     disp(filteredFiles(1,1).name)
     canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
     imageSize=size(canaryImport);
     canaryInfo=whos('canaryImport');
-    disp('assigned canary')
     bitD=canaryInfo.class;
     assignin('base','bitDebug',bitD); % debug 
     importedImages=zeros(imageSize(1),imageSize(2),importCount,bitD);
@@ -141,12 +140,13 @@ if mPF==0
     
     tic
     if pImport==1
-        parfor n=firstIm:endIm;
-            importedImages(:,:,n)=imread([imPath filesep filteredFiles(n,1).name]);
+        tempFiltFiles=filteredFiles(firstIm:endIm,1);
+        parfor n=1:importCount;
+            importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);
         end
     elseif pImport==0
         for n=firstIm:endIm;
-            importedImages(:,:,n)=imread([imPath filesep filteredFiles(n,1).name]);
+            importedImages(:,:,(firstIm+1)-n)=imread([imPath filesep filteredFiles(n,1).name]);
         end
     end
     iT=toc;
@@ -734,37 +734,38 @@ assignin('base','filteredFiles',filteredFiles)
 
 % we need to pad from 1 to the image you care about, because par loops
 % won't let you correct for the shift.
-registeredTransformations=zeros(4,(firstIm-1)+imageCount);
+totalImagesPossible=(firstIm-1)+imageCount;
+registeredTransformations=zeros(4,totalImagesPossible);
 subpixelFactor=100;
 
 regTemp=evalin('base','regTemplate');
 
-saveTiffFlag=get(handles.saveRegTiffsToggle,'Value');
+saveTiffFlag=get(handles.saveRegTiffsToggle,'Value'); % im changing the behavior of this to be save to workspace
 
-if saveTiffFlag==0
 tic
-parfor n=firstIm:endIm,
-        [out1,~]=dftregistration(ifft2(regTemp),ifft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
-        registeredTransformations(:,n)=out1;     
-end
-toc
+if saveTiffFlag==0
+    parfor n=firstIm:endIm,
+        [out1,~]=dftregistration(fft2(regTemp),fft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
+        registeredTransformations(:,n)=out1;
+    end
+    % shave the pad and write out
+    assignin('base','registeredTransforms',registeredTransformations(:,firstIm:endIm))
 
 elseif saveTiffFlag==1
-regSavePath=uigetdir();    
-tic
+    % pre-alloc the stack
+    registeredImages=zeros(size(regTemp,1),size(regTemp,2),totalImagesPossible,'uint16');
+    parfor n=firstIm:endIm,
+        [out1,out2]=dftregistration(fft2(regTemp),fft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
+        registeredTransformations(:,n)=out1;
+        registeredImages(:,:,n)=abs(ifft2(out2));
+    end
+    % shave the pad and write out
+    assignin('base','registeredTransforms',registeredTransformations(:,firstIm:endIm))
+    assignin('base',['registeredStack_' filterString],uint16(registeredImages(:,:,firstIm:endIm)))
+end
 
-parfor n=firstIm:endIm,
-        [out1,out2]=dftregistration(ifft2(regTemp),ifft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
-        imwrite(uint16(round(abs(ifft2(out2))*65535)),[regSavePath filesep 'registered_' int2str(n) '.tif'],'TIF');
-        registeredTransformations(:,n)=out1;     
-end
-end
 toc
-assignin('base','registeredImagesPath',regSavePath);
 
-% we shave any images from 1 to the image you care about.
-registeredTransformations=registeredTransformations(:,firstIm:endIm);
-assignin('base','registeredTransformations',registeredTransformations);
 
 
 vars = evalin('base','who');
@@ -1269,22 +1270,58 @@ function diskLumValButton_Callback(hObject, eventdata, handles)
 % hObject    handle to diskLumValButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+guiFeedback=1;
+feedbackBlockSize=2000;
+sImageImRate=0.002;
+
 imPath=evalin('base','importPath');
 fileList=evalin('base','filteredFiles');
-numImages=numel(fileList);  %todo: this is a place holder to fix the entry.
+firstIm=str2num(get(handles.firstImageEntry,'string'));
+disp(['first image= ' num2str(firstIm)])  % **** debug
+endIm=str2num(get(handles.endImageEntry,'string'));
+
+numImages=endIm-firstIm;
+
+% enforce feedback by default if there are a bunch of images
+if numImages>25000;
+    disp('*** you have a lot of images, I am going to give progress updates ***')
+    guiFeedback=1;
+else
+    disp('you do not have too many images so I will opt to not give feedback about progress, unless you asked earlier')
+end
+
+
 
 % took a parloop 20.9 min for 124800 images (10 ms/image; slower than
 % usual) 17.8339 with a for loop.
 
-disp(['about to extract, this should take ~ ' num2str((0001*numImages)./60) ' minutes'])
+disp(['about to extract, this should take ~ ' num2str((sImageImRate*numImages)./60) ' minutes'])
 cc=clock;
 disp(['started at ' num2str(cc(4)) ':'  num2str(cc(5))])
+eT=0;  % elapsed time container
 tic
 disp('extracting')
 diskLuminance=zeros(1,numImages);
-for n=1:numImages
-    diskLuminance(:,n)=mean2(imread([imPath filesep fileList(n).name]));
+
+for n=firstIm:endIm;
+    funcN=(n-firstIm)+1;
+    diskLuminance(:,funcN)=mean2(imread([imPath filesep fileList(n).name]));
+    if (mod(funcN,feedbackBlockSize)==0 && guiFeedback==1)
+        eT=eT+toc;
+        tic
+        fEst=eT/funcN;
+        disp(['... extracted ' num2str(feedbackBlockSize) ' more images in ' num2str(eT) '; just ' num2str(numImages-funcN) ' to go ...'])
+        disp(['**** import/extraction rate = ' num2str(fEst)])
+        disp(['*** new finish time estimate =' num2str((fEst*(numImages-funcN))) ' seconds'])
+        disp(' ')
+    else
+    end
 end
-eT=toc;
+% there is a very tiny performance hit to do the funcN assignment outside
+% the loop assignment, but when I add the feedback it cancels out.
+
 assignin('base','diskLuminance',diskLuminance);
-disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
+disp(['done luminance extraction, this took ' num2str(eT./60) ' minutes'])
+cc=clock;
+disp(['finished disk luminance at ' num2str(cc(4)) ':'  num2str(cc(5))])

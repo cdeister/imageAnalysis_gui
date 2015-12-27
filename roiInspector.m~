@@ -170,12 +170,12 @@ disp('extracting')
 diskLuminance=zeros(1,numImages);
 for n=firstIm:endIm
     impImage=imread([imPath filesep fileList(n).name]);
-    diskLuminance(:,(n-firstIm)+1)=mean2(impImage);
+    diskLuminance(:,n)=mean2(impImage);
     for q=1:numel(rois)
-        sED(q,(n-firstIm)+1)=mean(impImage(rois{q}(:,:)));
+        sED(q,(firstIm+1)-n)=mean(impImage(rois{q}(:,:)));
     end
-    if (rem((n-firstIm)+1,100)==0)
-        fprintf('%d/%d (%d%%)\n',(n-firstIm)+1,numImages,round(100*((n-firstIm)+1)./numImages));
+    if (rem((firstIm+1)-n,100)==0)
+        fprintf('%d/%d (%d%%)\n',(firstIm+1)-n,numImages,round(100*(((firstIm+1)-n)./numImages)));
     end
 end
 eT=toc;
@@ -199,13 +199,13 @@ for n=firstIm:endIm
     impImage=imread([imPath filesep fileList(n).name]);
     [out1,out2]=dftregistration(fft2(template),fft2(impImage),100);
     registeredTransformations(:,(n-firstIm)+1)=out1;
-    diskLuminance(:,(n-firstIm)+1)=mean2(impImage);
+    diskLuminance(:,(firstIm+1)-n)=mean2(impImage);
     regImage=abs(ifft2(out2));
     for q=1:numel(rois)
-        sED(q,(n-firstIm)+1)=mean(regImage(rois{q}(:,:)));
+        sED(q,(firstIm+1)-n)=mean(regImage(rois{q}(:,:)));
     end
-    if (rem((n-firstIm)+1,100)==0)
-        fprintf('%d/%d (%d%%)\n',(n-firstIm)+1,numImages,round(100*((n-firstIm)+1)./numImages));
+    if (rem((firstIm+1)-n,100)==0)
+        fprintf('%d/%d (%d%%)\n',(firstIm+1)-n,numImages,round(100*(((firstIm+1)-n)./numImages)));
     end
 end
 

@@ -11,7 +11,7 @@ function out=applyRegTransforms(image,transforms)
 % output=[error,diffphase,row_shift,col_shift];
 
 varClass=class(image);
-buf2ft=ifft2(image);
+buf2ft=fft2(image);
 
 [nr,nc]=size(buf2ft);
 Nr = ifftshift([-fix(nr/2):ceil(nr/2)-1]);
@@ -21,7 +21,7 @@ Greg = buf2ft.*exp(i*2*pi*(-transforms(3)*Nr/nr-transforms(4)*Nc/nc));
 Greg = Greg*exp(i*transforms(2));
 
 
-out=imrotate(abs(ifft2(Greg)),180);
+out=abs(ifft2(Greg));
 if strcmp(varClass,'uint16')
     out=im2uint16(out);
 else
