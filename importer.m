@@ -146,7 +146,7 @@ if mPF==0
         end
     elseif pImport==0
         for n=firstIm:endIm;
-            importedImages(:,:,(firstIm+1)-n)=imread([imPath filesep filteredFiles(n,1).name]);
+            importedImages(:,:,(n-firstIm)+1)=imread([imPath filesep filteredFiles(n,1).name]);
         end
     end
     iT=toc;

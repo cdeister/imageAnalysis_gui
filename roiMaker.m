@@ -16,7 +16,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 06-Dec-2014 11:18:24
+% Last Modified by GUIDE v2.5 31-Dec-2015 12:05:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -51,6 +51,12 @@ handles.output = hObject;
 
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
+g=evalin('base','exist(''neuropilRoiCounter'')');
+if g
+    set(handles.neuropilAlertString,'String','');
+else
+    set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
+end
 
 % Update handles structure
 guidata(hObject, handles);
@@ -305,7 +311,8 @@ rSTr=get(handles.redSomaRoisDisplayToggle, 'Value');
 dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
 aTr=get(handles.axonRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
-vTr=get(handles.vesselRoisDisplayToggle, 'Value');
+vTr=get(handles.vascularRoisDisplayToggle, 'Value');
+nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 
 % --- Plot the image again
 cMap=get(handles.colormapTextEntry,'String');
@@ -350,6 +357,11 @@ elseif vTr==1;
     h=evalin('base','vesselRoiCounter');
     c=evalin('base','vesselROICenters');
     b=evalin('base','vesselROIBoundaries');
+elseif nTr==1;
+    h=evalin('base','neuropilRoiCounter'); 
+    b=evalin('base','neuropilROIBoundaries');
+    c=evalin('base','neuropilROICenters');
+
 else
 end
 
@@ -504,7 +516,9 @@ rSTr=get(handles.redSomaRoisDisplayToggle, 'Value');
 dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
 aTr=get(handles.axonRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
-vTr=get(handles.vesselRoisDisplayToggle, 'Value');
+vTr=get(handles.vascularRoisDisplayToggle, 'Value');
+nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
+
 
 roiNumber=get(handles.roiSelector,'Value');
 
@@ -527,6 +541,14 @@ if sTr
     assignin('base','somaticRoiCounter',h)
     assignin('base','somaticROI_PixelLists',pl)
     somaRoisDisplayToggle_Callback(handles.somaRoisDisplayToggle,eventdata,handles)
+    
+    % alert the user their neuropil masks will be out of sync.
+    g=evalin('base','exist(''neuropilRoiCounter'')');
+    if g 
+        set(handles.neuropilAlertString,'String','regenerate neuropil masks -->','ForegroundColor',[1 0 0]);
+    else
+        set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
+    end
 
 elseif rSTr
     h=evalin('base','redSomaticRoiCounter');
@@ -613,7 +635,23 @@ elseif vTr
     assignin('base','vesselROICenters',c)
     assignin('base','vesselROIBoundaries',b)
     assignin('base','vesselRoiCounter',h)
-    vesselRoisDisplayToggle_Callback(handles.vesselRoisDisplayToggle,eventdata,handles)     
+    vesselRoisDisplayToggle_Callback(handles.neuropilRoisDisplayToggle,eventdata,handles)     
+elseif nTr
+    h=evalin('base','neuropilRoiCounter');
+    r=evalin('base','neuropilROIs');
+    c=evalin('base','neuropilROICenters');
+    b=evalin('base','neuropilROIBoundaries');
+    
+    h=h-1;
+    r(roiNumber)=[];
+    c(roiNumber)=[];
+    b(roiNumber)=[];
+    
+    assignin('base','neuropilROIs',r)
+    assignin('base','neuropilROICenters',c)
+    assignin('base','neuropilROIBoundaries',b)
+    assignin('base','neuropilRoiCounter',h)
+    neuropilRoisDisplayToggle_Callback(handles.neuropilRoisDisplayToggle,eventdata,handles)        
 end
 % Update handles structure
 guidata(hObject, handles);
@@ -632,7 +670,7 @@ set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
-set(handles.vesselRoisDisplayToggle, 'Value', 0);
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
@@ -702,7 +740,7 @@ set(handles.redSomaRoisDisplayToggle, 'Value', 1);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
-set(handles.vesselRoisDisplayToggle, 'Value', 0);
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
@@ -760,7 +798,7 @@ set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 1);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
-set(handles.vesselRoisDisplayToggle, 'Value', 0);
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
@@ -831,7 +869,7 @@ set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 1);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
-set(handles.vesselRoisDisplayToggle, 'Value', 0);
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
@@ -887,7 +925,9 @@ set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 1);
-set(handles.vesselRoisDisplayToggle, 'Value', 0);
+set(handles.neuropilRoisDisplayToggle, 'Value', 0);
+set(handles.vascularRoisDisplayToggle, 'Value', 0);
+
 
 
 % --- Plot the image again
@@ -934,7 +974,6 @@ for n=1:numel(b)
     for k=1:numel(c{1,n})
         plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
         text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-
     end
 end
 
@@ -946,24 +985,27 @@ guidata(hObject, handles);
 
 
 
-% --- Executes on button press in vesselRoisDisplayToggle.
-function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to vesselRoisDisplayToggle (see GCBO)
+% --- Executes on button press in neuropilRoisDisplayToggle.
+function neuropilRoisDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to neuropilRoisDisplayToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of vesselRoisDisplayToggle
+% Hint: get(hObject,'Value') returns toggle state of neuropilRoisDisplayToggle
 set(handles.somaRoisDisplayToggle, 'Value', 0);
 set(handles.redSomaRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
-set(handles.vesselRoisDisplayToggle, 'Value', 1);
+set(handles.neuropilRoisDisplayToggle, 'Value', 1);
 
 
 % --- Plot the image again
+cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
+
+
 aa = get(handles.lowCutEntry,'String');
 bb = get(handles.highCutEntry,'String');
 lowCut=str2num(aa)/65535;
@@ -973,11 +1015,12 @@ adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
+colormap(cMap)
 % --- end image plot
 
-h=evalin('base','vesselRoiCounter');
-c=evalin('base','vesselROICenters');
-b=evalin('base','vesselROIBoundaries');
+h=evalin('base','neuropilRoiCounter');
+c=evalin('base','neuropilROICenters');
+b=evalin('base','neuropilROIBoundaries');
 
 % Populate the box:
 for n=1:h
@@ -988,13 +1031,25 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-
-hold all    
-for n=1:numel(b)
-    plot(b{1,n}{1,1}(:,2),b{1,n}{1,1}(:,1),'g','LineWidth',1)
-    text(c{1,n}.Centroid(1)-1, c{1,n}.Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 1 1]);
+if strcmp(cMap,'jet')
+    outColor='k';
+    txtColor=[0 0 0];
+else
+    outColor='g';
+    txtColor=[0 1 1];
 end
+axes(handles.imageWindow);
+hold all 
+for n=1:numel(b)
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+
+    end
+end
+
 hold off
+
 
         
 % Update handles structure
@@ -1192,47 +1247,61 @@ function makeNeuropilMasks_Callback(hObject, eventdata, handles)
 
 % Handle Neuropil ROIs
 
+% because our somas can be irregular we need to smooth the boundaries.
+
 % parameters
-tempImage=evalin('base','currentImage');
-aspectR=[size(tempImage,1),size(tempImage,2)];
+tempImage=evalin('base','somaticROIs{1,1}');
 sR=evalin('base','somaticROIs');
-sR_PL=evalin('base','somaticROI_PixelLists');
-pxSpred = str2double(get(handles.neuropilPixelSpreadEntry,'String'));
-seDisk=strel('disk',pxSpred);
-
-% We will make individual masks for each roi and then dilate by a specific
-% number of pixels.
 
 
+npSpredPx = str2double(get(handles.neuropilPixelSpreadEntry,'String'));
+somaClosePx=10;
+somaBoundaryPx=6; %todo: should be entered by user.
+
+
+% todo: a possible error case if an image has fewer than 30 pixels.
+
+smoothSomasMask=zeros(size(tempImage)); % this will be an all containing mask we use to exclude from neuropils.
+smoothNeuropilsMask=zeros(size(tempImage)); 
+
+neuropilRoiCounter=0;
+% First make an array of individual smoothed somatic rois and build on the all inclusive image.
 for n=1:numel(sR)
-    neuropilROIs{1,n}=imdilate(sR{1,n},seDisk);
+    neuropilROIs{1,n}=imdilate(imclose(sR{1,n},strel('disk',somaClosePx)),strel('disk',somaBoundaryPx));
+    smoothSomasMask=smoothSomasMask+neuropilROIs{1,n};
+    neuropilRoiCounter=neuropilRoiCounter+1;
+end
+
+% normalize because after dialting each cell there will be more overlap.
+smoothSomasMask=smoothSomasMask>0;
+assignin('base','flatMasks_smoothSomas',smoothSomasMask)
+
+
+for n=1:neuropilRoiCounter
+    neuropilROIs{1,n}=imdilate(neuropilROIs{1,n},strel('disk',npSpredPx));
+    % Find and Subtract Overlap Between a Particular Neuropil Mask and ROI mask
+    neuropilROIs{1,n}=neuropilROIs{1,n}-smoothSomasMask;
+    % this will give 0's where there is overlap, 1's were there is none and -1 where there was no difference
+    neuropilROIs{1,n}=neuropilROIs{1,n}>0;
+    smoothNeuropilsMask=smoothNeuropilsMask+neuropilROIs{1,n};
     neuropilROIBoundaries{1,n}=bwboundaries(neuropilROIs{1,n});
     neuropilROICenters{1,n}=regionprops(neuropilROIs{1,n},'Centroid');
     neuropilROI_PixelLists{1,n}=regionprops(neuropilROIs{1,n},'PixelList');
     neuropilROI_PixelLists{1,n}=neuropilROI_PixelLists{1,n}.PixelList;
-    sR_PL{1,n}=sR_PL{1,n}.PixelList;
 end
 
-% Find and Subtract Overlap Between a Particular Neuropil Mask and ROI mask
-for n=1:numel(sR)
-    for h=1:numel(sR)
-    % loop through each cell and look for overlap between all cells
-    neuropilROI_PixelLists{1,n}=setdiff(neuropilROI_PixelLists{1,n},sR_PL{1,h},'rows');
-    end
-end
+smoothNeuropilsMask=smoothNeuropilsMask>0;
+assignin('base','flatMasks_neuropilRings',smoothNeuropilsMask)
 
-% Draw the annulus
-for n=1:numel(sR),
-        neuropilROIs{1,n}=false(aspectR(1),aspectR(2));
-        for h=1:size(neuropilROI_PixelLists{1,n},1)
-            neuropilROIs{1,n}(neuropilROI_PixelLists{1,n}(h,2),neuropilROI_PixelLists{1,n}(h,1))=1;
-        end
-    neuropilROIBoundaries{1,n}=bwboundaries(neuropilROIs{1,n});
-end
 
 assignin('base','neuropilROIs',neuropilROIs)
 assignin('base','neuropilROI_PixelLists',neuropilROI_PixelLists)
 assignin('base','neuropilROIBoundaries',neuropilROIBoundaries)
+assignin('base','neuropilRoiCounter',neuropilRoiCounter)
+assignin('base','neuropilROICenters',neuropilROICenters)
+
+set(handles.neuropilAlertString,'String','finished making neuropil masks','ForegroundColor',[0 0 0]);
+disp('neuropil masks made')
 
 
 % Update handles structure
@@ -1969,3 +2038,12 @@ boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
+
+
+% --- Executes on button press in vascularRoisDisplayToggle.
+function vascularRoisDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to vascularRoisDisplayToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of vascularRoisDisplayToggle

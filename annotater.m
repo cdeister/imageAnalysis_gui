@@ -182,7 +182,7 @@ numImages=size(importStack,3);
 imageToDisplay=str2num(get(handles.imageCountEntry,'String'));
 
 axes(handles.imageWindow);
-imagesc(importStack(:,:,imageToDisplay))
+imagesc(importStack(:,:,imageToDisplay)')
 colormap gray
 daspect([1 1 1])
 
@@ -263,7 +263,7 @@ numImages=size(importStack,3);
 imageToDisplay=str2num(get(handles.imageCountEntry,'String'));
 
 axes(handles.imageWindow);
-imagesc(importStack(:,:,imageToDisplay))
+imagesc(importStack(:,:,imageToDisplay)')
 colormap gray
 daspect([1 1 1])
 
