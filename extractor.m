@@ -17,7 +17,7 @@ function varargout = extractor(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 31-Dec-2015 16:35:10
+% Last Modified by GUIDE v2.5 31-Dec-2015 16:51:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -122,6 +122,10 @@ firstIm=str2num(get(handles.firstImageEntry,'string'));
 endIm=str2num(get(handles.endImageEntry,'string'));
 
 skipImagesToggle=get(handles.diskExtractSkipByToggle,'Value');
+skipImagesToggle=get(handles.diskExtractSkipByToggle,'Value');
+
+
+skipImagesToggle=get(handles.diskExtractSkipByToggle,'Value');
 if skipImagesToggle
     st=str2num(get(handles.diskExtractSkipByStartEntry,'String'));
     by=str2num(get(handles.diskExtractSkipByEntry,'String'));
@@ -137,10 +141,12 @@ end
 disp(['after skiping you will extract from ' num2str(numel(fileList)) ' images'])
 
 
-% handle concat of roi types
-roiStringMap={'somaticROIs','dendriticROIs','axonalROIs','neuropilROIs','redSomaticROIs'};
+% ************ handle concatination of roi types
+roiStringMap={'somaticROIs','dendriticROIs','axonalROIs','boutonROIs','neuropilROIs','vascularROIs','filledSomaROIs','redSomaticROIs'};
 roiToggleTruth=[get(handles.somaExtractCheck,'Value'),get(handles.dendriteExtractCheck,'Value'),...
-    get(handles.axonExtractCheck,'Value'),get(handles.neuropilExtractCheck,'Value'),get(handles.filledNeuropilExtractCheck,'Value')];
+    get(handles.axonExtractCheck,'Value'),get(handles.boutonExtractCheck,'Value'),...
+    get(handles.neuropilExtractCheck,'Value'),get(handles.vascularExtractCheck,'Value'),...
+    get(handles.filledSomaExtractCheck,'Value'),get(handles.redSomaticExtractCheck,'Value')];
 
 rois=[];   % we will map in the selected rois into this
 warnBit=1;
@@ -156,11 +162,17 @@ end
 if warnBit==1;
     disp('no rois')
 end
+% ************ end handle concatination of roi types
 
+% ************  handle image list prep
 numImages=(endIm-firstIm)+1;
 sED=zeros(numel(rois),numImages);
 regFlag=get(handles.diskRegFlag,'Value');
 
+% ************  end handle image list prep
+
+
+% ************  extract without registration 
 if regFlag==0
 disp(['about to extract, this should take ~ ' num2str((numel(rois)*.0004*numImages)./60) ' minutes'])
 cc=clock;
@@ -182,6 +194,7 @@ eT=toc;
 assignin('base','diskLuminance',diskLuminance);
 disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
+% ************  extract with registration 
 elseif regFlag==1
 
 disp(['about to extract, this should take ~ ' num2str((numel(rois)*.0008*numImages)./60) ' minutes'])
@@ -192,8 +205,6 @@ template=evalin('base','regTemplate');
 disp('extracting')
 registeredTransformations=zeros(4,numImages);
 diskLuminance=zeros(1,numImages);
-
-
 
 for n=firstIm:endIm
     impImage=imread([imPath filesep fileList(n).name]);
@@ -218,14 +229,18 @@ disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
 end
 
-
-assignin('base','somaticF',sED)
+% ************  now we need to map the extracted values to the original roi types
+for n=1:numel(roiToggleTruth)
+    if roiToggleTruth(n)==1
+        roisToMapCount=evalin('base', ['numel(' roiStringMap{n} ')']);
+        assignin('base',[roiStringMap{n}(1:end-4) 'F'],sED(1:roisToMapCount,:));
+        sED(1:roisToMapCount,:)=[];
+    else
+    end
+end
 
 % Update handles structure
 guidata(hObject, handles);
-
-
-
 
 
 
@@ -237,93 +252,60 @@ function extractButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.extractButton,'string','running','ForegroundColor','red','enable','off');
 
-disp('*** extracting now, wait a bit ...')
+% ************ handle concatination of roi types
+roiStringMap={'somaticROIs','dendriticROIs','axonalROIs','boutonROIs','neuropilROIs','vascularROIs','filledSomaROIs','redSomaticROIs'};
+roiToggleTruth=[get(handles.somaExtractCheck,'Value'),get(handles.dendriteExtractCheck,'Value'),...
+    get(handles.axonExtractCheck,'Value'),get(handles.boutonExtractCheck,'Value'),...
+    get(handles.neuropilExtractCheck,'Value'),get(handles.vascularExtractCheck,'Value'),...
+    get(handles.filledSomaExtractCheck,'Value'),get(handles.redSomaticExtractCheck,'Value')];
 
+rois=[];   % we will map in the selected rois into this
+warnBit=1;
+for n=1:numel(roiToggleTruth)
+    if roiToggleTruth(n)==1
+        warnBit=0;      % if anything is selected flip the warning to 0.
+        roisToMap=evalin('base', roiStringMap{n});
+        rois=[rois roisToMap];
+    else
+    end
+end
+
+if warnBit==1;
+    disp('no rois')
+end
+% ************ end handle concatination of roi types
+
+%--- extract
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 selectStack=selections{selectionsIndex};
 
-if get(handles.somaExtractCheck, 'Value')==1;
-    tic
-    sRois=evalin('base','somaticROIs');
-    dStack=double(evalin('base',selectStack));
-    sED=zeros(numel(sRois),size(dStack,3));
-    for n=1:size(dStack,3)
-        for q=1:numel(sRois)
-            aIm=dStack(:,:,n);
-            sED(q,n)=mean(aIm(sRois{q}(:,:)));
-        end
+
+dStackSize=evalin('base',['size(' selectStack ');']);
+
+sED=zeros(numel(rois),dStackSize(3));
+tic
+for n=1:dStackSize(3)
+    for q=1:numel(rois)
+        aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
+        sED(q,n)=mean(aIm(rois{q}(:,:)));
     end
-    assignin('base','somaticF',sED)
-    disp('somas extracted')
-    toc 
+end
+aa=toc
+disp(num2str(aa))
+
+%--- end extract
+
+% ************  now we need to map the extracted values to the original roi types
+for n=1:numel(roiToggleTruth)
+    if roiToggleTruth(n)==1
+        roisToMapCount=evalin('base', ['numel(' roiStringMap{n} ')']);
+        assignin('base',[roiStringMap{n}(1:end-4) 'F'],sED(1:roisToMapCount,:));
+        sED(1:roisToMapCount,:)=[];
+    else
+    end
 end
 
-if get(handles.neuropilExtractCheck, 'Value')==1;
-    tic
-    sRois=evalin('base','neuropilROIs');
-    dStack=double(evalin('base',selectStack));
-    sED=zeros(numel(sRois),size(dStack,3));
-    for n=1:size(dStack,3)
-        for q=1:numel(sRois)
-            aIm=dStack(:,:,n);
-            sED(q,n)=mean(aIm(sRois{q}(:,:)));
-        end
-    end
-    assignin('base','neuropilF',sED)
-    disp('neuropil extracted')
-    toc   
-end
-
-if get(handles.boutonExtractCheck, 'Value')==1;
-    tic
-    sRois=evalin('base','boutonROIs');
-    dStack=double(evalin('base',selectStack));
-    sED=zeros(numel(sRois),size(dStack,3));
-    for n=1:size(dStack,3)
-        for q=1:numel(sRois)
-            aIm=dStack(:,:,n);
-            sED(q,n)=mean(aIm(sRois{q}(:,:)));
-        end
-    end
-    assignin('base','boutonF',sED)
-    disp('boutons extracted')
-    toc 
-end
-
-if get(handles.dendriteExtractCheck, 'Value')==1;
-    tic
-    sRois=evalin('base','dendriticROIs');
-    dStack=double(evalin('base',selectStack));
-    sED=zeros(numel(sRois),size(dStack,3));
-    for n=1:size(dStack,3)
-        for q=1:numel(sRois)
-            aIm=dStack(:,:,n);
-            sED(q,n)=mean(aIm(sRois{q}(:,:)));
-        end
-    end
-    assignin('base','dendriticF',sED)
-    disp('dendrites extracted')
-    toc    
-end
-
-if get(handles.filledNeuropilExtractCheck, 'Value')==1;
-    tic
-    sRois=evalin('base','redSomaticROIs');
-    dStack=double(evalin('base',selectStack));
-    sED=zeros(numel(sRois),size(dStack,3));
-    for n=1:size(dStack,3)
-        for q=1:numel(sRois)
-            aIm=dStack(:,:,n);
-            sED(q,n)=mean(aIm(sRois{q}(:,:)));
-        end
-    end
-    assignin('base','redSomaticF',sED)
-    disp('dendrites extracted')
-    toc    
-end
-
-disp('*** done extracting now, go have fun')
 
 set(handles.extractButton,'string','Extract','ForegroundColor','black','enable','on');
 
@@ -333,13 +315,16 @@ set(handles.extractButton,'string','Extract','ForegroundColor','black','enable',
 % Update handles structure
 guidata(hObject, handles);
 
+
+
 % --- Executes on slider movement.
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
 % hObject    handle to roiDisplaySlider (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'Value') returns position of slider
+% Hints: 
+(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
 sTr=get(handles.somaRoisDisplayToggle, 'Value');
@@ -348,7 +333,7 @@ bTr=get(handles.boutonRoisDisplayToggle, 'Value');
 dTr=get(handles.dendriteRoisDisplayToggle, 'Value');
 npTr=get(handles.dfDisplayToggle,'Value');
 cnpTr=get(handles.npCorDfDispToggle,'Value');
-rsTr=get(handles.filledNeuropilRoisDisplayToggle, 'Value');
+rsTr=get(handles.redSomaticRoisDisplayToggle, 'Value');
 
 
 sliderValue = get(handles.roiDisplaySlider,'Value');
@@ -455,7 +440,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 1);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -503,7 +488,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 1);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -554,7 +539,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 1);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -601,7 +586,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 1);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -649,7 +634,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -697,7 +682,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -730,13 +715,13 @@ ylim([0 9000])
 guidata(hObject, handles);
 
 
-% --- Executes on button press in filledNeuropilRoisDisplayToggle.
-function filledNeuropilRoisDisplayToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to filledNeuropilRoisDisplayToggle (see GCBO)
+% --- Executes on button press in redSomaticRoisDisplayToggle.
+function redSomaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to redSomaticRoisDisplayToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of filledNeuropilRoisDisplayToggle
+% Hint: get(hObject,'Value') returns toggle state of redSomaticRoisDisplayToggle
 
 set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 set(handles.filledSomaRoisDisplayToggle, 'Value', 0);
@@ -745,7 +730,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 1);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 1);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -793,7 +778,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 1);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 1);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -836,13 +821,13 @@ function filledSomaExtractCheck_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of filledSomaExtractCheck
 
 
-% --- Executes on button press in filledNeuropilExtractCheck.
-function filledNeuropilExtractCheck_Callback(hObject, eventdata, handles)
-% hObject    handle to filledNeuropilExtractCheck (see GCBO)
+% --- Executes on button press in redSomaticExtractCheck.
+function redSomaticExtractCheck_Callback(hObject, eventdata, handles)
+% hObject    handle to redSomaticExtractCheck (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of filledNeuropilExtractCheck
+% Hint: get(hObject,'Value') returns toggle state of redSomaticExtractCheck
 
 
 % --- Executes on button press in neuropilExtractCheck.
@@ -945,7 +930,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 1);
 set(handles.npCorDfDispToggle,'Value',0);
 
@@ -998,7 +983,7 @@ set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.dendriteRoisDisplayToggle, 'Value', 0);
 set(handles.somaRoisDisplayToggle, 'Value', 0);
-set(handles.filledNeuropilRoisDisplayToggle, 'Value', 0);
+set(handles.redSomaticRoisDisplayToggle, 'Value', 0);
 set(handles.dfDisplayToggle, 'Value', 0);
 set(handles.npCorDfDispToggle,'Value',1);
 
@@ -1049,7 +1034,7 @@ bS=get(handles.boutonRoisDisplayToggle, 'Value');
 aS=get(handles.axonRoisDisplayToggle, 'Value');
 dS=get(handles.dendriteRoisDisplayToggle, 'Value');
 sS=get(handles.somaRoisDisplayToggle, 'Value');
-fnpS=get(handles.filledNeuropilRoisDisplayToggle, 'Value');
+fnpS=get(handles.redSomaticRoisDisplayToggle, 'Value');
 dfS=get(handles.dfDisplayToggle, 'Value');
 sS=get(handles.npCorDfDispToggle,'Value');
 
@@ -1133,3 +1118,28 @@ function diskExtractSkipByStartEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in pushbutton7.
+function pushbutton7_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in checkbox15.
+function checkbox15_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox15 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox15
+
+
+% --- Executes on button press in dataAppendToggle.
+function dataAppendToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to dataAppendToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of dataAppendToggle
