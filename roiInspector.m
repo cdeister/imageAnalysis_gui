@@ -17,7 +17,7 @@ function varargout = roiInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 31-Dec-2015 19:32:02
+% Last Modified by GUIDE v2.5 09-Apr-2016 13:23:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -95,6 +95,12 @@ selectStack=selections{selectionsIndex};
 
 traces=evalin('base',selectStack);
 
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 sTr=get(handles.traceSmoothToggle, 'Value');
@@ -146,6 +152,13 @@ elseif bTr
 elseif dTr
     traces=evalin('base','dendriticF')';
 end
+
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
@@ -180,8 +193,18 @@ selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 selectStack=selections{selectionsIndex};
 
+assignin('base',[selectStack '_t'],selectStack)
+evalin('base',['scratch.loadedData=' selectStack '_t;'])
+evalin('base',['clear ' selectStack '_t;']);
+
 traces=evalin('base',selectStack);
-% traces=traces';
+
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
 tnum=str2double(get(handles.displayedROICounter,'String'));
 
 
@@ -214,22 +237,22 @@ function flagROIButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-if dfS || sS
-    sROI=str2num(get(handles.displayedROICounter,'String'));
-    lP=1;
-    disp('lP')
-    if lP==1
-        somaticROIS_flagged=evalin('base','somaticROIS_flagged');
-        somaticROIS_flagged=[somaticROIS_flagged sROI];
-        assignin('base','somaticROIS_flagged',somaticROIS_flagged);
-        disp('1')
-    else
-        somaticROIS_flagged=sROI;
-        assignin('base','somaticROIS_flagged',somaticROIS_flagged);
-        disp('0')
-    end
+dataToFlag=evalin('base','scratch.loadedData');
+flagString=['flagged_' dataToFlag];
+prevAt=evalin('base',['exist(''' flagString ''',''var'')']);
+
+roiToFlag=str2num(get(handles.displayedROICounter,'String'));
+
+if prevAt
+    tFD=evalin('base',flagString);
+    tFD(end+1)=roiToFlag;
+    tFD=unique(tFD);
+    assignin('base',flagString,tFD);
 else
+    assignin('base',flagString,roiToFlag);
 end
+
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -273,6 +296,12 @@ selectStack=selections{selectionsIndex};
 
 traces=evalin('base',selectStack);
 
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 sTr=get(handles.traceSmoothToggle, 'Value');
@@ -301,16 +330,72 @@ selectStack=selections{selectionsIndex};
 
 traces=evalin('base',selectStack);
 
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 sTr=get(handles.traceSmoothToggle, 'Value');
 if sTr
     tempT=traces(tnum,:)';
     tempT=batchSmooth(tempT)';
-    evalin('base',[selectStack '(' num2str() ',:)']);
+    
+    % if the xy toggle is on, then flip before you save.
+    if dimensionIntent
+        tempT=tempT';
+        assignin('base','tempT',tempT);
+        evalin('base',[selectStack '(:,' num2str(tnum) ')=tempT;,clear tempT'])
+    else
+        assignin('base','tempT',tempT);
+        evalin('base',[selectStack '(' num2str(tnum) ',:)=tempT;,clear tempT'])
+    end
 else
     evalin('base',[]);
 end
+
+
+traces=evalin('base',selectStack);
+
+if dimensionIntent
+    traces=traces';
+else
+end
+
+tnum=str2double(get(handles.displayedROICounter,'String'));
+axes(handles.traceDisplay);
+sTr=get(handles.traceSmoothToggle, 'Value');
+if sTr
+    tempT=traces(tnum,:)';
+    plot(batchSmooth(tempT))
+else
+plot(traces(tnum,:));
+end
+
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in flipXY_Toggle.
+function flipXY_Toggle_Callback(hObject, eventdata, handles)
+% hObject    handle to flipXY_Toggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of flipXY_Toggle
+
+
+% --- Executes on button press in refreshVarListButton.
+function refreshVarListButton_Callback(hObject, eventdata, handles)
+% hObject    handle to refreshVarListButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+vars = evalin('base','who');
+set(handles.workspaceVarBox,'String',vars)
 
 % Update handles structure
 guidata(hObject, handles);

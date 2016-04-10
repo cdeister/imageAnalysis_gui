@@ -1,6 +1,9 @@
-function [nC,pairMap]=getNoiseCorSingle(testCellsData)
+function [nC,pairMap]=getNoiseCorShuf(testCellsData)
 
+rPN=size(testCellsData,2);
 
+testCellsData(:,:,1)=testCellsData(:,randperm(rPN),1);
+testCellsData(:,:,2)=testCellsData(:,randperm(rPN),2);
 
 rsDf=reshape(testCellsData,(size(testCellsData,1)*size(testCellsData,2)),size(testCellsData,3));
 

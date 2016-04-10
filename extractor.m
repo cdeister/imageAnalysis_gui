@@ -324,7 +324,7 @@ function roiDisplaySlider_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hints: 
-(hObject,'Value') returns position of slider
+%(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
 sTr=get(handles.somaRoisDisplayToggle, 'Value');

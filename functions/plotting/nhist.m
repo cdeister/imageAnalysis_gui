@@ -1,9 +1,9 @@
 %% description
 % function  [theText, rawN, x] = nhist(cellValues, 'parameter', value, ...)
 % 
-% nhist(x); works just like hist(x) but the resulting plot looks nice.
+% NHIST(x); works just like hist(x) but the resulting plot looks nice.
 % 
-% t = nhist(Y) bins the elements of Y into equally spaced containers
+% t = NHIST(Y) bins the elements of Y into equally spaced containers
 %            and returns a string with information about the distributions.
 %            If Y is a cell array or a structure nhist will make graph the
 %            binned (discrete) probability density function of each data
@@ -11,12 +11,12 @@
 %            array or structure which includes a string for each set of
 %            data.
 % 
-% [t, N, X]= nhist(...) also returns the number of items in each bin, N,
+% [t, N, X]= NHIST(...) also returns the number of items in each bin, N,
 %            and the locations of the left edges of each bin. If Y is a
 %            cell array or structure then the output is in the same form.
 % 
-% nhist(Y,'Property', . . . )
-% nhist(Y,'PropertyName',PropertyValue, . . . )
+% NHIST(Y,'Property', . . . )
+% NHIST(Y,'PropertyName',PropertyValue, . . . )
 % See below for the different parameters.
 %__________________________________________________________________________ 
 % Summary of what function does:
@@ -264,6 +264,8 @@ newfigFlag=0;
 
 barFactor=1;
 normalHist=0;
+logFlag = 0;
+logFunc = @(x) x;
 
 %% Interpret the user parameters
 k = 1;
@@ -314,14 +316,18 @@ while k <= length(varargin)
             
         case {'samebins','samebin','same'}
             sameBinsFlag=1;
-        case {'proportion','p','fraction','frac','percent'}
+        case {'proportion','p','fraction','frac','percent','normal'}
             proportionFlag=1;
         case 'pdf'
             pdfFlag=1;
         case {'numbers','number'}
             numberFlag = 1;
-        case {'smooth','smoooth'}
+        case {'smooth','smoooth','filter','filt'}
             smoothFlag = 1;
+        case {'log'}
+            logFlag = 1;
+            logFunc = @(x) 10.^x;
+
             
         case {'int','integer','discrete','intbins','intbin'}
             intbinsForcedFlag = 1;
@@ -331,6 +337,7 @@ while k <= length(varargin)
                 temp = varargin{k + 1};
                 if ~ischar(temp) % if its a number then we want to use it.
                     intbinsFlag=temp;
+                    k=k+1;
                 end
             end
             
@@ -378,7 +385,7 @@ while k <= length(varargin)
             k = k+1;
         case {'median','medians'}
             medianFlag=1;
-        case {'separateplots','separate','plotseparately','normalhist','normal','s'}
+        case {'separateplots','separate','plotseparately','normalhist','s'}
             normalHist=1;
         case {'mode','modes'}
             modeFlag = 1;
@@ -455,6 +462,8 @@ if vertLinesForcedFlag>1
     vertLinesForcedFlag=0;
 end         
 
+
+
 %% Collect the Data, check some things
 num2Plot=length(cellValues);
 
@@ -465,6 +474,16 @@ if legendExists
             for k=length(cellLegend)+1:num2Plot
                 cellLegend{k}=['Plot #' num2str(k)];
             end
+        end
+    end
+end
+
+% check for negative and zero values if logFlag is used.
+if logFlag
+    for k=1:num2Plot
+        badVals = sum(cellValues{k}<=0);
+        if badVals>0
+            warning([num2str(badVals) ' were <=0 and had to be removed from the analysis, try adding +1']);
         end
     end
 end
@@ -482,6 +501,13 @@ else
         if sameBinsFlag % then if one has integers, they all must be plotted along integers.
             intbins = or(intbins,sum(intbins));
         end
+    end
+end
+
+% if logflag then take that log here!
+if logFlag
+    for k=1:num2Plot
+        cellValues{k} = log10(cellValues{k});
     end
 end
 
@@ -688,7 +714,7 @@ binWidth=zeros(1,num2Plot);
 if minBins<3,  error('No I refuse to plot this you abuser of functions, the minimum number of bins must be at least 3'); end;
 if minBins<10, warning('you are using a very small minimum number of bins, do you even know what a histogram is?'); end;
 if minBins>20, warning('you are using a very large minimum number of bins, are you sure you *always need this much precision?'); end;
-if maxBins>150,warning('you are using a very high maximum for the number of bins, unless your monitor is in times square you probably won''t need that many bins'); end;
+if maxBins>200,warning('you are using a very high maximum for the number of bins, unless your monitor is in times square you probably won''t need that many bins'); end;
 if maxBins<50, warning('you are using a low maximum for the number of bins, are you sure it makes sense to do this?'); end;
 
 % Choose estimate bin widths
@@ -903,7 +929,7 @@ else % they will all be in one plot, its simple. there is no faceStyleOrder
 %       That means we should use the colormap they gave
         lineStyleOrder=linspecer(num2Plot,lineColor);
     else % just use the default 'jet' colormap.
-        lineStyleOrder=linspecer(num2Plot);
+        lineStyleOrder=linspecer(num2Plot,'qualitative');
     end    
 end
 
@@ -920,7 +946,7 @@ if normalHist % There will be no legend for the normalHist, therefore this loop 
             subplot(num2Plot,1,k);
         end
         hold on;
-        plot([0 1],[-1 -1],'color',lineStyleOrder{k},'linewidth',linewidth);
+        plot([.5 1.5],[-1 -1],'color',lineStyleOrder{k},'linewidth',linewidth);
         set(gca,'fontsize',AxisFontSize);
     end
 else % do the same thing, but on different subplots
@@ -929,7 +955,7 @@ else % do the same thing, but on different subplots
 %     places with no data have a reserved color spot on a legend.
 %     plot lines below the x axis, they will never show up but will set the
 %     legend appropriately.
-        plot([0 1],[-1 -1],'color',lineStyleOrder{k},'linewidth',linewidth);
+        plot([.5 1.5],[-1 -1],'color',lineStyleOrder{k},'linewidth',linewidth);
     end
     set(gca,'fontsize',AxisFontSize);
 end
@@ -944,18 +970,21 @@ if normalHist % plot on separate sub-plots
 %           but with more functionality (there must be some matlab bug which
 %           doesn't allow changing the lineColor property of a histc bar graph.)
             if vertLinesFlag % then plot the bars with edges
-                bar(x{k}+binWidth(k)/2,n{k}/1,'FaceColor',faceStyleOrder{k},'barwidth',1,'EdgeColor','k','linewidth',1.5)
+                bar(logFunc(x{k}+binWidth(k)/2),n{k}/1,'FaceColor',faceStyleOrder{k},'barwidth',1,'EdgeColor','k','linewidth',1.5)
             else % plot the bars without edges
-                bar(x{k}+binWidth(k)/2,n{k}/1,'FaceColor',faceStyleOrder{k},'barwidth',1,'EdgeColor','none')
+                bar(logFunc(x{k}+binWidth(k)/2),n{k}/1,'FaceColor',faceStyleOrder{k},'barwidth',1,'EdgeColor','none')
             end
             
             if ~smoothFlag
-                stairs(x{k},n{k},'k','linewidth',linewidth);
-                plot([x{k}(1) x{k}(1)],[0 n{k}(1)],'color','k','linewidth',linewidth);
+                stairs(logFunc(x{k}),n{k},'k','linewidth',linewidth);
+                plot(logFunc([x{k}(1) x{k}(1)]),[0 n{k}(1)],'color','k','linewidth',linewidth);
             else % plot it smooth, skip the very edges.
 %                 plot(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),'k','linewidth',linewidth);
-                xi = linspace(SXRange(1),SXRange(2),500); yi = pchip(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),xi);
-                plot(xi,yi,'k','linewidth',linewidth);
+%                 xi = linspace(SXRange(1),SXRange(2),500); yi = pchip(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),xi);
+                xi = linspace(SXRange(1)-binWidth(k)/2,SXRange(2)+binWidth(k)/2,500);
+%                 not to (end-1) like above, so we got an extra digit
+                yi = pchip([x{k}(1)-binWidth(k)/2, x{k}(1:end)+binWidth(k)/2],[0 n{k}(1:end-1) 0],xi);
+                plot(logFunc(xi),yi,'k','linewidth',linewidth);
             end
             
             
@@ -965,13 +994,17 @@ else % plot them all on one graph with the stairs function
     for k=1:num2Plot
         if isData(k)
             if ~smoothFlag
-                stairs(x{k},n{k},'color',lineStyleOrder{k},'linewidth',linewidth);
-                plot([x{k}(1) x{k}(1)],[0 n{k}(1)],'color',lineStyleOrder{k},'linewidth',linewidth);
+                stairs(logFunc(x{k}),n{k},'color',lineStyleOrder{k},'linewidth',linewidth);
+                plot(logFunc([x{k}(1) x{k}(1)]),[0 n{k}(1)],'color',lineStyleOrder{k},'linewidth',linewidth);
             else % plot it smooth
-                xi = linspace(SXRange(1),SXRange(2),500); yi = pchip(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),xi);
-                plot(xi,yi,'color',lineStyleOrder{k},'linewidth',linewidth);
+                
+                xi = linspace(SXRange(1)-binWidth(k)/2,SXRange(2)+binWidth(k)/2,500);
+%                 not to (end-1) like above, so we got an extra digit
+                yi = pchip([x{k}(1)-binWidth(k)/2, x{k}(1:end)+binWidth(k)/2],[0 n{k}(1:end-1) 0],xi);
+%                 xi = [linspace(SXRange(1),SXRange(2),500)]; yi = pchip(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),xi);
+                plot(logFunc(xi),yi,'color',lineStyleOrder{k},'linewidth',linewidth);
                 if vertLinesFlag % plot those points, otherwise its a wash.
-                    plot(x{k}(1:end-1)+binWidth(k)/2,n{k}(1:end-1),'.','color',lineStyleOrder{k},'markersize',15);
+                    plot(logFunc(x{k}(1:end-1)+binWidth(k)/2),n{k}(1:end-1),'.','color',lineStyleOrder{k},'markersize',15);
                 end
             end
         end
@@ -993,10 +1026,10 @@ if normalHist
         end
         if isData(k)
         if cropped_right{k} % if some of the data points lie outside the bins.
-            text(x{k}(end-1)+binWidth(k)/10,n{k}(end-1)+max(n{k})/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
+            text(logFunc(x{k}(end-1)+binWidth(k)/10),n{k}(end-1)+max(n{k})/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
         end
         if cropped_left{k} % if some of the data points lie outside the bins.
-            text(x{k}(1)+binWidth(k)/10,n{k}(1)+max(n{k})/30-max(n{k})/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
+            text(logFunc(x{k}(1)+binWidth(k)/10),n{k}(1)+max(n{k})/30-max(n{k})/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
         end
         end
     end
@@ -1008,10 +1041,10 @@ else
 
       %    ADD A STAR IF CROPPED 
             if cropped_right{k} % if some of the data points lie outside the bins.
-                text(x{k}(end-1)+binWidth(k)/10,n{k}(end-1)+maxN/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
+                text(logFunc(x{k}(end-1)+binWidth(k)/10),n{k}(end-1)+maxN/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
             end
             if cropped_left{k} % if some of the data points lie outside the bins.
-                text(x{k}(1)+binWidth(k)/10,n{k}(1)+maxN/30-maxN/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
+                text(logFunc(x{k}(1)+binWidth(k)/10),n{k}(1)+maxN/30-maxN/50,'*','fontsize',AxisFontSize,'color',lineStyleOrder{k});
             end
         end
     end
@@ -1050,9 +1083,9 @@ for k=1:num2Plot
     end
     if medianFlag
         if normalHist % plot with 'MarkerFaceColor'
-            stem(medianV{k},(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k});
+            stem(logFunc(medianV{k}),(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k});
         else % plot hollow
-            stem(medianV{k},(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth)
+            stem(logFunc(medianV{k}),(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth)
         end
         
     end
@@ -1061,16 +1094,16 @@ for k=1:num2Plot
 %               Note that this mode is rounded . . .
         if medianFlag % plot the mode in a different way
             if normalHist
-                stem(roundedMode{k},(1.1)*tempMax,'--','color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k});
+                stem(logFunc(roundedMode{k}),(1.1)*tempMax,'--','color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k});
             else
-                stem(roundedMode{k},(1.1)*tempMax,'--','color',lineStyleOrder{k},'linewidth',linewidth)
+                stem(logFunc(roundedMode{k}),(1.1)*tempMax,'--','color',lineStyleOrder{k},'linewidth',linewidth)
             end
             
         else % plot the regular way and there will be no confusion
             if normalHist
-                stem(roundedMode{k},(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k})
+                stem(logFunc(roundedMode{k}),(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth,'MarkerFaceColor',faceStyleOrder{k})
             else
-                stem(roundedMode{k},(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth);
+                stem(logFunc(roundedMode{k}),(1.1)*tempMax,'color',lineStyleOrder{k},'linewidth',linewidth);
             end
         end
 
@@ -1102,10 +1135,10 @@ for k=1:num2Plot
         end
         
         if normalHist % plot only the dot in color
-            plot(meanV{k},tempY,'.','markersize',25,'color',faceStyleOrder{k});
-            plot(meanV{k},tempY,'o','markersize',8,'color',[0 0 0],'linewidth',linewidth);
+            plot(logFunc(meanV{k}),tempY,'.','markersize',25,'color',faceStyleOrder{k});
+            plot(logFunc(meanV{k}),tempY,'o','markersize',8,'color',[0 0 0],'linewidth',linewidth);
         else % plot everything in color, this dot and the bars before it
-            plot(meanV{k},tempY,'.','markersize',25,'color',lineStyleOrder{k});
+            plot(logFunc(meanV{k}),tempY,'.','markersize',25,'color',lineStyleOrder{k});
         end
     end
 %   Plot the boxplot!
@@ -1131,9 +1164,9 @@ for k=1:num2Plot
         end
         
         if normalHist % plot the thing with all the colors, there is just one of them.
-            bplot(cellValues{k},tempY,'barwidth',boxplotWidth,'linewidth',linewidth,'horizontal',pointsOrNo,'specialwidth','histmode');
+            bplot(logFunc(cellValues{k}),tempY,'barwidth',boxplotWidth,'linewidth',linewidth,'horizontal',pointsOrNo,'specialwidth','histmode');
         else % plot with the color for that data set
-            bplot(cellValues{k},tempY,'color',lineStyleOrder{k},'barwidth',boxplotWidth,'linewidth',linewidth,'horizontal',pointsOrNo,'specialwidth','histmode');
+            bplot(logFunc(cellValues{k}),tempY,'color',lineStyleOrder{k},'barwidth',boxplotWidth,'linewidth',linewidth,'horizontal',pointsOrNo,'specialwidth','histmode');
         end
         
     end
@@ -1175,7 +1208,7 @@ if normalHist
             title(makeTitle(cellLegend{k}),'FontWeight','bold');
         end
 %      set axis
-        xlim(axisRange);
+        xlim(logFunc(axisRange));
         if ~plotStdFlag && ~boxplotFlag
 %             if the plots std flag happened then it would have been
 %             already set
@@ -1183,6 +1216,11 @@ if normalHist
 %         else
             ylim([0 max(n{k})*(1.1)+modeShift{k}]);
         end
+%         scale axis
+        if logFlag
+            set(gca,'xscale','log');
+        end
+        
 %       label y
         ylabel(SYLabel, 'FontSize', AxisFontSize);
     end
@@ -1197,10 +1235,14 @@ else % all in one plot:
         ylim([0 maxN*(1.1)+modeShift{k}]);
     end
     % set x limits
-    xlim(axisRange);
+    xlim(logFunc(axisRange));
     % label y and x axis
     ylabel(SYLabel, 'FontSize', AxisFontSize);
     xlabel(SXLabel, 'FontSize', AxisFontSize);
+%         scale axis
+    if logFlag
+        set(gca,'xscale','log');
+    end
 %   Add legend
     if legendExists
         legend(makeTitle(cellLegend),'location',legendLocation);%,'location','SouthOutside');
@@ -1209,6 +1251,9 @@ else % all in one plot:
 end
 
 %% Save theText variable with all the special data points plotted
+if logFlag
+    warning('text stats not supported for logFlag');
+end
 for k=1:num2Plot
     theText{k}=[oldLegend{k} ': '];
     if isData(k)
@@ -1609,7 +1654,7 @@ end
 set3 = colorBrew2mat({[141, 211, 199];[ 255, 237, 111];[ 190, 186, 218];[ 251, 128, 114];[ 128, 177, 211];[ 253, 180, 98];[ 179, 222, 105];[ 188, 128, 189];[ 217, 217, 217];[ 252, 205, 229];[ 204, 235, 197];[ 255, 255, 179]}');
 set1JL = brighten(colorBrew2mat({[228, 26, 28];[ 55, 126, 184];[ 77, 175, 74];[ 255, 127, 0];[ 255, 237, 111]*.95;[ 166, 86, 40];[ 247, 129, 191];[ 153, 153, 153];[ 152, 78, 163]}'));
 % set1JL = set1JL);
-set1 = brighten(colorBrew2mat({[ 55, 126, 184]*.95;[228, 26, 28];[ 77, 175, 74];[ 152, 78, 163];[ 255, 127, 0]}),.8);
+set1 = brighten(colorBrew2mat({[ 55, 126, 184]*.95;[228, 26, 28];[ 77, 175, 74];[ 255, 127, 0];[ 152, 78, 163]}),.8);
 % 
 %
 if N<=0
