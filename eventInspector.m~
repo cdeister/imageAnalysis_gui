@@ -893,7 +893,7 @@ else
             if triggerTr
                 sTimTmp=0;
             else
-                sTimTmp=corStimTimesForPlot;
+                sTimTmp=corStimTimesForPlot(n);
             end
             plot([sTimTmp sTimTmp],[yMin,yMax],'k:','LineWidth',stimLineThicknes)
         end
