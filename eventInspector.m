@@ -17,7 +17,7 @@ function varargout = eventInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 10-Apr-2016 17:38:42
+% Last Modified by GUIDE v2.5 10-Apr-2016 21:20:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -366,6 +366,17 @@ stimTime_trialCountEntry_Callback(hObject,eventdata,handles)
 
 updateTrialSlider_Callback(hObject, eventdata, handles)
 
+% attempt to fill in some timing details for the user.
+timingFromStruct_Callback(hObject, eventdata, handles)
+
+% frames per trial
+stackName=evalin('base','scratch.loadedData');
+traces=evalin('base',stackName);
+frameCount=max(size(traces));
+framePerTrial=fix(frameCount/numel(selectTimesT));
+set(handles.imTime_framesPerTrialEntry,'String',framePerTrial);
+
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -594,6 +605,12 @@ function imTime_framesPerTrialEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of imTime_framesPerTrialEntry as text
 %        str2double(get(hObject,'String')) returns contents of imTime_framesPerTrialEntry as a double
 
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+
+% Update handles structure
+guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function imTime_framesPerTrialEntry_CreateFcn(hObject, eventdata, handles)
@@ -606,6 +623,8 @@ function imTime_framesPerTrialEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
 
 
 
@@ -850,6 +869,8 @@ end
 
 triggerTr=get(handles.stimTriggerToggle,'Value');
 rsInterval=str2double(get(handles.rsIntervalEntry,'string'));
+preTrigInt=str2num(get(handles.preTriggerTimeEntry,'string'));
+postTrigInt=str2num(get(handles.postTriggerEntry,'string'));
 
 if plotAsTrialsVal
     traceStart=1+((tempTrialNum-1)*framesPerTrialT);
@@ -863,14 +884,16 @@ if plotAsTrialsVal
             tempT=resampleCalciumData(tempT,tV,tV_rs);
             tV=tV_rs;
             selectedTrial=str2num(get(handles.displayedTrialCounter,'String'));
-            [tempT,tV]=stimTrigger(tempT,corStimTimesForPlot,0.5,1,rsInterval);
+            [tempT,tV]=stimTrigger(tempT,corStimTimesForPlot,preTrigInt,postTrigInt,rsInterval);
         else
         end
     else
         tV=1:framesPerTrialT;
-end
+    end
 else
 end
+
+holdTr=get(handles.traceHoldToggle,'Value');
 
 axes(handles.traceDisplay);
 if numel(tV) ~= numel(tempT)
@@ -881,9 +904,19 @@ if numel(tV) ~= numel(tempT)
     beep
 else
     if plotSampTruth
+        if holdTr
+            hold all
+        else
+            hold off
+        end
         plot(tV,tempT,'o-')
         ylim([yMin yMax])
     else
+        if holdTr
+            hold all
+        else
+            hold off
+        end
         plot(tV,tempT)
         ylim([yMin yMax])
     end
@@ -893,11 +926,15 @@ else
             if triggerTr
                 sTimTmp=0;
             else
-                sTimTmp=corStimTimesForPlot;
+                sTimTmp=corStimTimesForPlot(n);
             end
             plot([sTimTmp sTimTmp],[yMin,yMax],'k:','LineWidth',stimLineThicknes)
         end
-        hold off
+        if holdTr
+            hold all
+        else
+            hold off
+        end
     else
     end
 end
@@ -1037,7 +1074,7 @@ if sTr
 else
 end
 
-% save block
+% @@@@@@@@@@@@@@@@@@@@@@ save block
 % if the xy toggle is on, then flip before you save.
 if dimensionIntent
     tempT=tempT';
@@ -1047,6 +1084,8 @@ else
     assignin('base','tempT',tempT);
     evalin('base',[stackName '(' num2str(tnum) ',:)=tempT;,clear tempT'])
 end
+
+% @@@@@@@@@@@@@@@@@@@@@@ end save block
 
 
 if plotAsTrialsVal
@@ -1084,7 +1123,9 @@ function plotDotsToggle_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of plotDotsToggle
+
 updateTracePlot_Callback(hObject, eventdata, handles)
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1105,6 +1146,11 @@ function stimLineThicknessEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of stimLineThicknessEntry as text
 %        str2double(get(hObject,'String')) returns contents of stimLineThicknessEntry as a double
 
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function stimLineThicknessEntry_CreateFcn(hObject, eventdata, handles)
@@ -1120,51 +1166,6 @@ end
 
 
 
-function edit20_Callback(hObject, eventdata, handles)
-% hObject    handle to edit20 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit20 as text
-%        str2double(get(hObject,'String')) returns contents of edit20 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit20_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit20 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function edit21_Callback(hObject, eventdata, handles)
-% hObject    handle to edit21 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit21 as text
-%        str2double(get(hObject,'String')) returns contents of edit21 as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function edit21_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit21 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
 % --- Executes on button press in autoScaleToggle.
 function autoScaleToggle_Callback(hObject, eventdata, handles)
 % hObject    handle to autoScaleToggle (see GCBO)
@@ -1172,6 +1173,11 @@ function autoScaleToggle_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of autoScaleToggle
+
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
 
 
 
@@ -1182,6 +1188,11 @@ function yMinEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of yMinEntry as text
 %        str2double(get(hObject,'String')) returns contents of yMinEntry as a double
+
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1206,6 +1217,11 @@ function yMaxEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of yMaxEntry as text
 %        str2double(get(hObject,'String')) returns contents of yMaxEntry as a double
 
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function yMaxEntry_CreateFcn(hObject, eventdata, handles)
@@ -1228,6 +1244,11 @@ function rsIntervalEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of rsIntervalEntry as text
 %        str2double(get(hObject,'String')) returns contents of rsIntervalEntry as a double
+
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1252,6 +1273,11 @@ function preTriggerTimeEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of preTriggerTimeEntry as text
 %        str2double(get(hObject,'String')) returns contents of preTriggerTimeEntry as a double
 
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function preTriggerTimeEntry_CreateFcn(hObject, eventdata, handles)
@@ -1275,6 +1301,11 @@ function postTriggerEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of postTriggerEntry as text
 %        str2double(get(hObject,'String')) returns contents of postTriggerEntry as a double
 
+updateTracePlot_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function postTriggerEntry_CreateFcn(hObject, eventdata, handles)
@@ -1289,6 +1320,8 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
+
+
 % --- Executes on button press in stimTriggerToggle.
 function stimTriggerToggle_Callback(hObject, eventdata, handles)
 % hObject    handle to stimTriggerToggle (see GCBO)
@@ -1301,3 +1334,12 @@ updateTracePlot_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
+
+
+% --- Executes on button press in traceHoldToggle.
+function traceHoldToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to traceHoldToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of traceHoldToggle
