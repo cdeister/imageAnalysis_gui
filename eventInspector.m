@@ -17,7 +17,7 @@ function varargout = eventInspector(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 10-Apr-2016 21:20:32
+% Last Modified by GUIDE v2.5 11-Apr-2016 13:41:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1343,3 +1343,461 @@ function traceHoldToggle_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of traceHoldToggle
+
+
+
+function edit35_Callback(hObject, eventdata, handles)
+% hObject    handle to edit35 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit35 as text
+%        str2double(get(hObject,'String')) returns contents of edit35 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit35_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit35 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit36_Callback(hObject, eventdata, handles)
+% hObject    handle to edit36 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit36 as text
+%        str2double(get(hObject,'String')) returns contents of edit36 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit36_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit36 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in writePan_matSaveButton.
+function writePan_matSaveButton_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_matSaveButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+writeTrace_Callback(hObject, eventdata, handles)
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+
+
+function writePan_matNameEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_matNameEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of writePan_matNameEntry as text
+%        str2double(get(hObject,'String')) returns contents of writePan_matNameEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function writePan_matNameEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to writePan_matNameEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function writePan_roiIncEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_roiIncEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of writePan_roiIncEntry as text
+%        str2double(get(hObject,'String')) returns contents of writePan_roiIncEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function writePan_roiIncEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to writePan_roiIncEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in writePan_noFlagToggle.
+function writePan_noFlagToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_noFlagToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of writePan_noFlagToggle
+
+
+% --- Executes on button press in writePan_onlyFlagToggle.
+function writePan_onlyFlagToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_onlyFlagToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of writePan_onlyFlagToggle
+
+
+
+function writePan_trialIncEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_trialIncEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of writePan_trialIncEntry as text
+%        str2double(get(hObject,'String')) returns contents of writePan_trialIncEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function writePan_trialIncEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to writePan_trialIncEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in writePan_noFlagTrialsToggle.
+function writePan_noFlagTrialsToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_noFlagTrialsToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of writePan_noFlagTrialsToggle
+
+
+% --- Executes on button press in writePan_onlyFlagTrialsToggle.
+function writePan_onlyFlagTrialsToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_onlyFlagTrialsToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of writePan_onlyFlagTrialsToggle
+
+
+
+function plotOptions_rgbEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to plotOptions_rgbEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of plotOptions_rgbEntry as text
+%        str2double(get(hObject,'String')) returns contents of plotOptions_rgbEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function plotOptions_rgbEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to plotOptions_rgbEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in plotOptions_rgbToggle.
+function plotOptions_rgbToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to plotOptions_rgbToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plotOptions_rgbToggle
+
+
+% Callback for trace plot update
+function writeTrace_Callback(hObject, eventdata, handles)
+
+% resolve some timing stuff
+framesPerTrialT=str2num(get(handles.imTime_framesPerTrialEntry,'String'));
+frameIntervalT=str2double(get(handles.imTime_frameIntervalEntry,'String'));
+frameIntervalT=.03310588;       % todo: this shouldn't be hardcoded
+singleImageTrialTimeEnd=framesPerTrialT*frameIntervalT;
+stimTimesT=evalin('base','scratch.stimTimes');
+stimTimesT2=evalin('base','scratch.stimTimes');
+imageBehaviorDiff=(8-(framesPerTrialT*frameIntervalT))+(frameIntervalT/2);
+totalTrialsT=str2num(get(handles.stimTime_trialCountEntry,'string'));
+
+trialTimesT=(8-imageBehaviorDiff)*ones(size(stimTimesT));   % todo: the 8 shouldn't be hardcoded
+trialTimesT(1)=0;
+
+% handle stim timing
+stimTimesT=stimTimesT+cumsum(trialTimesT);
+corStimTimesForPlot=stimTimesT;
+
+assignin('base','corContStimTimesT',corStimTimesForPlot);
+evalin('base','scratch.corContStimTimes=corContStimTimesT;,clear corContStimTimesT')
+ogStimTimes=evalin('base','scratch.stimTimes');
+
+% load in the right matrix and resolve it's dimensions.
+stackName=evalin('base','scratch.loadedData');
+traces=evalin('base',stackName);
+traceDimensions=numel(size(traces));
+
+% we assume Ncell by Mframes unless told otherwise.
+dimensionIntent = get(handles.flipXY_Toggle,'Value');
+if dimensionIntent
+    traces=traces';
+else
+end
+
+% @@@@@@@@@@@@@ ROI/Trial Inclusion Logic Block
+% now we need to winow our focus to the traces and rois we want.
+% poll UI for rois to keep:
+%
+% --- ROIs -----
+%
+% is a radio toggle checked?
+excFlgROIs_Tr=get(handles.writePan_noFlagToggle,'Value');
+onlyFlgROIs_Tr=get(handles.writePan_onlyFlagToggle,'Value');
+roiKeepEntryString=get(handles.writePan_roiIncEntry,'string');
+
+% if the user wants to kick out flagged data, then we need to load the
+% flags and exclude from the entry
+% i added truth to the interface so the user won't have this option unless
+% flagged data are present.
+
+% temp logic vars
+strCont=1;
+
+% now if the user only wants the flagged data:
+if onlyFlgROIs_Tr
+    erCnd=evalin('base',['exist(''flagged_Rois_' stackName ''',''var''']);
+    if erCnd
+        includeROIS=evalin('base',['flagged_Rois_' stackName]);
+        strCont=0;
+    else
+        disp('I can not exclude flagged data you have not flagged.')
+        disp('defaulting to not including')
+        includeROIS=[];
+        strCont=1;
+    end
+else
+end
+
+if excFlgROIs_Tr && strCont
+    erCnd=evalin('base',['exist(''flagged_Rois_' stackName ''',''var''']);
+    if erCnd
+        excludeROIS=evalin('base',['flagged_Rois_' stackName]);
+    else
+        disp('I can not exclude flagged data you have not flagged.')
+        disp('defaulting to not excluding')
+        excludeROIS=[];
+    end
+else
+end
+
+if strCont
+    eval(['includeROIS=[' roiKeepEntryString '];'])
+    if excFlgROIs_Tr
+        includeROIS=setdiff(includeROIS,excludeROIS);
+    else
+    end
+else
+end
+
+
+% --- Trials -----
+%
+% is a radio toggle checked?
+excFlgTrials_Tr=get(handles.writePan_noFlagToggle,'Value');
+onlyFlgTrials_Tr=get(handles.writePan_onlyFlagToggle,'Value');
+trialKeepEntryString=get(handles.writePan_trialIncEntry,'string');
+
+% if the user wants to kick out flagged data, then we need to load the
+% flags and exclude from the entry
+% i added truth to the interface so the user won't have this option unless
+% flagged data are present.
+
+% temp logic vars
+strCont=1;
+
+% now if the user only wants the flagged data:
+if onlyFlgTrials_Tr
+    erCnd=evalin('base',['exist(''flagged_Trials_' stackName ''',''var''']);
+    if erCnd
+        includeTrials=evalin('base',['flagged_Trials_' stackName ';']);
+        strCont=0;
+    else
+        disp('I can not exclude flagged data you have not flagged.')
+        disp('defaulting to not including')
+        includeTrials=[];
+        strCont=1;
+    end
+else
+end
+
+if excFlgTrials_Tr && strCont
+    erCnd=evalin('base',['exist(''flagged_Trials_' stackName ''',''var''']);
+    if erCnd
+        excludeTrials=evalin('base',['flagged_Trials_' stackName]);
+    else
+        disp('I can not exclude flagged data you have not flagged.')
+        disp('defaulting to not excluding')
+        excludeTrials=[];
+    end
+else
+end
+
+if strCont
+    eval(['includeTrials=[' trialKeepEntryString '];'])
+    if excFlgTrials_Tr
+        includeTrials=setdiff(includeTrials,excludeTrials);
+    else
+    end
+else
+end
+
+% clean up crud
+clear strCont
+
+% ################ End: ROI/Trial Inclusion Logic Block
+
+% @@@@@@@@@@@@@ Make Matrix Block
+
+%trim the stim-times
+ogTrialCount=numel(stimTimesT);
+corStimTimesForPlot=corStimTimesForPlot(includeTrials);
+ogStimTimes=ogStimTimes(includeTrials);
+
+%trim the traces
+% first only the ROIs you want.
+traces=traces(includeROIS,:);
+totFrames=size(traces,2);
+
+% now reshape into trials and then exclude and come back:
+traces=reshape(traces,numel(includeROIS),framesPerTrialT,ogTrialCount);
+traces=traces(:,:,includeTrials);
+traces=reshape(traces,size(traces,1),size(traces,2)*size(traces,3));
+
+% now process the data
+% -- smooth?
+sTr=get(handles.traceSmoothToggle, 'Value');
+if sTr
+    traces=batchSmooth(traces);
+else
+end
+
+% -- trigger?
+
+triggerTr=get(handles.stimTriggerToggle,'Value');
+rsInterval=str2double(get(handles.rsIntervalEntry,'string'));
+preTrigInt=str2num(get(handles.preTriggerTimeEntry,'string'));
+postTrigInt=str2num(get(handles.postTriggerEntry,'string'));
+
+if triggerTr
+    tDel=str2num(get(handles.imTime_frameIntervalEntry,'String'));
+    tV=(tDel/2:tDel:framesPerTrialT*tDel-(tDel/2));
+    % reshpae into trials, but do X frames, by Y trials and Z cells to be
+    % consistent with triggering script.
+    traces=traces';
+    traces=reshape(traces,framesPerTrialT,numel(includeTrials),numel(includeROIS));
+    tV_rs=(tDel/2:rsInterval:framesPerTrialT*tDel-(tDel/2));
+    traces=resampleCalciumData(traces,tV,tV_rs);
+    tV=tV_rs;
+    [tempT,tV]=stimTrigger(traces,ogStimTimes,preTrigInt,postTrigInt,rsInterval);    
+else
+end
+
+matName=get(handles.writePan_matNameEntry,'string');
+assignin('base',[matName '_d'],tempT);
+assignin('base',[matName '_t'],tV);
+
+    
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in writePan_roiIncWrkVarButton.
+function writePan_roiIncWrkVarButton_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_roiIncWrkVarButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+assignin('base',[selectStack '_t'],selectStack)
+
+vars=evalin('base',selectStack);
+
+
+
+% make sure the user passed variable is a vector.
+if isvector(vars)==0 || isnumeric(vars)==0 
+    disp('you did not select a vector')
+    beep
+else
+    
+    set(handles.writePan_roiIncEntry,'string',num2str(vars))
+end
+
+% Update handles structure
+guidata(hObject, handles);
+
+
+% --- Executes on button press in writePan_trialIncWrkVarButton.
+function writePan_trialIncWrkVarButton_Callback(hObject, eventdata, handles)
+% hObject    handle to writePan_trialIncWrkVarButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+assignin('base',[selectStack '_t'],selectStack)
+
+vars=evalin('base',selectStack);
+
+
+
+% make sure the user passed variable is a vector.
+if isvector(vars)==0 || isnumeric(vars)==0 
+    disp('you did not select a vector')
+    beep
+else
+    
+    set(handles.writePan_trialIncEntry,'string',num2str(vars))
+end
+
+% Update handles structure
+guidata(hObject, handles);

@@ -4,9 +4,23 @@ function out=resampleCalciumData(dataMatrix,originalTimeVector,targetTimeVector)
 % easiest/best way to interpolate data sampled at odd intervals.
 
 warning('off','all');
-for i=1:size(dataMatrix,2)
-        a(i)=timeseries(dataMatrix(:,i),originalTimeVector);
-        r(i)=resample(a(1,i),targetTimeVector);  % 'zoh'
-        out(:,i)=r(i).data;
+
+if numel(size(dataMatrix))==3
+    endT=size(dataMatrix,3);
+else
+    endT=1;
 end
+
+
+for k=1:endT
+    for i=1:size(dataMatrix,2)
+        a(i)=timeseries(dataMatrix(:,i,k),originalTimeVector);
+        r(i)=resample(a(1,i),targetTimeVector);  % 'zoh'
+        out(:,i,k)=r(i).data;
+        clear a
+        clear r
+    end
+end
+
+out=squeeze(out);
 warning('on','all');

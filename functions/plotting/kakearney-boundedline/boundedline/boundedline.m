@@ -348,7 +348,7 @@ end
 % Assign output
 %--------------------
 
-nargoutchk(0, 2, nargout);
+nargchk(0, 2, nargout);
 
 if nargout >= 1
     varargout{1} = hl;
