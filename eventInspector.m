@@ -1732,6 +1732,7 @@ if triggerTr
     traces=resampleCalciumData(traces,tV,tV_rs);
     tV=tV_rs;
     [tempT,tV]=stimTrigger(traces,ogStimTimes,preTrigInt,postTrigInt,rsInterval);    
+    size(tempT)
 else
 end
 

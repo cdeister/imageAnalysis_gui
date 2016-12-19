@@ -2067,12 +2067,12 @@ for ii=1:length(hReg)
     set(get(get(hReg(ii),'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
 end
 
-% remove all remenants of legends
-if forceNoLegend
-    for ii=1:length(hReg2)
-        set(get(get(hReg2(ii),'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
-    end
-end
+% % remove all remenants of legends
+% if forceNoLegend
+%     for ii=1:length(hReg2)
+%         set(get(get(hReg2(ii),'Annotation'),'LegendInformation'),'IconDisplayStyle','off'); % Exclude line from legend
+%     end
+% end
 %% set the axis
 % The axis is only messed with if you didn't pass a position value (because
 % I figured you just wanted to make a quick plot without worry about much
