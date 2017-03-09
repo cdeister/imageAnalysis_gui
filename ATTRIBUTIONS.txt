@@ -1,0 +1,6 @@
+Key Attributions
+
+This software makes use of an image registration algorithm:
+Manuel Guizar-Sicairos, Samuel T. Thurman, and James R. Fienup, 
+
+"Efficient subpixel image registration algorithms," Opt. Lett. 33, 156-158 (2008)
