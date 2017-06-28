@@ -1,4 +1,3 @@
-
 function varargout = eventInspector(varargin)
 % EVENTINSPECTOR MATLAB code for eventInspector.fig
 % eventInspector is a very simple (incomplete) but effective extraction tool.

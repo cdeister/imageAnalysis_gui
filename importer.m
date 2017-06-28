@@ -352,7 +352,7 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
 mPF=get(handles.multiPageFlag, 'Value');
 
 if mPF==0
-    imPath=uigetdir;
+    imPath=uigetdir();
     assignin('base','importPath',imPath);
     filterString={get(handles.fileFilterString,'String')};
     filteredFiles = dir([imPath filesep '*' filterString{1} '*']); % '*.' imageType{1}

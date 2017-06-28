@@ -64,8 +64,8 @@ end
 %bsDistb=mean(bsDistb,numel(bsDistb),1);
 
 %% two metrics (t-test; rank test eq)
-dataToBSt=bias_h_all_stimDP;
-dataToBSt2=bias_m_all_stimDP;
+dataToBSt=[mean(g1(1:3,:)) mean(g1b(1:3,:))];
+dataToBSt2=[mean(g2(1:3,:)) mean(g2b(1:3,:))];
 
 bReps=10000;
 tic
