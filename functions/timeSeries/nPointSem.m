@@ -18,5 +18,5 @@ o = (q - s .^ 2 ./ n) ./ (n - 1);
 % have to take the square root since output o is the 
 % square of the standard deviation currently
 o = o .^ 0.5
-out=o;
+out=real(o);
 end

@@ -1,5 +1,7 @@
-function playMov(stack)
-
+function playMov(stack,rate)
+    if nargin==1
+        rate=30;
+    end
 
     mfactor=.3;
     ii=1;
@@ -11,5 +13,8 @@ function playMov(stack)
         colormap('jet')
         daspect([1 1 1])
         drawnow;
+        pause(rate^-1);
         delete(h);
-    end;
+    end
+
+ 

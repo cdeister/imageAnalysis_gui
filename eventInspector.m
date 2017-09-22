@@ -1,22 +1,17 @@
 function varargout = eventInspector(varargin)
+%
 % EVENTINSPECTOR MATLAB code for eventInspector.fig
-% eventInspector is a very simple (incomplete) but effective extraction tool.
-% it will load any number of tif files from disk and extract F values from
-% defined ROI types (made in roiMaker).
+% eventInspector is a flexible simple visual data inspection tool.
+% It's primary purpose is to examine Ca2+ imaging data as part of imageAnalysis,
+% but it can be used to examine any time/event series. 
 %
-% This will be improved soon to give options to control parallelization,
-% image types etc.
 %
-% Note: This used to detect the images in a folder you point to after
-% selecting disk extract. I removed this due to a weird edge case bug. 
-% So for now, you have to manually define the image range.
-%
-% Code by: Chris Deister
+% 
 % Questions: cdeister@brown.edu
 
 
 
-% Last Modified by GUIDE v2.5 11-Apr-2016 13:41:32
+% Last Modified by GUIDE v2.5 08-Jul-2017 22:19:25
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -722,7 +717,10 @@ if runBefore
     set(handles.plotTimingToggle_Frame,'Value',0);
     updateTracePlot_Callback(hObject, eventdata, handles)
 else
-    disp('I do not know how many trials are here, so it is hard to make the time vector. Update the timing struct reload it, load some spike times, and/or enter the trial times in the window.')
+    disp('I do not know how many trials are here')
+    disp('so it is hard to make the time vector Update the timing')
+    disp('struct reload it, load some spike times,')
+    disp('and/or enter the trial times in the window')
 end
 
 % Update handles structure
@@ -1801,3 +1799,10 @@ end
 
 % Update handles structure
 guidata(hObject, handles);
+
+
+% --- Executes on button press in unpackStruct.
+function unpackStruct_Callback(hObject, eventdata, handles)
+% hObject    handle to unpackStruct (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
