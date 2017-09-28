@@ -288,7 +288,7 @@ tic
 for n=1:dStackSize(3)
     for q=1:numel(rois)
         aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
-        sED(q,n)=mean(aIm(rois{q}(:,:)));
+        sED(q,n)=mean(aIm(rois{q}(:,:)));    
     end
 end
 aa=toc
@@ -336,7 +336,7 @@ cnpTr=get(handles.npCorDfDispToggle,'Value');
 rsTr=get(handles.redSomaticRoisDisplayToggle, 'Value');
 
 
-sliderValue = get(handles.roiDisplaySlider,'Value');
+sliderValue = fix(get(handles.roiDisplaySlider,'Value'));
 set(handles.displayedROICounter,'String', num2str(sliderValue));
 
 if sTr
@@ -989,7 +989,7 @@ set(handles.npCorDfDispToggle,'Value',1);
 
 somaF=evalin('base','somaticF');
 neuropilF=evalin('base','neuropilF');
-traces=batchDeltaF(batchSmooth(somaF'-(0.7*neuropilF')),0.2);
+traces=batchDeltaF(nPointMean(somaF'-(0.7*neuropilF'),3),0.2);
 traces=traces';
 assignin('base','npdfs_fp',traces);
 evalin('base','traces.dfs_npc=npdfs_fp;,clear npdfs_fp')

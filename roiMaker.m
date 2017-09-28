@@ -9,14 +9,13 @@ function varargout = roiMaker(varargin)
 % You have to refresh the workspace variables when you first load.
 % No Documentation (yet)
 %
-% Latest Update: 11/30/2014 (more user friendly)
 % Most Code: Chris Deister & Jakob Voigts
-% Global XCor Code: Spencer Smith
+% Global XCorr Segmentation Idea: Stephan Junek et al., 2009, Spencer Smith
 %
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 31-Dec-2015 12:05:38
+% Last Modified by GUIDE v2.5 28-Sep-2017 11:57:31
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -78,10 +77,9 @@ varargout{1} = handles.output;
 
 % --- Executes on button press in somaButton.
 function somaButton_Callback(hObject, eventdata, handles)
-% hObject    handle to somaButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 g=evalin('base','exist(''somaticRoiCounter'')');
+
 if g==1
     h=evalin('base','somaticRoiCounter');
     r=evalin('base','somaticROIs');
@@ -118,15 +116,13 @@ else
     assignin('base','somaticRoiCounter',h)
 end
 
-% Update handles structure
 guidata(hObject, handles);
 
-% --- Executes on button press in redSomaButton.
+
 function redSomaButton_Callback(hObject, eventdata, handles)
-% hObject    handle to redSomaButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 g=evalin('base','exist(''redSomaticRoiCounter'')');
+
 if g==1
     h=evalin('base','redSomaticRoiCounter');
     r=evalin('base','redSomaticROIs');
@@ -314,23 +310,7 @@ bTr=get(handles.boutonRoisDisplayToggle, 'Value');
 vTr=get(handles.vascularRoisDisplayToggle, 'Value');
 nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 
-% --- Plot the image again
-cMap=get(handles.colormapTextEntry,'String');
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-
-
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
-colormap(cMap)
-% --- end image plot
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 
 % If somatic
 if sTr==1;
@@ -371,10 +351,10 @@ for n=1:h
 end
 set(handles.roiSelector, 'String', '');
 set(handles.roiSelector,'String',roisList);
-set(handles.roiSelector,'Value',1)
+set(handles.roiSelector,'Value',roiNumber)
 
 % Plot
-if strcmp(cMap,'jet')
+if strcmp(get(handles.colormapTextEntry,'String'),'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -463,12 +443,6 @@ end
 guidata(hObject, handles);
 
 
-% --- Executes on button press in pushbutton6.
-function pushbutton6_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton6 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 % --- Executes on button press in loadMeanProjectionButton.
 function loadMeanProjectionButton_Callback(hObject, eventdata, handles)
@@ -476,31 +450,81 @@ function loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-a = get(handles.lowCutEntry,'String');
-b = get(handles.highCutEntry,'String');
-lowCut=str2num(a)/65535;
-highCut=str2num(b)/65535;
-
-% set(handles.lowCutEntry,'String','0')
-% set(handles.highCutEntry,'String','65535')
+a = str2double(get(handles.lowCutEntry,'String'));
+b = str2double(get(handles.highCutEntry,'String'));
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 
+
 imageP=evalin('base',selections{selectionsIndex});
-adjImage=imadjust(imageP,[lowCut highCut]);
+
+if numel(size(imageP))==3
+    stackNum=size(imageP,3);
+    stackInd=fix(str2num(get(handles.frameTextEntry,'String')));
+    imageP=imageP(:,:,stackInd);
+    maxTest=max(max(imageP));
+    if maxTest<=1
+        imageP=imageP*65535;
+    else
+    end
+    
+    sliderMin = 1;
+    sliderMax = stackNum; % this is variable
+    sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+    
+    set(handles.frameSlider, 'Min', sliderMin);
+    set(handles.frameSlider, 'Max', sliderMax);
+    set(handles.frameSlider, 'SliderStep', sliderStep);
+    set(handles.frameSlider, 'Value', stackInd); % set to beginning of sequence
+    
+else
+    maxTest=max(max(imageP));
+    if maxTest<=1
+        imageP=imageP*65535;
+    else
+    end
+    
+    sliderMin = 0;
+    sliderMax = 1; % this is variable
+    sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+    
+    set(handles.frameSlider, 'Min', sliderMin);
+    set(handles.frameSlider, 'Max', sliderMax);
+    set(handles.frameSlider, 'SliderStep', sliderStep);
+    set(handles.frameSlider, 'Value', 1); % set to beginning of sequence
+    set(handles.frameTextEntry,'Value',1);
+end
+
+medFilter=get(handles.medianFilterToggle,'Value');
+if medFilter==1
+    imageP=medfilt2(imageP);
+else
+end
+
+wienerFilter=get(handles.wienerFilterToggle,'Value');
+if wienerFilter==1
+    imageP=wiener2(imageP);
+else
+end
 
 cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
-imshow(adjImage);
+imshow(imageP,'DisplayRange',[a b]);
 colormap(cMap)
 
 
-set(handles.lowCutEntry,'String',a)
-set(handles.highCutEntry,'String',b)
 assignin('base','currentImage',imageP)
 
+axes(handles.imageHistogram);
+nhist(double(imageP),'box');
+xlim([a b])
+hold all
+plot([a a],[0 10000],'r-')
+plot([b b],[0 10000],'b-')
+hold off
 
+axes(handles.imageWindow);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -674,21 +698,7 @@ set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
-cMap=get(handles.colormapTextEntry,'String');
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-
-
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
-colormap(cMap)
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 % --- end image plot
 
 h=evalin('base','somaticRoiCounter');
@@ -704,7 +714,7 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-if strcmp(cMap,'jet')
+if strcmp(get(handles.colormapTextEntry,'String'),'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -744,18 +754,8 @@ set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
 % --- end image plot
 
 h=evalin('base','redSomaticRoiCounter');
@@ -802,21 +802,7 @@ set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
-cMap=get(handles.colormapTextEntry,'String');
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
-colormap(cMap)
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 % --- end image plot
 
 h=evalin('base','dendriticRoiCounter');
@@ -832,7 +818,7 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-if strcmp(cMap,'jet')
+if strcmp(get(handles.colormapTextEntry,'String'),'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -873,17 +859,7 @@ set(handles.neuropilRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 % --- end image plot
 
 h=evalin('base','axonalRoiCounter');
@@ -931,21 +907,7 @@ set(handles.vascularRoisDisplayToggle, 'Value', 0);
 
 
 % --- Plot the image again
-cMap=get(handles.colormapTextEntry,'String');
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-
-
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
-colormap(cMap)
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 % --- end image plot
 
 h=evalin('base','boutonRoiCounter');
@@ -961,7 +923,7 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-if strcmp(cMap,'jet')
+if strcmp(get(handles.colormapTextEntry,'String'),'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -1001,21 +963,7 @@ set(handles.neuropilRoisDisplayToggle, 'Value', 1);
 
 
 % --- Plot the image again
-cMap=get(handles.colormapTextEntry,'String');
-axes(handles.imageWindow);
-imageP=evalin('base','currentImage');
-
-
-aa = get(handles.lowCutEntry,'String');
-bb = get(handles.highCutEntry,'String');
-lowCut=str2num(aa)/65535;
-highCut=str2num(bb)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
-
-axes(handles.imageWindow);
-imshow(adjImage);
-colormap(cMap)
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 % --- end image plot
 
 h=evalin('base','neuropilRoiCounter');
@@ -1031,7 +979,7 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',1)
 
 % Plot
-if strcmp(cMap,'jet')
+if strcmp(get(handles.colormapTextEntry,'String'),'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -1072,18 +1020,11 @@ set(handles.lowCutEntry,'String', num2str(sliderValue));
 % --- adjust the image
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
-a = get(handles.lowCutEntry,'String');
-b = get(handles.highCutEntry,'String');
-lowCut=str2num(a)/65535;
-highCut=str2num(b)/65535;
-
-adjImage=imadjust(imageP,[lowCut highCut]);
+a = str2double(get(handles.lowCutEntry,'String'));
+b = str2double(get(handles.highCutEntry,'String'));
 
 axes(handles.imageWindow);
-imshow(adjImage);
-% axes(handles.cdfWindow);
-% imhist(adjImage,100);
-% --- end 
+imshow(imageP,[a b]);
 
 guidata(hObject, handles); 
 
@@ -1114,19 +1055,12 @@ set(handles.highCutEntry,'String', num2str(sliderValue));
 % --- adjust the image
 axes(handles.imageWindow);
 imageP=evalin('base','currentImage');
-a = get(handles.lowCutEntry,'String');
-b = get(handles.highCutEntry,'String');
-lowCut=str2num(a)/65535;
-highCut=str2num(b)/65535;
-%gamA=str2num(get(handles.gammaBox,'String'));
+a = str2double(get(handles.lowCutEntry,'String'));
+b = str2double(get(handles.highCutEntry,'String'));
 
-adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
-imshow(adjImage);
-% axes(handles.cdfWindow);
-% imhist(adjImage,100);
-% --- end 
+imshow(imageP,[a b]);
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1165,15 +1099,11 @@ a = get(handles.lowCutEntry,'String');
 b = get(handles.highCutEntry,'String');
 lowCut=str2double(a)/65535;
 highCut=str2double(b)/65535;
-%gamA=str2double(get(handles.gammaBox,'String'));
 
 adjImage=imadjust(imageP,[lowCut highCut]);
 
 axes(handles.imageWindow);
 imshow(adjImage);
-% axes(handles.cdfWindow);
-% imhist(adjImage,100);
-% --- end 
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1464,7 +1394,7 @@ ff=fspecial('gaussian',11,0.5);
 
 nstack=min(imsToCor,numImages);
 
-for n=1:nstack;
+for n=1:nstack
     c=c+1;
     
     if (rem(n,100)==0)
@@ -1563,25 +1493,12 @@ end
 
 % --- Executes on button press in gXCorSmoothToggle.
 function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to gXCorSmoothToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of gXCorSmoothToggle
-
-
-% --- Executes on button press in playStackMovButton.
 function playStackMovButton_Callback(hObject, eventdata, handles)
-% hObject    handle to playStackMovButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Toggle the play state of the movie with wonky code
 playState=1;
 assignin('base','playState',playState)
 
-
-% play the movie
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 playStack=evalin('base',[selections{selectionsIndex}]);
@@ -1593,8 +1510,6 @@ if startFrame==size(playStack,3)
 else
 end
 
-
-% --- begin slider junk
 sliderMin = 1;
 sliderMax = size(playStack,3); % this is variable
 sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
@@ -1605,7 +1520,6 @@ set(handles.frameSlider, 'Max', sliderMax);
 set(handles.frameSlider, 'SliderStep', sliderStep);
 set(handles.frameSlider, 'Value', startFrame); % set to beginning of sequence
 
-% --- end slider junk
 
 
 axes(handles.imageWindow);
@@ -1617,45 +1531,26 @@ lowCut=str2double(a);
 highCut=str2double(b);
 cMap=get(handles.colormapTextEntry,'String');
 
-% 	sN=evalin('base','somaticRoiCounter');
-% 	sC=evalin('base','somaticROICenters');
-% 	sB=evalin('base','somaticROIBoundaries');
-
-% This makes the movie
 ii=1;
     for i=startFrame:size(playStack,3)
         pS=evalin('base','playState');
         if pS==1
-            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            ii=playStack(:,:,i);
             set(handles.frameTextEntry,'String',num2str(i));
             set(handles.frameSlider, 'Value', i);
-            h=imagesc(ii,[lowCut highCut]);
+            h=imshow(ii,'DisplayRange',[lowCut highCut]);
+
             colormap(cMap)
             daspect([1 1 1])
-%             hold all
-%             for n=1:numel(sB)
-%                 for k=1:numel(sC{1,n})
-%                     plot(sB{1,n}{k,1}(:,2),sB{1,n}{k,1}(:,1),'red','LineWidth',2)
-%                     text(sC{1,n}(k).Centroid(1)-1, sC{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 0 0]);
-%                 end
-%             end
-%             hold off
             drawnow;
             delete(h);
         elseif pS==0
-            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
-            imagesc(ii,[lowCut highCut]);
+            ii=playStack(:,:,i);
+%             ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            imshow(ii,'DisplayRange',[lowCut highCut]);
             daspect([1 1 1])
-%             hold all
-%             for n=1:numel(sB)
-%                 for k=1:numel(sC{1,n})
-%                     plot(sB{1,n}{k,1}(:,2),sB{1,n}{k,1}(:,1),'red','LineWidth',2)
-%                     text(sC{1,n}(k).Centroid(1)-1, sC{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',[0 0 0]);
-%                 end
-%             end
-%             hold off
-            % axes(handles.imageWindow);
-            assignin('base','currentImage',im2uint16(ii,'Indexed'))
+            axes(handles.imageWindow);
+            assignin('base','currentImage',ii)
             break
         end  
     end
@@ -1682,11 +1577,14 @@ function localXCorButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 I=evalin('base','ccimage');
 sstack=evalin('base','sstack');
+
 [x,y]=ginput(1);
 %iterative region growing
 ref= (squeeze(sstack(ceil(y),ceil(x),:) ));
+
 xc=I.*0;
 xc(ceil(y),ceil(x))=0.9; % seed
+
 it=1;
     while it<50
         sig=find(xc>0.04);
@@ -1696,7 +1594,7 @@ it=1;
         if numel(update)<1
             it=500;
         end
-        for fillin=update' % fill in where we detected any corr >.1s
+        for fillin=update'
             [a,b]=ind2sub(size(I),fillin);
             c=corrcoef(squeeze(sstack(a,b,:)),ref);
             xc(a,b)=c(2,1);
@@ -1716,7 +1614,7 @@ cdfplot(reshape(localCorMaskPlot,numel(I),1))
 
 roiTh=str2num(get(handles.roiThresholdEntry,'String'));
 axes(handles.roiPreviewWindow);
-imagesc(im2bw(currentImage,roiTh)),colormap('jet')
+imagesc(im2bw(currentImage,roiTh),[0 2]),colormap jet
 assignin('base','candidateRoi',im2bw(currentImage,roiTh))
 assignin('base','candidateRoi_rawVals',currentImage)
 evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
@@ -1741,7 +1639,7 @@ if prevAt
     
     roiTh=str2num(get(handles.roiThresholdEntry,'String'));
     axes(handles.roiPreviewWindow);
-    imagesc(im2bw(currentROI,roiTh)),colormap('jet')
+    imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
     assignin('base','candidateRoi',im2bw(currentROI,roiTh))
     assignin('base','candidateRoi_rawVals',currentROI)
     evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
@@ -1838,6 +1736,10 @@ function frameSlider_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
+sliderValue = fix(get(handles.frameSlider,'Value'));
+set(handles.frameTextEntry,'String', num2str(sliderValue));
+loadMeanProjectionButton_Callback(hObject,eventdata, handles);
+
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1861,23 +1763,23 @@ function frameTextEntry_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of frameTextEntry as text
 %        str2double(get(hObject,'String')) returns contents of frameTextEntry as a double
 
-frame=get(hObject,'String');
-selections = get(handles.workspaceVarBox,'String');
-selectionsIndex = get(handles.workspaceVarBox,'Value');
-frameFromStack=evalin('base',[selections{selectionsIndex} '(:,:,' frame ')']);
-axes(handles.imageWindow);
+% frame=get(hObject,'String');
+% selections = get(handles.workspaceVarBox,'String');
+% selectionsIndex = get(handles.workspaceVarBox,'Value');
+% frameFromStack=evalin('base',[selections{selectionsIndex} '(:,:,' frame ')']);
+% axes(handles.imageWindow);
+% a = str2double(get(handles.lowCutEntry,'String'));
+% b = str2double(get(handles.highCutEntry,'String'));
+% 
+% cMap=get(handles.colormapTextEntry,'String');
+% 
+% imshow(frameFromStack,[a b]);
+% colormap(cMap)
+% 
+% assignin('base','currentImage',frameFromStack)
 
-
-a = get(handles.lowCutEntry,'String');
-b = get(handles.highCutEntry,'String');
-lowCut=str2double(a);
-highCut=str2double(b);
-cMap=get(handles.colormapTextEntry,'String');
-
-imagesc(frameFromStack,[lowCut highCut]);
-colormap(cMap)
-
-assignin('base','currentImage',im2uint16(frameFromStack,'Indexed'))
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+% somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 
 
@@ -2047,3 +1949,56 @@ function vascularRoisDisplayToggle_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of vascularRoisDisplayToggle
+
+
+% --- Executes on button press in nnmfButton.
+function nnmfButton_Callback(hObject, eventdata, handles)
+% hObject    handle to nnmfButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function featureCountEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to featureCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of featureCountEntry as text
+%        str2double(get(hObject,'String')) returns contents of featureCountEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function featureCountEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to featureCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in medianFilterToggle.
+function medianFilterToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to medianFilterToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of medianFilterToggle
+
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+
+
+% --- Executes on button press in wienerFilterToggle.
+function wienerFilterToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to wienerFilterToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of wienerFilterToggle
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+
+
