@@ -70,6 +70,11 @@ function importButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+set(handles.importFeedbackString,'String','Importing Images ...')
+% Update handles structure
+guidata(hObject, handles);
+pause(0.001)
+
 mPF=get(handles.multiPageFlag, 'Value');
 pImport=get(handles.parallelizeImportToggle,'Value');
 
@@ -199,7 +204,10 @@ else  % The user wants multi-page tif. This import is a bit different.
     set(handles.workspaceVarBox,'String',vars)
 end
 
+set(handles.importFeedbackString,'String','')
+
 disp(['*** done with import, which took ' num2str(iT) ' seconds'])
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -371,7 +379,7 @@ elseif mPF==1
 end
 
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -385,6 +393,7 @@ function workspaceVarBox_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns workspaceVarBox contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from workspaceVarBox
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -421,7 +430,7 @@ end
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -446,7 +455,7 @@ vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
     
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -470,7 +479,7 @@ vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
     
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -505,7 +514,7 @@ disp('registration started ...')
 
 tic
 regTempC=regTemp;
-    parfor n=1:totalImagesPossible,
+    parfor n=1:totalImagesPossible
         imReg=rStack(:,:,n);
         [out1,out2]=dftregistration(fft2(regTempC),fft2(imReg),subpixelFactor);
         registeredTransformations(:,n)=out1;
@@ -522,6 +531,7 @@ assignin('base','registeredTransforms',registeredTransformations)
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -533,6 +543,7 @@ function refreshVarListButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
+
 
 % Update handles structure
 guidata(hObject, handles);
@@ -605,9 +616,7 @@ evalin('base','stackObject=matfile([stackObject_meta.objectPath filesep stackObj
 disp('done saving stack');
 
 
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -621,6 +630,7 @@ function saveDirectoryButton_Callback(hObject, eventdata, handles)
 savDir=uigetdir;
 assignin('base','savePath_stacks',savDir);
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -687,11 +697,7 @@ assignin('base','meanProjection',pS);
 disp('done!')
 
 
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-    
-
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -768,9 +774,7 @@ toc
 
 
 
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -831,7 +835,7 @@ vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
     
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -900,6 +904,7 @@ function stackSplit_everyOtherToggle_Callback(hObject, eventdata, handles)
 set(handles.stackSplit_serialToggle,'Value',0);
 set(handles.stackSplit_everyOtherToggle,'Value',1);
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -914,6 +919,7 @@ function stackSplit_serialToggle_Callback(hObject, eventdata, handles)
 set(handles.stackSplit_serialToggle,'Value',1);
 set(handles.stackSplit_everyOtherToggle,'Value',0);
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -997,7 +1003,7 @@ end
 
 
 
-    
+refreshVarListButton_Callback(hObject, eventdata, handles)    
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1025,9 +1031,7 @@ disp('applying transforms ...')
 evalin('base',[selectStack '_registered=applyTransformsToStack(' selectStack ',registeredTransforms);'])
 disp('*** done applying transforms')
 
-% update var box
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
+refreshVarListButton_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1045,6 +1049,7 @@ imageToPlot=selections{selectionsIndex};
 
 evalin('base',['figure,imagesc(' imageToPlot '),axis square,colormap(''jet''),title ' imageToPlot])
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1061,6 +1066,7 @@ stackToPlot=selections{selectionsIndex};
 
 evalin('base',['figure,playMov(' stackToPlot ')'])
 
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1138,7 +1144,7 @@ function inferRunningButton_Callback(hObject, eventdata, handles)
 evalin('base','inferedRunningData=inferRunFromRegistration(registeredTransforms(3,:));')
 evalin('base','figure,plot(inferedRunningData),title(''normalized running data infered from reg data'')')
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
 
@@ -1156,7 +1162,7 @@ evalin('base',['for n=1:size(' stackToPlot ',3),' stackToPlot '_meanLuminance(:,
 
 evalin('base',['figure,plot(' stackToPlot '_meanLuminance),title ' stackToPlot ''': mean lum.'''])
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
 
@@ -1201,12 +1207,7 @@ mP=mean(s,3);
 assignin('base',['consMeanProj_' selectStack],uint16(mP));
 
 
-
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-
-
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1260,7 +1261,7 @@ badFrames=cell2mat(badFrames);
 assignin('base','badFrames',badFrames)
 evalin('base',[selectStack '=' selectStack '(:,:,setdiff(1:' num2str(ogFrames) ',badFrames));']);
 
-
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1304,7 +1305,7 @@ tic
 disp('extracting')
 diskLuminance=zeros(1,numImages);
 
-for n=firstIm:endIm;
+for n=firstIm:endIm
     funcN=(n-firstIm)+1;
     diskLuminance(:,funcN)=mean2(imread([imPath filesep fileList(n).name]));
     if (mod(funcN,feedbackBlockSize)==0 && guiFeedback==1)
@@ -1325,3 +1326,5 @@ assignin('base','diskLuminance',diskLuminance);
 disp(['done luminance extraction, this took ' num2str(eT./60) ' minutes'])
 cc=clock;
 disp(['finished disk luminance at ' num2str(cc(4)) ':'  num2str(cc(5))])
+
+refreshVarListButton_Callback(hObject, eventdata, handles)

@@ -114,6 +114,9 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
+set(handles.extractFeedbackString,'String','Extracting ...')
+pause(0.001);
+guidata(hObject, handles);
 
 imPath=evalin('base','importPath');
 fileList=evalin('base','filteredFiles');
@@ -239,7 +242,7 @@ for n=1:numel(roiToggleTruth)
     end
 end
 
-% Update handles structure
+set(handles.extractFeedbackString,'String','')
 guidata(hObject, handles);
 
 
@@ -251,6 +254,10 @@ function extractButton_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 set(handles.extractButton,'string','running','ForegroundColor','red','enable','off');
+
+set(handles.extractFeedbackString,'String','Extracting ...')
+pause(0.001);
+guidata(hObject, handles);
 
 % ************ handle concatination of roi types
 roiStringMap={'somaticROIs','dendriticROIs','axonalROIs','boutonROIs','neuropilROIs','vascularROIs','filledSomaROIs','redSomaticROIs'};
@@ -291,8 +298,8 @@ for n=1:dStackSize(3)
         sED(q,n)=mean(aIm(rois{q}(:,:)));    
     end
 end
-aa=toc
-disp(num2str(aa))
+aa=toc;
+% disp(num2str(aa))
 
 %--- end extract
 
@@ -311,6 +318,7 @@ set(handles.extractButton,'string','Extract','ForegroundColor','black','enable',
 
 % Update handles structure
 
+set(handles.extractFeedbackString,'String','')
 set(handles.extractButton,'string','Extract','ForegroundColor','black','enable','on');
 % Update handles structure
 guidata(hObject, handles);

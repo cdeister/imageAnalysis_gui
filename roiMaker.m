@@ -15,7 +15,7 @@ function varargout = roiMaker(varargin)
 % Questions: cdeister@brown.edu
 
 % 
-% Last Modified by GUIDE v2.5 28-Sep-2017 11:57:31
+% Last Modified by GUIDE v2.5 28-Sep-2017 23:11:35
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -2000,5 +2000,3 @@ function wienerFilterToggle_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of wienerFilterToggle
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-
-
