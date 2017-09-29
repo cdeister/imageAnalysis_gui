@@ -76,7 +76,7 @@ guidata(hObject, handles);
 pause(0.001)
 
 mPF=get(handles.multiPageFlag, 'Value');
-pImport=get(handles.parallelizeImportToggle,'Value');
+pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
 % Check to see if the user imported something already and/or wants to
 % import a multi-page Tif. 
