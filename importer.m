@@ -10,7 +10,7 @@ function varargout = importer(varargin)
 %
 %
 %
-% Last Modified by GUIDE v2.5 26-Jan-2015 08:32:54
+% Last Modified by GUIDE v2.5 29-Sep-2017 15:52:29
 %
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1047,7 +1047,9 @@ selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 imageToPlot=selections{selectionsIndex};
 
-evalin('base',['figure,imagesc(' imageToPlot '),axis square,colormap(''jet''),title ' imageToPlot])
+tI=evalin('base',imageToPlot);
+handles.imageAxis
+imagesc(tI),colormap jet
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
@@ -1063,9 +1065,12 @@ function inspectStackButton_Callback(hObject, eventdata, handles)
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 stackToPlot=selections{selectionsIndex};
-
-evalin('base',['figure,playMov(' stackToPlot ')'])
-
+sPC=evalin('base',[stackToPlot '(:,:,1)']);
+tM=max(max(sPC));
+disp(tM)
+sP=evalin('base',stackToPlot);
+handles.imageAxis;
+playMov(sP,30,[1,tM])
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
@@ -1285,7 +1290,7 @@ endIm=str2num(get(handles.endImageEntry,'string'));
 numImages=endIm-firstIm;
 
 % enforce feedback by default if there are a bunch of images
-if numImages>25000;
+if numImages>25000
     disp('*** you have a lot of images, I am going to give progress updates ***')
     guiFeedback=1;
 else
@@ -1328,3 +1333,20 @@ cc=clock;
 disp(['finished disk luminance at ' num2str(cc(4)) ':'  num2str(cc(5))])
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
+
+
+% --- Executes on button press in roiMakerButton.
+function roiMakerButton_Callback(hObject, eventdata, handles)
+% hObject    handle to roiMakerButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+evalin('base','roiMaker')
+
+
+% --- Executes on button press in extractorButton.
+function extractorButton_Callback(hObject, eventdata, handles)
+% hObject    handle to extractorButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+evalin('base','extractor')

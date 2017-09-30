@@ -11,7 +11,7 @@ function varargout = roiMaker(varargin)
 %
 % Questions: cdeister@brown.edu
 % 
-% Last Modified by GUIDE v2.5 30-Sep-2017 15:26:04
+% Last Modified by GUIDE v2.5 30-Sep-2017 14:55:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -478,7 +478,6 @@ if numel(size(imageP))==3
     set(handles.frameSlider, 'Value', stackInd); % set to beginning of sequence
     
 else
-    set(handles.frameTextEntry,'String','1');
     maxTest=max(max(imageP));
     if maxTest<=1
         imageP=double(imageP)*65535;
@@ -537,10 +536,10 @@ assignin('base','currentImage',imageP)
 
 axes(handles.imageHistogram);
 nhist(nonzeros(imageP),'box');
-xlim([0 b])
+xlim([0 6553])
 hold all
-plot([a a],[0 20000],'r-')
-plot([b b],[0 20000],'b-')
+plot([a a],[0 10000],'r-')
+plot([b b],[0 10000],'b-')
 hold off
 
 axes(handles.imageWindow);
@@ -1980,16 +1979,9 @@ function vascularRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in nnmfButton.
 function nnmfButton_Callback(hObject, eventdata, handles)
-% performs non-negative matrix factorization with defaults
-% this is a 'feature' based PCA that only allows non-negative values.
-% assuming you have a matrix of features with magnitudes of 0->something
-% this is then ideal for finding the most variance predicting features that
-% correspond more to intuitive features than PCA.
-% see Lee and Seung, 1999 Nature for the first and very lucid description
-% of the method. NM1 are the image sized feature filters (masks) and NM2 is
-% the frame varying weights. Think of NM2 as your PCA'd proportional
-% variance, but varying in time. This tells you the realtive weight of your
-% feature at any momment in time!
+% hObject    handle to nnmfButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -2005,25 +1997,31 @@ end
 tStack=reshape(tStack,size(tStack,1)*size(tStack,2),size(tStack,3));
 
 [nm1,nm2,nm3]=nnmf(tStack,fNum);
-
-nm1=reshape(nm1,size(tStack,1),size(tStack,2),size(tStack,3));
-clear tStack
-
 assignin('base','nm1',nm1);
 assignin('base','nm2',nm2);
 assignin('base','nm3',nm3);
 
-clear nm1 nm2 nm3
 
-refreshVarListButton_Callback(hObject, eventdata, handles)
+
 
 
 function featureCountEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to featureCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of featureCountEntry as text
+%        str2double(get(hObject,'String')) returns contents of featureCountEntry as a double
 
 
 % --- Executes during object creation, after setting all properties.
 function featureCountEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to featureCountEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
 
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
@@ -2081,14 +2079,3 @@ function overlayIndRoiToggle_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of overlayIndRoiToggle
-loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-
-
-% --- Executes on button press in cMaskToggle.
-function cMaskToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to cMaskToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-cImage=evalin('base','currentImage');
-cMask=imbinarize(cImage,'adaptive');
-assignin('base','cMask',cMask);

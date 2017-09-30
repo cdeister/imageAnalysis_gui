@@ -365,10 +365,11 @@ end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
+ylim([0 65535])
 if npTr || cnpTr 
-    ylim([-0.5 6.5])
+    ylim([-0.5 10])
 else
-    ylim([0 9000])
+    
 end
 
 % Update handles structure
@@ -415,7 +416,7 @@ end
 tnum=str2double(get(handles.displayedROICounter,'String'));
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-
+ylim([0 65535])
 % Update handles structure
 guidata(hObject, handles);
 
@@ -476,7 +477,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -524,7 +525,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 
 
@@ -574,7 +575,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -621,7 +622,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 
 % Update handles structure
@@ -669,7 +670,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -717,7 +718,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -765,7 +766,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -814,7 +815,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([0 9000])
+ylim([0 65535])
 
 % Update handles structure
 guidata(hObject, handles);
@@ -969,7 +970,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([-0.5 6.5])
+ylim([-0.5 10])
 
 
 
@@ -1023,7 +1024,7 @@ end
 
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
-ylim([-0.5 6.5])
+ylim([-0.5 10])
 
 % Update handles structure
 guidata(hObject, handles);
