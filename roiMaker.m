@@ -11,7 +11,7 @@ function varargout = roiMaker(varargin)
 %
 % Questions: cdeister@brown.edu
 % 
-% Last Modified by GUIDE v2.5 30-Sep-2017 15:26:04
+% Last Modified by GUIDE v2.5 01-Oct-2017 03:16:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,6 +70,55 @@ function varargout = roiMaker_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
+function addArbToSomas(hObject, eventdata, handles,mask)
+
+% [imSelection imclass]=getWSVar(hObject, eventdata, handles);
+
+% if size(imSelection,3)
+%     sID=fix(str2double(get(handles.frameTextEntry,'String')));
+%     mask=imSelection(:,:,sID);
+%     clear imSelection
+% else
+%     mask=imSelection;
+%     clear imSelection
+% end
+
+g=evalin('base','exist(''somaticRoiCounter'')');
+
+if g==1
+    h=evalin('base','somaticRoiCounter');
+    r=evalin('base','somaticROIs');
+    c=evalin('base','somaticROICenters');
+    b=evalin('base','somaticROIBoundaries');
+    pl=evalin('base','somaticROI_PixelLists');
+    
+    h=h+1;
+   
+    
+    
+    
+    r{h}=mask;
+    b{h}=bwboundaries(mask);
+    c{h}=regionprops(mask,'Centroid');
+    pl{h}=regionprops(mask,'PixelList');
+    
+    
+    assignin('base','somaticROIs',r)
+    assignin('base','somaticROICenters',c)
+    assignin('base','somaticROIBoundaries',b)
+    assignin('base','somaticRoiCounter',h)
+    assignin('base','somaticROI_PixelLists',pl)
+    
+else
+    h=1;
+
+    
+    assignin('base','somaticROIs',{mask})
+    assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
+    assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
+    assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
+    assignin('base','somaticRoiCounter',h)
+end
 
 % --- Executes on button press in somaButton.
 function somaButton_Callback(hObject, eventdata, handles)
@@ -426,7 +475,11 @@ set(handles.roiSelector,'Value',roiNumber);
 guidata(hObject, handles);
 
     
-
+function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+wsObj=evalin('base',selections{selectionsIndex});
+wsClass=class(wsObj);
 
 % --- Executes during object creation, after setting all properties.
 function roiSelector_CreateFcn(hObject, eventdata, handles)
@@ -442,7 +495,7 @@ end
 
 % --- Executes on button press in loadMeanProjectionButton.
 function loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-% main image load
+% main load image
 % hObject    handle to loadMeanProjectionButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -450,24 +503,75 @@ function loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 a = str2double(get(handles.lowCutEntry,'String'));
 b = str2double(get(handles.highCutEntry,'String'));
 
-selections = get(handles.workspaceVarBox,'String');
-selectionsIndex = get(handles.workspaceVarBox,'Value');
 
+[imageP imClass]=getWSVar(hObject, eventdata, handles);
 
+if strcmp(imClass,'logical')
+    updateHist=0;
+else
+    updateHist=1;
+end
 
-imageP=evalin('base',selections{selectionsIndex});
+hSM = get(handles.highCutSlider,'Max');
+
+tMxVl=max(max(imageP(:,:,1)));
+
+if tMxVl<=1
+    rangeOne=1;
+else
+    rangeOne=0;
+end
+
+if hSM==1
+    lastLogical=1;
+else
+    lastLogical=0;
+end
+
+if rangeOne==0 & lastLogical==1
+    typeChange=1;
+elseif rangeOne==1 & lastLogical==0
+    typeChange=1;
+else
+    typeChange=0;
+end
+
+if typeChange==1
+    if rangeOne
+      set(handles.highCutSlider,'Max',1.0);
+      set(handles.highCutSlider,'Min',0.0);
+      set(handles.lowCutSlider,'Max',1.0);
+      set(handles.lowCutSlider,'Min',0.0);
+      set(handles.highCutSlider,'Value',1.0);
+      set(handles.lowCutSlider,'Value',0.0);
+      set(handles.highCutEntry,'String','1.0');
+      set(handles.lowCutEntry,'String','0.0');
+      % Update handles structure
+      guidata(hObject, handles);
+      
+      
+    else
+      set(handles.highCutSlider,'Max',65535);
+      set(handles.highCutSlider,'Min',0);
+      set(handles.lowCutSlider,'Max',65535);
+      set(handles.lowCutSlider,'Min',0);
+      set(handles.highCutSlider,'Value',65535);
+      set(handles.lowCutSlider,'Value',0);
+      set(handles.highCutEntry,'String','65535');
+      set(handles.lowCutEntry,'String','0');
+      % Update handles structure
+      guidata(hObject, handles);
+    end
+else
+end
+
 
 
 if numel(size(imageP))==3
     stackNum=size(imageP,3);
     stackInd=fix(str2num(get(handles.frameTextEntry,'String')));
-    imageP=double(imageP(:,:,stackInd));
-    maxTest=max(max(imageP));
-    if maxTest<=1
-        imageP=imageP*65535;
-    else
-    end
-    
+    imageP=imageP(:,:,stackInd);
+
     sliderMin = 1;
     sliderMax = stackNum; % this is variable
     sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
@@ -479,12 +583,6 @@ if numel(size(imageP))==3
     
 else
     set(handles.frameTextEntry,'String','1');
-    maxTest=max(max(imageP));
-    if maxTest<=1
-        imageP=double(imageP)*65535;
-    else
-    end
-    
     sliderMin = 0;
     sliderMax = 1; % this is variable
     sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
@@ -495,8 +593,6 @@ else
     set(handles.frameSlider, 'Value', 1); % set to beginning of sequence
     set(handles.frameTextEntry,'Value',1);
 end
-
-imageP=double(imageP);
 
 medFilter=get(handles.medianFilterToggle,'Value');
 if medFilter==1
@@ -513,7 +609,6 @@ end
 % check if they want to overlay a mask
 pMO=get(handles.overlayIndRoiToggle,'Value');
 % override if there is no mask
-% override if there is no mask
 mE=evalin('base','exist(''cMask'')');
 if mE==0
     pMO=0;
@@ -522,26 +617,30 @@ end
 
 if pMO
     cMask=evalin('base','cMask');
-    imageP=imageP.*cMask;
+    imageP=double(imageP).*cMask;
 else
     cMask=1;
 end
 
 cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
-imshow(imageP,'DisplayRange',[a b]);
+hold on
+mI=imshow(imageP,'DisplayRange',[a b]);
+hold off
 colormap(gca,cMap)
 
 
 assignin('base','currentImage',imageP)
-
+if updateHist
 axes(handles.imageHistogram);
-nhist(nonzeros(imageP),'box');
+nhist(nonzeros(imageP),'box','maxbins',40);
 xlim([0 b])
 hold all
 plot([a a],[0 20000],'r-')
 plot([b b],[0 20000],'b-')
 hold off
+else
+end
 
 axes(handles.imageWindow);
 
@@ -741,7 +840,6 @@ for n=1:numel(b)
     for k=1:numel(c{1,n})
         plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
         text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-
     end
 end
 
@@ -798,6 +896,14 @@ hold off
 % Update handles structure
 guidata(hObject, handles);
 
+function [togglesSelected types]=checkOverlayDisplay(hObject, eventdata, handles)
+
+types={'soma','redSoma','dendrite','axon','bouton','neuropil'};
+
+for n=1:numel(types)
+    togglesSelected(:,n)=eval(['get(handles.' types{n} 'RoisDisplayToggle, ''Value'');']);
+end
+
 
 % --- Executes on button press in dendriteRoisDisplayToggle.
 function dendriteRoisDisplayToggle_Callback(hObject, eventdata, handles)
@@ -813,6 +919,8 @@ set(handles.dendriteRoisDisplayToggle, 'Value', 1);
 set(handles.axonRoisDisplayToggle, 'Value', 0);
 set(handles.boutonRoisDisplayToggle, 'Value', 0);
 set(handles.neuropilRoisDisplayToggle, 'Value', 0);
+
+
 
 
 % --- Plot the image again
@@ -1032,14 +1140,6 @@ sliderValue = get(handles.lowCutSlider,'Value');
 set(handles.lowCutEntry,'String', num2str(sliderValue));
 
 loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-% % --- adjust the image
-% axes(handles.imageWindow);
-% imageP=evalin('base','currentImage');
-% a = str2double(get(handles.lowCutEntry,'String'));
-% b = str2double(get(handles.highCutEntry,'String'));
-% 
-% axes(handles.imageWindow);
-% imshow(imageP,[a b]);
 
 guidata(hObject, handles); 
 
@@ -1067,15 +1167,6 @@ function highCutSlider_Callback(hObject, eventdata, handles)
 sliderValue = get(handles.highCutSlider,'Value');
 set(handles.highCutEntry,'String', num2str(sliderValue));
 
-% % --- adjust the image
-% axes(handles.imageWindow);
-% imageP=evalin('base','currentImage');
-% a = str2double(get(handles.lowCutEntry,'String'));
-% b = str2double(get(handles.highCutEntry,'String'));
-% 
-% 
-% axes(handles.imageWindow);
-% imshow(imageP,[a b]);
 loadMeanProjectionButton_Callback(hObject,eventdata, handles);
 
 % --- Executes during object creation, after setting all properties.
@@ -1739,6 +1830,7 @@ function colormapTextEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of colormapTextEntry as text
 %        str2double(get(hObject,'String')) returns contents of colormapTextEntry as a double
+loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
@@ -2092,3 +2184,131 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
 cImage=evalin('base','currentImage');
 cMask=imbinarize(cImage,'adaptive');
 assignin('base','cMask',cMask);
+
+
+% --- Executes on button press in curImageToCandButton.
+function curImageToCandButton_Callback(hObject, eventdata, handles)
+% hObject    handle to curImageToCandButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+imSelection=getWSVar(hObject, eventdata, handles);
+if size(imSelection,3)
+    sID=fix(str2double(get(handles.frameTextEntry,'String')));
+    imageP=imSelection(:,:,sID);
+    clear imSelection
+else
+    imageP=imSelection;
+    clear imSelection
+end
+axes(handles.roiPreviewWindow);
+imagesc(imageP,[0 2]),colormap('jet')
+
+
+% --- Executes on button press in addArbSomaBtn.
+function addArbSomaBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to addArbSomaBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+sR=evalin('base','segMask');
+imSize=[size(sR,1) size(sR,2)];
+minROISize=fix(str2double(get(handles.minRoiEntry,'String')));
+linThr=0;
+pROIs=bwboundaries(sR,'holes');
+pROIsizes=cellfun(@numel,pROIs)/2;
+disp(pROIsizes)
+ogNum=numel(pROIs);
+stROIs=find(pROIsizes>=minROISize);
+usedNum=numel(stROIs);
+
+
+%pre allocate
+linearROIs=[];
+
+goodCount=0;
+for n=1:usedNum
+    tSegMask=zeros(imSize(1),imSize(2),1);
+    tROI=pROIs{stROIs(n)};
+    
+    c1Mean=mean(abs(diff(tROI(:,1))));
+    c2Mean=mean(abs(diff(tROI(:,2))));
+    
+    if c1Mean==linThr || c2Mean==linThr
+        linearROIs=[linearROIs; n];
+    else
+        goodCount=goodCount+1;
+        tROIs(:,:,goodCount)=roipoly(imSize(1),imSize(2),tROI(:,2),tROI(:,1));
+        addArbToSomas(hObject, eventdata, handles,tROIs(:,:,goodCount))
+    end
+end
+
+for n=1:size(sR,3)
+    addArbToSomas(hObject, eventdata, handles,sR(:,:,n))
+end
+
+
+% --- Executes on button press in autoMaskBtn.
+function autoMaskBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to autoMaskBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+sens=str2double(get(handles.binarySensEntry,'String'));
+tI=getWSVar(hObject, eventdata, handles);
+stackInd=fix(str2double(get(handles.frameTextEntry,'String')));
+if size(tI,3)>1
+    tI=tI(:,:,stackInd);
+end
+
+ogMs=double(tI)./max(max(double(tI)));
+bthr=0;
+thMs=imbinarize(ogMs,'adaptive','sensitivity',sens);
+thMs=medfilt2(thMs);
+axes(handles.imageWindow)
+imshowpair(ogMs,thMs,'montage')
+assignin('base','segMask',thMs);
+
+
+
+function binarySensEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to binarySensEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of binarySensEntry as text
+%        str2double(get(hObject,'String')) returns contents of binarySensEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function binarySensEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to binarySensEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function minRoiEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to minRoiEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of minRoiEntry as text
+%        str2double(get(hObject,'String')) returns contents of minRoiEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function minRoiEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to minRoiEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

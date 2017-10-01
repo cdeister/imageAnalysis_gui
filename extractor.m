@@ -346,9 +346,16 @@ rsTr=get(handles.redSomaticRoisDisplayToggle, 'Value');
 
 sliderValue = fix(get(handles.roiDisplaySlider,'Value'));
 set(handles.displayedROICounter,'String', num2str(sliderValue));
+tnum=str2double(get(handles.displayedROICounter,'String'));
 
 if sTr
     traces=evalin('base','somaticF');
+    mask=evalin('base',['somaticROIs{' num2str(tnum) '}']);
+    selTrace=traces(tnum,:);
+    nonSelTraces=traces(1:size(traces,1),:);
+    %nonSelTraces=traces(setdiff(1:size(traces,1),tnum),:);
+    selTrace=repmat(selTrace,size(nonSelTraces,1),1);
+
 elseif nTr
     traces=evalin('base','neuropilF');
 elseif bTr
@@ -362,13 +369,28 @@ elseif cnpTr
 elseif rsTr
     traces=evalin('base','redSomaticF');
 end
-tnum=str2double(get(handles.displayedROICounter,'String'));
+
 axes(handles.traceDisplay);
 plot(traces(tnum,:));
 ylim([0 65535])
 if npTr || cnpTr 
     ylim([-0.5 10])
 else
+axes(handles.roiMaskAxis)
+imagesc(mask,[0 2]),colormap jet
+a=gca;
+a.YTick=[];
+a.XTick=[];
+% axes(handles.traceDisplay);
+axes(handles.corAxis)
+curCorr=corr(selTrace',nonSelTraces');
+[csV,csI]=sort(curCorr');
+csV=csV(:,1);
+csI=csI(:,1);
+imagesc(corr(selTrace',nonSelTraces'),[-1 1]),colormap jet
+assignin('base','curCorr',curCorr);
+disp(csI(find(csV>0.8)))
+
     
 end
 

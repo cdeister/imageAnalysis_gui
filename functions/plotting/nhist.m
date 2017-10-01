@@ -711,11 +711,11 @@ end
 binWidth=zeros(1,num2Plot);
 
 % Warn users for dumb max/min bin size choices.
-if minBins<3,  error('No I refuse to plot this you abuser of functions, the minimum number of bins must be at least 3'); end;
-if minBins<10, warning('you are using a very small minimum number of bins, do you even know what a histogram is?'); end;
-if minBins>20, warning('you are using a very large minimum number of bins, are you sure you *always need this much precision?'); end;
-if maxBins>200,warning('you are using a very high maximum for the number of bins, unless your monitor is in times square you probably won''t need that many bins'); end;
-if maxBins<50, warning('you are using a low maximum for the number of bins, are you sure it makes sense to do this?'); end;
+% if minBins<3,  error('No I refuse to plot this you abuser of functions, the minimum number of bins must be at least 3'); end;
+% if minBins<10, warning('you are using a very small minimum number of bins, do you even know what a histogram is?'); end;
+% if minBins>20, warning('you are using a very large minimum number of bins, are you sure you *always need this much precision?'); end;
+% if maxBins>200,warning('you are using a very high maximum for the number of bins, unless your monitor is in times square you probably won''t need that many bins'); end;
+% if maxBins<50, warning('you are using a low maximum for the number of bins, are you sure it makes sense to do this?'); end;
 
 % Choose estimate bin widths
 for k=1:num2Plot

@@ -10,7 +10,7 @@ function varargout = importer(varargin)
 %
 %
 %
-% Last Modified by GUIDE v2.5 29-Sep-2017 15:52:29
+% Last Modified by GUIDE v2.5 01-Oct-2017 01:36:12
 %
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -46,12 +46,13 @@ handles.output = hObject;
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 
+
+
 % Update handles structure
 guidata(hObject, handles);
 
 % UIWAIT makes importer wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
-
 
 % --- Outputs from this function are returned to the command line.
 function varargout = importer_OutputFcn(hObject, eventdata, handles) 
@@ -499,6 +500,9 @@ regStackString=evalin('base','stackToRegister');
 % todo: allow user to crop what they want
 % the way I do the registration rotates the image, here I offset that
 
+set(handles.feedbackString,'String','Working...')
+pause(0.001);
+guidata(hObject, handles);
 
 regTemp=evalin('base','regTemplate');
 rStack=evalin('base',regStackString);
@@ -522,14 +526,10 @@ regTempC=regTemp;
         %registeredImages(:,:,n)=imrotate(abs(ifft2(out2)),180);
     end
 t=toc;
+set(handles.feedbackString,'String','')
 disp(['done with registration. it took ' num2str(t) ' seconds'])
 assignin('base',[regStackString '_registered'],uint16(registeredImages))
 assignin('base','registeredTransforms',registeredTransformations)
-
-
-% update var box
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
@@ -976,7 +976,8 @@ stackStrings=strsplit(ab,',');
 
 if splitType==1
     for n=1:splitCount;
-        evalin('base',[stackStrings{n} '=' selectStack '(:,:,' num2str(n) ':' num2str(splitCount) ':' num2str(ogStackSize-(splitCount-n)) ');'])
+        evalin('base',[stackStrings{n} '=' selectStack '(:,:,' num2str(n) ':' ...
+            num2str(splitCount) ':' num2str(ogStackSize-(splitCount-n)) ');'])
     end
     if deleteOG==1
         evalin('base',['clear ' selectStack])
@@ -1164,12 +1165,30 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 stackToPlot=selections{selectionsIndex};
 
 evalin('base',['for n=1:size(' stackToPlot ',3),' stackToPlot '_meanLuminance(:,n)=mean2(' stackToPlot '(:,:,n));,end'])
+mlP=evalin('base',[stackToPlot '_meanLuminance;']);
+handles.imageAxis;
+plotVectors(hObject, eventdata,handles,mlP)
+% plot(mlP,'k-')
 
-evalin('base',['figure,plot(' stackToPlot '_meanLuminance),title ' stackToPlot ''': mean lum.'''])
+xlabel('frame')
+ylabel('mean luminance')
+% 
+% a=gca;
+% a.TickDir='out';
+% a.Box='off';
+% a.LineWidth=1;
+% axis square
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
+function plotVectors(hObject, eventdata,handles,uvector)
+plot(uvector,'k-')
+a=gca;
+a.TickDir='out';
+a.Box='off';
+a.LineWidth=1;
+axis square
 
 
 function constrainedMeanEntry_Callback(hObject, eventdata, handles)
@@ -1210,7 +1229,6 @@ selectStack=selections{selectionsIndex};
 s=evalin('base',[selectStack '(:,:,' constrainedFrames{1} ':' constrainedFrames{2} ');']);
 mP=mean(s,3);
 assignin('base',['consMeanProj_' selectStack],uint16(mP));
-
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
@@ -1333,7 +1351,7 @@ cc=clock;
 disp(['finished disk luminance at ' num2str(cc(4)) ':'  num2str(cc(5))])
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
-
+guidata(hObject, handles);
 
 % --- Executes on button press in roiMakerButton.
 function roiMakerButton_Callback(hObject, eventdata, handles)
@@ -1350,3 +1368,47 @@ function extractorButton_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 evalin('base','extractor')
+
+
+% --------------------------------------------------------------------
+function graph_Callback(hObject, eventdata, handles)
+% hObject    handle to graph (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+function selectedObject=getWSVar(hObject, eventdata, handles)
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectedItem=selections{selectionsIndex};
+selectedObject=evalin('base',selectedItem);
+
+% --------------------------------------------------------------------
+function Untitled_1_Callback(hObject, eventdata, handles)
+
+
+
+% --- Executes on button press in plotVectorButton.
+function plotVectorButton_Callback(hObject, eventdata, handles)
+% hObject    handle to plotVectorButton (see GCBO)
+
+
+vP=getWSVar(hObject, eventdata, handles);
+plotVectors(hObject, eventdata,handles,vP)
+
+refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
+
+
+% --- Executes on button press in deleteSelectionBtn.
+function deleteSelectionBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to deleteSelectionBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectedItem=selections{selectionsIndex};
+evalin('base',['clear ' selectedItem]);
+
+refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
