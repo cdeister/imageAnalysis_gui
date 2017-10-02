@@ -11,7 +11,7 @@ function varargout = roiMaker(varargin)
 %
 % Questions: cdeister@brown.edu
 % 
-% Last Modified by GUIDE v2.5 01-Oct-2017 03:16:20
+% Last Modified by GUIDE v2.5 01-Oct-2017 21:12:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,32 +70,31 @@ function varargout = roiMaker_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-function addArbToSomas(hObject, eventdata, handles,mask)
+function returnTypeStrings=returnAllTypes(hObject,eventdata,handles)
+% set all known ROI types here
+returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vascular','generic'};
 
-% [imSelection imclass]=getWSVar(hObject, eventdata, handles);
 
-% if size(imSelection,3)
-%     sID=fix(str2double(get(handles.frameTextEntry,'String')));
-%     mask=imSelection(:,:,sID);
-%     clear imSelection
-% else
-%     mask=imSelection;
-%     clear imSelection
-% end
+function addROIsFromMask(hObject,eventdata,handles,mask)
 
-g=evalin('base','exist(''somaticRoiCounter'')');
+sL=get(handles.roiTypeMenu,'String');
+sV=get(handles.roiTypeMenu,'Value');
+roiTypeSelected=sL{sV};
+
+disp(roiTypeSelected)
+
+g=evalin('base',['exist(''' roiTypeSelected 'RoiCounter' ''');']);
+
+disp('debug run')
+disp(['g=' num2str(g)])
 
 if g==1
-    h=evalin('base','somaticRoiCounter');
-    r=evalin('base','somaticROIs');
-    c=evalin('base','somaticROICenters');
-    b=evalin('base','somaticROIBoundaries');
-    pl=evalin('base','somaticROI_PixelLists');
-    
+    h=evalin('base',[roiTypeSelected 'RoiCounter']);
+    r=evalin('base',[roiTypeSelected 'ROIs']);
+    c=evalin('base',[roiTypeSelected 'ROICenters']);
+    b=evalin('base',[roiTypeSelected 'ROIBoundaries']);
+    pl=evalin('base',[roiTypeSelected 'ROI_PixelLists']);
     h=h+1;
-   
-    
-    
     
     r{h}=mask;
     b{h}=bwboundaries(mask);
@@ -103,22 +102,23 @@ if g==1
     pl{h}=regionprops(mask,'PixelList');
     
     
-    assignin('base','somaticROIs',r)
-    assignin('base','somaticROICenters',c)
-    assignin('base','somaticROIBoundaries',b)
-    assignin('base','somaticRoiCounter',h)
-    assignin('base','somaticROI_PixelLists',pl)
+    assignin('base',[roiTypeSelected 'ROIs'],r)
+    assignin('base',[roiTypeSelected 'ROICenters'],c)
+    assignin('base',[roiTypeSelected 'ROIBoundaries'],b)
+    assignin('base',[roiTypeSelected 'RoiCounter'],h)
+    assignin('base',[roiTypeSelected 'ROI_PixelLists'],pl)
     
 else
     h=1;
-
-    
-    assignin('base','somaticROIs',{mask})
-    assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
-    assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
-    assignin('base','somaticROIBoundaries',{bwboundaries(mask)})
-    assignin('base','somaticRoiCounter',h)
+    assignin('base',[roiTypeSelected 'ROIs'],{mask})
+    assignin('base',[roiTypeSelected 'ROICenters'],{regionprops(mask,'Centroid')})
+    assignin('base',[roiTypeSelected 'ROI_PixelLists'],{regionprops(mask,'PixelList')})
+    assignin('base',[roiTypeSelected 'ROIBoundaries'],{bwboundaries(mask)})
+    assignin('base',[roiTypeSelected 'RoiCounter'],h)
 end
+
+refreshVarListButton_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
 
 % --- Executes on button press in somaButton.
 function somaButton_Callback(hObject, eventdata, handles)
@@ -161,6 +161,7 @@ else
     assignin('base','somaticRoiCounter',h)
 end
 
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -204,7 +205,7 @@ else
     assignin('base','redSomaticRoiCounter',h)
 end
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -244,7 +245,7 @@ else
     assignin('base','dendriticRoiCounter',h)
 end
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -284,7 +285,7 @@ else
     assignin('base','axonalRoiCounter',h)
 end
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -327,7 +328,7 @@ else
     assignin('base','boutonRoiCounter',h)
 end
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -369,7 +370,7 @@ else
     assignin('base','vesselRoiCounter',h)
 end
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 function selected=checkROISelections(hObject, eventdata, handles)
@@ -443,7 +444,11 @@ set(handles.roiSelector,'String',roisList);
 set(handles.roiSelector,'Value',roiNumber)
 
 % Plot
-if strcmp(get(handles.colormapTextEntry,'String'),'jet')
+sL=get(handles.colormapTextEntry,'String');
+sV=get(handles.colormapTextEntry,'Value');
+fS=sL{sV};
+
+if strcmp(fS,'jet')
     outColor='k';
     txtColor=[0 0 0];
 else
@@ -471,7 +476,7 @@ hold off
 
 set(handles.roiSelector,'Value',roiNumber);
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
     
@@ -606,45 +611,30 @@ if wienerFilter==1
 else
 end
 
-% check if they want to overlay a mask
-pMO=get(handles.overlayIndRoiToggle,'Value');
-% override if there is no mask
-mE=evalin('base','exist(''cMask'')');
-if mE==0
-    pMO=0;
-else
-end
+sL=get(handles.colormapTextEntry,'String');
+sV=get(handles.colormapTextEntry,'Value');
+cMap=sL{sV};
 
-if pMO
-    cMask=evalin('base','cMask');
-    imageP=double(imageP).*cMask;
-else
-    cMask=1;
-end
-
-cMap=get(handles.colormapTextEntry,'String');
 axes(handles.imageWindow);
-hold on
-mI=imshow(imageP,'DisplayRange',[a b]);
-hold off
+imshow(imageP,'DisplayRange',[a b]);
 colormap(gca,cMap)
 
 
 assignin('base','currentImage',imageP)
 if updateHist
-axes(handles.imageHistogram);
-nhist(nonzeros(imageP),'box','maxbins',40);
-xlim([0 b])
-hold all
-plot([a a],[0 20000],'r-')
-plot([b b],[0 20000],'b-')
-hold off
+    axes(handles.imageHistogram);
+    nhist(nonzeros(imageP),'box','maxbins',40);
+    xlim([0 b])
+    hold all
+    plot([a a],[0 20000],'r-')
+    plot([b b],[0 20000],'b-')
+    hold off
 else
 end
 
 axes(handles.imageWindow);
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -790,7 +780,15 @@ elseif tt(7)==1
     assignin('base','neuropilRoiCounter',h)
     neuropilRoisDisplayToggle_Callback(handles.neuropilRoisDisplayToggle,eventdata,handles)        
 end
-% Update handles structure
+
+if roiNumber>1
+    set(handles.roiSelector,'Value',roiNumber-1);
+else
+    set(handles.roiSelector,'Value',1);
+end
+
+roiSelector_Callback(hObject, eventdata, handles)
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 % --- Executes on button press in somaRoisDisplayToggle.
@@ -846,7 +844,7 @@ end
 hold off
 
         
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -1418,7 +1416,11 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 for n=1:numel(selectionsIndex)
     s=evalin('base',selections{selectionsIndex(n)});
     mP=mean(s,3);
-    assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
+    if class(s)=='uint16'
+        assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
+    else
+        assignin('base',['meanProj_' selections{selectionsIndex(n)}],mP);
+    end
 end
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
@@ -1503,7 +1505,10 @@ for n=1:nstack
     c=c+1;
     
     if (rem(n,100)==0)
-        fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./nstack)));
+        set(handles.feedbackString,'String',['finished ' num2str(n) ' of ' num2str(numImages) ' | ' num2str(round(100*(n./nstack))) '% done'])
+        pause(0.0000001);
+        guidata(hObject, handles);
+%         fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./nstack)));
     end
 
     fnum=n;
@@ -1518,8 +1523,10 @@ assignin('base','sstack',sstack);
 % global xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
 % local xcor region growing Jakob Voigts
 
+set(handles.feedbackString,'String','computing local xcorr')
+pause(0.000001);
+guidata(hObject, handles);
 
-disp('computing local xcorr');
 w=1; % window size
 
 % Initialize and set up parameters
@@ -1530,9 +1537,12 @@ ccimage=zeros(ymax,xmax);
 
 for y=1+w:ymax-w
     
-    if (rem(y,10)==0)
-        fprintf('%d/%d (%d%%)\n',y,ymax,round(100*(y./ymax)));
-    end;
+    if (rem(y,20)==0)
+        set(handles.feedbackString,'String',['finished ' num2str(y) ' of ' num2str(ymax) ' | ' num2str(round(100*(y./ymax))) '% done'])
+        pause(0.0000001);
+        guidata(hObject, handles);
+%         fprintf('%d/%d (%d%%)\n',y,ymax,round(100*(y./ymax)));
+    end
     
     for x=1+w:xmax-w
         % Center pixel
@@ -1561,8 +1571,9 @@ ccimage(:,end)=m;
 
 assignin('base',['ccimage_' selectStack],ccimage);
 assignin('base','ccimage',ccimage);
-disp('! done with xcor');
-
+set(handles.feedbackString,'String','! done with xcor')
+pause(0.00001);
+guidata(hObject, handles);
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 
@@ -1606,7 +1617,7 @@ assignin('base','playState',playState)
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
-playStack=evalin('base',[selections{selectionsIndex}]);
+playStack=double(evalin('base',[selections{selectionsIndex}]));
 
 % This helps you start from where you left off.
 startFrame=str2num(get(handles.frameTextEntry,'String'));
@@ -1641,19 +1652,23 @@ else
 end
 
 axes(handles.imageWindow);
-mfactor=.35;
+mfactor=.1;
 
 a = get(handles.lowCutEntry,'String');
 b = get(handles.highCutEntry,'String');
 lowCut=str2double(a);
 highCut=str2double(b);
-cMap=get(handles.colormapTextEntry,'String');
+sL=get(handles.colormapTextEntry,'String');
+sV=get(handles.colormapTextEntry,'Value');
+cMap=sL{sV};
+
 
 ii=1;
     for i=startFrame:size(playStack,3)
         pS=evalin('base','playState');
         if pS==1
-            ii=double(playStack(:,:,i)).*cMask;
+            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            ii=ii.*cMask;
             set(handles.frameTextEntry,'String',num2str(i));
             set(handles.frameSlider, 'Value', i);
             h=imshow(ii,'DisplayRange',[lowCut highCut]);
@@ -1662,8 +1677,8 @@ ii=1;
             drawnow;
             delete(h);
         elseif pS==0
-            ii=double(playStack(:,:,i)).*cMask;
-%             ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
+            ii=ii.*cMask;
             imshow(ii,'DisplayRange',[lowCut highCut]);
             colormap(gca,cMap)
             daspect([1 1 1])
@@ -1797,8 +1812,10 @@ imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
 stack=evalin('base',[selections{selectionsIndex}]);
 pcaimage=evalin('base','ccimage');
 
-disp('computing PCA ROI prediction');
-    % make PCA composite, this seems to display good roi candidates
+set(handles.feedbackString,'String','computing PCA ROI estimate')
+pause(0.00001);
+guidata(hObject, handles);
+
 stack_v=zeros(imsToCor,size(stack,1)*size(stack,2));
 for i=1:imsToCor
     x=stack(:,:,i);
@@ -1811,13 +1828,15 @@ pcaimage=(squeeze(mean(abs(imcomponents(:,:,:)))));
 
 assignin('base','pcaimage',pcaimage./max(max(pcaimage)))
 
-disp('done');
-
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
-
+set(handles.feedbackString,'String','done with PCA')
+pause(0.00001);
+guidata(hObject, handles);
 
 
+
+
+guidata(hObject, handles);
+refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1830,6 +1849,10 @@ function colormapTextEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of colormapTextEntry as text
 %        str2double(get(hObject,'String')) returns contents of colormapTextEntry as a double
+% disp(get(handles.colormapTextEntry,'String'))
+% disp(get(handles.colormapTextEntry,'Value'))
+
+
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 
 
@@ -2083,10 +2106,23 @@ function nnmfButton_Callback(hObject, eventdata, handles)
 % variance, but varying in time. This tells you the realtive weight of your
 % feature at any momment in time!
 
+tic
+set(handles.feedbackString,'String','starting nnmf prediction')
+pause(0.00001);
+guidata(hObject, handles);
+
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 tStack=double(evalin('base',selections{selectionsIndex}));
-sSize=size(tStack,3);
+
+% sSize=size(tStack,3);
+sSize=fix(str2double(get(handles.gXCorImageCountEntry,'String')));
+if sSize<size(tStack,3)
+    tStack=tStack(:,:,1:sSize);
+else
+    sSize=size(tStack,3);
+end
+
 fNum=fix(str2double(get(handles.featureCountEntry,'String')));
 
 if fNum>=sSize
@@ -2096,9 +2132,12 @@ end
 
 tStack=reshape(tStack,size(tStack,1)*size(tStack,2),size(tStack,3));
 
-[nm1,nm2,nm3]=nnmf(tStack,fNum);
-
-nm1=reshape(nm1,size(tStack,1),size(tStack,2),size(tStack,3));
+size(tStack,1)
+size(tStack,2)
+size(tStack,3)
+[nm1,nm2,nm3]=nmf(tStack,fNum);
+nm1=nm1./max(max(max(nm1)));
+% nm1=reshape(nm1,fix(size(nm1,1)/2),fix(size(nm1,1)/2),size(nm1,2));
 clear tStack
 
 assignin('base','nm1',nm1);
@@ -2107,6 +2146,10 @@ assignin('base','nm3',nm3);
 
 clear nm1 nm2 nm3
 
+nmTim=toc;
+set(handles.feedbackString,'String',['finished nnmf in ' num2str(nmTim) 'seconds'])
+pause(0.000001);
+guidata(hObject, handles);
 refreshVarListButton_Callback(hObject, eventdata, handles)
 
 
@@ -2181,9 +2224,18 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
 % hObject    handle to cMaskToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+bT=str2double(get(handles.binaryThrValEntry,'String'));
+
 cImage=evalin('base','currentImage');
-cMask=imbinarize(cImage,'adaptive');
+cMask=medfilt2(imbinarize(cImage,bT));
 assignin('base','cMask',cMask);
+
+axes(handles.imageWindow)
+imshow(cMask)
+assignin('base','segMask',cMask);
+
+refreshVarListButton_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
 
 
 % --- Executes on button press in curImageToCandButton.
@@ -2204,10 +2256,13 @@ end
 axes(handles.roiPreviewWindow);
 imagesc(imageP,[0 2]),colormap('jet')
 
+refreshVarListButton_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
 
-% --- Executes on button press in addArbSomaBtn.
-function addArbSomaBtn_Callback(hObject, eventdata, handles)
-% hObject    handle to addArbSomaBtn (see GCBO)
+
+% --- Executes on button press in segmentMaskBtn.
+function segmentMaskBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to segmentMaskBtn (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 sR=evalin('base','segMask');
@@ -2238,13 +2293,22 @@ for n=1:usedNum
     else
         goodCount=goodCount+1;
         tROIs(:,:,goodCount)=roipoly(imSize(1),imSize(2),tROI(:,2),tROI(:,1));
-        addArbToSomas(hObject, eventdata, handles,tROIs(:,:,goodCount))
+        addROIsFromMask(hObject, eventdata, handles,tROIs(:,:,goodCount))
     end
 end
 
-for n=1:size(sR,3)
-    addArbToSomas(hObject, eventdata, handles,sR(:,:,n))
-end
+set(handles.feedbackString,'String',['segmented ' num2str(goodCount) ' rois'])
+pause(0.00000001);
+guidata(hObject, handles);
+refreshVarListButton_Callback(hObject, eventdata, handles);
+somaRoisDisplayToggle_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
+
+
+
+% for n=1:size(sR,3)
+%     addROIsFromMask(hObject, eventdata, handles,sR(:,:,n))
+% end
 
 
 % --- Executes on button press in autoMaskBtn.
@@ -2265,8 +2329,12 @@ bthr=0;
 thMs=imbinarize(ogMs,'adaptive','sensitivity',sens);
 thMs=medfilt2(thMs);
 axes(handles.imageWindow)
-imshowpair(ogMs,thMs,'montage')
+imshow(thMs)
 assignin('base','segMask',thMs);
+
+refreshVarListButton_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
+
 
 
 
@@ -2304,6 +2372,66 @@ function minRoiEntry_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function minRoiEntry_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to minRoiEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in manROIBtn_Generic.
+function manROIBtn_Generic_Callback(hObject, eventdata, handles)
+% hObject    handle to manROIBtn_Generic (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on selection change in roiTypeMenu.
+function roiTypeMenu_Callback(hObject, eventdata, handles)
+% hObject    handle to roiTypeMenu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns roiTypeMenu contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from roiTypeMenu
+
+
+% --- Executes during object creation, after setting all properties.
+function roiTypeMenu_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to roiTypeMenu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in deleteWSVar.
+function deleteWSVar_Callback(hObject, eventdata, handles)
+% hObject    handle to deleteWSVar (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function binaryThrValEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to binaryThrValEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of binaryThrValEntry as text
+%        str2double(get(hObject,'String')) returns contents of binaryThrValEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function binaryThrValEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to binaryThrValEntry (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
