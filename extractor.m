@@ -17,7 +17,7 @@ function varargout = extractor(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 04-Oct-2017 12:43:06
+% Last Modified by GUIDE v2.5 05-Oct-2017 10:00:22
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -341,6 +341,10 @@ rsTr=get(handles.redSomaticRoisDisplayToggle, 'Value');
 plotRelated=get(handles.showCorrelatedToggle,'Value');
 relatedOffset=str2double(get(handles.montageOffsetEntry,'String'));
 relatedThreshold=str2double(get(handles.corThresholdEntry,'String'));
+if plotRelated==0
+    relatedThreshold=0.999999;
+else
+end
 
 sliderValue = fix(get(handles.roiDisplaySlider,'Value'));
 set(handles.displayedROICounter,'String', num2str(sliderValue));
@@ -399,7 +403,7 @@ selTrace=traces(tnum,:);
 nonSelTraces=traces(1:size(traces,1),:);
 selTrace=repmat(selTrace,size(nonSelTraces,1),1);
 
-% elseif plotRelated==1
+
 axes(handles.corAxis)
 curCorr=corr(selTrace',nonSelTraces');
 [csV,csI]=sort(curCorr');
@@ -453,13 +457,13 @@ if numel(relatedROIs)>1
     aa=colormap(jet(numel(relatedROIs)*3));
     aa=aa(1:3:end,:);
 else
-    col=[1,1,1];
+    col=[0,0,0];
 end
 
 hold off
 for n=1:numel(relatedROIs)
     if relatedROIs(n)==tnum
-        col=[1,1,1];
+        col=[0,0,0];
     else
         col=aa(n,:);
     end
@@ -467,9 +471,10 @@ for n=1:numel(relatedROIs)
     hold all
 end
 hold off
+assignin('base','curh',h);
 
 a=gca;
-a.Color=[0.3,0.3,0.3];
+a.Color=[0.6,0.6,0.6];
 
 
 ylim([yLow xLow])
@@ -1651,7 +1656,7 @@ killNum=numel(kill);
 if killNum>=1
 tKS=strjoin(arrayfun(@(x) num2str(x),kill,'UniformOutput',false),',');
 killString=['[' tKS ']'];
-disp(killString)
+
 
 evalin('base',['somaticF(' killString ',:)=[];']);
 evalin('base','somaticRoiCounter=size(somaticF,1);');
@@ -1699,3 +1704,22 @@ set(handles.roiDisplaySlider,'Value',rN)
 guidata(hObject, handles);
 roiDisplaySlider_Callback(hObject, eventdata, handles)
 somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+
+% --- Executes on button press in saveTracesPDFBtn.
+function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to saveTracesPDFBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+tnum=str2double(get(handles.displayedROICounter,'String'));
+hh=evalin('base','curh');
+axes(handles.traceDisplay)
+tFig=figure; %('visible','off');
+ta=gca;
+copyobj(hh,ta);
+ta.Box='off';
+ta.TickDir='out'
+
+tFig.PaperPositionMode='manual';
+orient(tFig,'landscape');
+print(tFig,['reladteROIs_' num2str(tnum) '.pdf'],'-dpdf','-painters','-r300');
