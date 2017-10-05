@@ -17,7 +17,7 @@ function varargout = extractor(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 01-Oct-2017 23:57:22
+% Last Modified by GUIDE v2.5 04-Oct-2017 12:43:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -329,15 +329,7 @@ guidata(hObject, handles);
 
 % --- Executes on slider movement.
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
-% main roi display
-% hObject    handle to roiDisplaySlider (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: 
-%(hObject,'Value') returns position of slider
-%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-
+% main roi load
 sTr=get(handles.somaRoisDisplayToggle, 'Value');
 nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
@@ -356,10 +348,9 @@ tnum=str2double(get(handles.displayedROICounter,'String'));
 
 if sTr
     traces=evalin('base','somaticF');
-    disp('a')
-    disp(tnum)
+
     class(tnum)
-    disp('a')
+
     mask=evalin('base',['somaticROIs{' num2str(tnum) '}']);
     maskStr='somaticROIs';
     centroidStr='somaticROICenters';
@@ -401,28 +392,14 @@ elseif rsTr
     centroidStr='redSomaticROICenters';
 end
 
+yLow=str2num(get(handles.yLowTrace,'String'));
+xLow=str2num(get(handles.yHighTrace,'String'));
 
 selTrace=traces(tnum,:);
 nonSelTraces=traces(1:size(traces,1),:);
 selTrace=repmat(selTrace,size(nonSelTraces,1),1);
 
-axes(handles.traceDisplay);
-plot(traces(tnum,:));
-ylim([0 65535])
-if npTr || cnpTr 
-    ylim([-0.5 10])
-else
-end
-
-if plotRelated==0
-axes(handles.roiMaskAxis)
-imagesc(mask,[-0.2 2]),colormap jet
-a=gca;
-a.YTick=[];
-a.XTick=[];
-
-
-elseif plotRelated==1
+% elseif plotRelated==1
 axes(handles.corAxis)
 curCorr=corr(selTrace',nonSelTraces');
 [csV,csI]=sort(curCorr');
@@ -434,15 +411,14 @@ plot([1 size(curCorr,1)],[relatedThreshold relatedThreshold],'r:','linewidth',1)
 hold off
 ylim([-1 1])
 
-% distance
 
 % related cells by index
-relatedROIs=csI(find(csV>relatedThreshold));
+relatedROIs=csI(find(csV>=relatedThreshold));
 relCString=strjoin(arrayfun(@(x) num2str(x),relatedROIs,'UniformOutput',false),',');
 set(handles.relatedCellsReturn,'String',relCString)
 
 % relation score (correlation etc.)
-relatedVals=csV(find(csV>relatedThreshold));
+relatedVals=csV(find(csV>=relatedThreshold));
 relVString=strjoin(arrayfun(@(x) num2str(x),relatedVals,'UniformOutput',false),',');
 set(handles.relatedValuesReturn,'String',relVString)
 
@@ -459,19 +435,44 @@ set(handles.relatedDistReturn,'String',relDString);
 if numel(relatedDists)>=2
     axes(handles.featureHist)
     nhist(relatedDists,'box');
-    xlim([0 100])
+    xlim([0 200])
     
     axes(handles.featurePlot)
     plot(relatedROIs,relatedDists,'ko')
     hold on
     plot([1 size(curCorr,1)],[20 20],'r:','linewidth',1)
     hold off
-    ylim([0 100])
+    ylim([0 200])
 else
 end
 
-axes(handles.traceMontage)
-plot(traces(relatedROIs,:)');
+
+axes(handles.traceDisplay)
+
+if numel(relatedROIs)>1
+    aa=colormap(jet(numel(relatedROIs)*3));
+    aa=aa(1:3:end,:);
+else
+    col=[1,1,1];
+end
+
+hold off
+for n=1:numel(relatedROIs)
+    if relatedROIs(n)==tnum
+        col=[1,1,1];
+    else
+        col=aa(n,:);
+    end
+    h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.2);
+    hold all
+end
+hold off
+
+a=gca;
+a.Color=[0.3,0.3,0.3];
+
+
+ylim([yLow xLow])
 
 for n=1:numel(relatedROIs)
     cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedVals(n);
@@ -485,8 +486,7 @@ a=gca;
 a.YTick=[];
 a.XTick=[];
 
-else
-end
+
 
 
 
@@ -523,19 +523,6 @@ end
 
 set(handles.roiDisplaySlider,'Value',input);
 
-% if sTr
-%     traces=evalin('base','somaticF')';
-% elseif nTr
-%     traces=evalin('base','neuropilF')';
-% elseif bTr
-%     traces=evalin('base','boutonF')';
-% elseif dTr
-%     traces=evalin('base','dendriticF')';
-% end
-% tnum=str2double(get(handles.displayedROICounter,'String'));
-% axes(handles.traceDisplay);
-% plot(traces(tnum,:));
-% ylim([0 65535])
 roiDisplaySlider_Callback(hObject, eventdata, handles)
 % Update handles structure
 guidata(hObject, handles);
@@ -1374,18 +1361,18 @@ end
 
 
 
-function edit9_Callback(hObject, eventdata, handles)
-% hObject    handle to edit9 (see GCBO)
+function xLowTrace_Callback(hObject, eventdata, handles)
+% hObject    handle to xLowTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edit9 as text
-%        str2double(get(hObject,'String')) returns contents of edit9 as a double
+% Hints: get(hObject,'String') returns contents of xLowTrace as text
+%        str2double(get(hObject,'String')) returns contents of xLowTrace as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function edit9_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit9 (see GCBO)
+function xLowTrace_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xLowTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1397,18 +1384,18 @@ end
 
 
 
-function edit10_Callback(hObject, eventdata, handles)
-% hObject    handle to edit10 (see GCBO)
+function xHighTrace_Callback(hObject, eventdata, handles)
+% hObject    handle to xHighTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edit10 as text
-%        str2double(get(hObject,'String')) returns contents of edit10 as a double
+% Hints: get(hObject,'String') returns contents of xHighTrace as text
+%        str2double(get(hObject,'String')) returns contents of xHighTrace as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function edit10_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit10 (see GCBO)
+function xHighTrace_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xHighTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1420,18 +1407,18 @@ end
 
 
 
-function edit13_Callback(hObject, eventdata, handles)
-% hObject    handle to edit13 (see GCBO)
+function yLowTrace_Callback(hObject, eventdata, handles)
+% hObject    handle to yLowTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edit13 as text
-%        str2double(get(hObject,'String')) returns contents of edit13 as a double
-
+% Hints: get(hObject,'String') returns contents of yLowTrace as text
+%        str2double(get(hObject,'String')) returns contents of yLowTrace as a double
+roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 % --- Executes during object creation, after setting all properties.
-function edit13_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit13 (see GCBO)
+function yLowTrace_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yLowTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1443,18 +1430,20 @@ end
 
 
 
-function edit14_Callback(hObject, eventdata, handles)
-% hObject    handle to edit14 (see GCBO)
+
+function yHighTrace_Callback(hObject, eventdata, handles)
+% hObject    handle to yHighTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edit14 as text
-%        str2double(get(hObject,'String')) returns contents of edit14 as a double
+% Hints: get(hObject,'String') returns contents of yHighTrace as text
+%        str2double(get(hObject,'String')) returns contents of yHighTrace as a double
+roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
-function edit14_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit14 (see GCBO)
+function yHighTrace_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yHighTrace (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1505,17 +1494,18 @@ gIs=str2num(get(handles.relatedCellsReturn,'String'));
 gVs=str2num(get(handles.relatedValuesReturn,'String'));
 gDs=str2num(get(handles.relatedDistReturn,'String'));
 if numel(gIs)>1
-assignin('base','tIs',gIs);
-assignin('base','tVs',gVs);
-assignin('base','tDs',gDs);
-evalin('base',['tgROIs{' num2str(gNum) ',1}=tIs;,clear tIs']);
-evalin('base',['tgScores{' num2str(gNum) ',1}=tVs;,clear tVs']);
-evalin('base',['tgDists{' num2str(gNum) ',1}=tDs;,clear tDs']);
-set(handles.groupCounter,'String',num2str(gNum))
-refreshWSVarsBtn_Callback(hObject, eventdata, handles)
-guidata(hObject, handles);
+    assignin('base','tIs',gIs);
+    assignin('base','tVs',gVs);
+    assignin('base','tDs',gDs);
+    evalin('base',['tgROIs{' num2str(gNum) ',1}=tIs;,clear tIs']);
+    evalin('base',['tgScores{' num2str(gNum) ',1}=tVs;,clear tVs']);
+    evalin('base',['tgDists{' num2str(gNum) ',1}=tDs;,clear tDs']);
+    set(handles.groupCounter,'String',num2str(gNum))
+    refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+    guidata(hObject, handles);
 else
 end
+
 
 rN=fix(str2double(get(handles.displayedROICounter,'String')))+1;
 set(handles.roiDisplaySlider,'Value',rN)
@@ -1550,7 +1540,6 @@ function groupCounter_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function relatedValuesReturn_Callback(hObject, eventdata, handles)
@@ -1625,6 +1614,7 @@ function deleteFlagged_Callback(hObject, eventdata, handles)
 
 refreshWSVarsBtn_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
+somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 
 
@@ -1658,9 +1648,10 @@ function keepFirstBtn_Callback(hObject, eventdata, handles)
 related=str2num(get(handles.relatedCellsReturn,'String'));
 kill=related(2:end);
 killNum=numel(kill);
+if killNum>=1
 tKS=strjoin(arrayfun(@(x) num2str(x),kill,'UniformOutput',false),',');
 killString=['[' tKS ']'];
-
+disp(killString)
 
 evalin('base',['somaticF(' killString ',:)=[];']);
 evalin('base','somaticRoiCounter=size(somaticF,1);');
@@ -1671,5 +1662,40 @@ evalin('base',['somaticROIs(' killString ')=[];']);
 
 refreshWSVarsBtn_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
+% somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+advance=0;
+else
+    advance=1;
+end
+rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
+set(handles.roiDisplaySlider,'Value',rN)
+guidata(hObject, handles);
+roiDisplaySlider_Callback(hObject, eventdata, handles)
 somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
+
+% --- Executes on button press in killSelectedBtn.
+function killSelectedBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to killSelectedBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% 
+tnum=str2double(get(handles.displayedROICounter,'String'));
+killString=num2str(tnum);
+
+evalin('base',['somaticF(' killString ',:)=[];']);
+evalin('base','somaticRoiCounter=size(somaticF,1);');
+evalin('base',['somaticROI_PixelLists(' killString ')=[];']);
+evalin('base',['somaticROIBoundaries(' killString ')=[];']);
+evalin('base',['somaticROICenters(' killString ')=[];']);
+evalin('base',['somaticROIs(' killString ')=[];']);
+
+refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
+advance=0;
+
+rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
+set(handles.roiDisplaySlider,'Value',rN)
+guidata(hObject, handles);
+roiDisplaySlider_Callback(hObject, eventdata, handles)
+somaRoisDisplayToggle_Callback(hObject, eventdata, handles)

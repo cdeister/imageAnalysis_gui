@@ -2108,12 +2108,14 @@ function nnmfButton_Callback(hObject, eventdata, handles)
 
 tic
 set(handles.feedbackString,'String','starting nnmf prediction')
-pause(0.00001);
+pause(0.000001);
 guidata(hObject, handles);
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 tStack=double(evalin('base',selections{selectionsIndex}));
+s1=size(tStack,1);
+s2=size(tStack,2);
 
 % sSize=size(tStack,3);
 sSize=fix(str2double(get(handles.gXCorImageCountEntry,'String')));
@@ -2135,9 +2137,11 @@ tStack=reshape(tStack,size(tStack,1)*size(tStack,2),size(tStack,3));
 size(tStack,1)
 size(tStack,2)
 size(tStack,3)
+
 [nm1,nm2,nm3]=nmf(tStack,fNum);
 nm1=nm1./max(max(max(nm1)));
-% nm1=reshape(nm1,fix(size(nm1,1)/2),fix(size(nm1,1)/2),size(nm1,2));
+
+nm1=reshape(nm1,s1,s2,fNum);
 clear tStack
 
 assignin('base','nm1',nm1);
@@ -2414,9 +2418,14 @@ end
 
 % --- Executes on button press in deleteWSVar.
 function deleteWSVar_Callback(hObject, eventdata, handles)
-% hObject    handle to deleteWSVar (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectedItem=selections{selectionsIndex};
+evalin('base',['clear ' selectedItem]);
+
+refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
 
 
 

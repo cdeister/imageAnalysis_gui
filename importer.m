@@ -147,11 +147,15 @@ if mPF==0
     tic
     if pImport==1
         tempFiltFiles=filteredFiles(firstIm:endIm,1);
-        parfor n=1:importCount;
+        parfor n=1:importCount
             importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);
         end
     elseif pImport==0
-        for n=firstIm:endIm;
+        for n=firstIm:endIm
+            if mod(n,200)==0
+                set(handles.importButton,'String',[num2str(n) ' of ' numImages])
+            else
+            end
             importedImages(:,:,(n-firstIm)+1)=imread([imPath filesep filteredFiles(n,1).name]);
         end
     end
@@ -170,10 +174,20 @@ if mPF==0
     set(handles.workspaceVarBox,'String',vars)
     
 else  % The user wants multi-page tif. This import is a bit different.
+    
     bitD=mpTifInfo(1).BitDepth;
+
     mImage=mpTifInfo(1).Width;
+    
     nImage=mpTifInfo(1).Height;
-    NumberImages=length(mpTifInfo);
+    
+    maxImages=length(mpTifInfo);
+    NumberImages=fix(str2double(get(handles.endImageEntry,'String')));
+    if NumberImages>maxImages
+        NumberImages=maxImages;
+    else
+    end
+    
     if bitD==16
         imType='uint16';
     elseif bitD==32
@@ -191,11 +205,18 @@ else  % The user wants multi-page tif. This import is a bit different.
         parfor i=1:NumberImages
             importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
         end
-    elseif pImport==0
+    elseif pImport==0        
         for i=1:NumberImages
+            if mod(i,500)==0
+                set(handles.importButton,'String',[num2str(i) '/' num2str(NumberImages)])
+                pause(0.00000000000001)
+                guidata(hObject, handles);
+            else
+            end
             importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
         end
     end
+    set(handles.importFeedbackString,'String','Import Images')
     assignin('base','importedStack',importedStack)
     assignin('base','importedBitDepth',bitD)
     iT=toc;
@@ -205,7 +226,7 @@ else  % The user wants multi-page tif. This import is a bit different.
     set(handles.workspaceVarBox,'String',vars)
 end
 
-set(handles.importFeedbackString,'String','')
+set(handles.importFeedbackString,'String','Import Images')
 
 disp(['*** done with import, which took ' num2str(iT) ' seconds'])
 refreshVarListButton_Callback(hObject, eventdata, handles)
