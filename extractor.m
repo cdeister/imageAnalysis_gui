@@ -329,7 +329,6 @@ cnpTr=get(handles.npCorDfDispToggle,'Value');
 rsTr=get(handles.redSomaticRoisDisplayToggle, 'Value');
 
 plotRelated=get(handles.showCorrelatedToggle,'Value');
-relatedOffset=str2double(get(handles.montageOffsetEntry,'String'));
 relatedThreshold=str2double(get(handles.corThresholdEntry,'String'));
 if plotRelated==0
     relatedThreshold=0.999999;
@@ -458,10 +457,12 @@ for n=1:numel(relatedROIs)
     else
         col=aa(n,:);
     end
-    h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.5);
+    h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.1);
     hold all
 end
 hold off
+
+
 assignin('base','curh',h);
 
 a=gca;
@@ -474,7 +475,7 @@ ylim([yLow xLow])
 for n=1:numel(relatedROIs)
     cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedVals(n);
 end
-rgb=cat(3,cumuMasks(:,:,1)*0,cumuMasks(:,:,1)*0,cumuMasks(:,:,1)*0);
+rgb=cat(3,false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))));
 
 if numel(relatedROIs)==1
     aa(1,:)=[1,1,1];
@@ -489,15 +490,16 @@ for n=1:numel(relatedROIs)
     rgb=rgb+cat(3,cumuMasks(:,:,n)*g(1),cumuMasks(:,:,n)*g(2),cumuMasks(:,:,n)*g(3));
 end
     
-    
-% sumMasks=sum(cumuMasks,3);
+   
 clear cumuMasks
 
 axes(handles.roiMaskAxis)
-imshow(rgb)
+mP=imshow(rgb);
 a=gca;
 a.YTick=[];
 a.XTick=[];
+
+assignin('base','curHMask',mP);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1521,13 +1523,6 @@ guidata(hObject, handles);
 roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 
-
-
-
-
-
-
-
 function groupCounter_Callback(hObject, eventdata, handles)
 % hObject    handle to groupCounter (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1716,17 +1711,40 @@ function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 tnum=str2double(get(handles.displayedROICounter,'String'));
 hh=evalin('base','curh');
-axes(handles.traceDisplay)
+mi=evalin('base','curHMask');
+miX=mi.XData;
+miY=mi.YData;
+mi.XData=miY;
+mi.YData=miX;
+
+
+
 tFig=figure('visible','off');
+subplot(6,2,[5 6 7 8 9 10 11 12])
 ta=gca;
+hh(1,end).Color=[0,0,0];
 copyobj(hh,ta);
 ta.Box='off';
 ta.TickDir='out';
 
-tFig.PaperPositionMode='manual';
-orient(tFig,'landscape');
+
+subplot(6,2,[2 4])
+tb=gca;
+copyobj(mi,tb);
+
+tb.YTick=[];
+tb.XTick=[];
+tb.Clipping='off';
+tb.Visible='off';
+tb.YDir='reverse';
+
+% tFig.PaperPositionMode='manual';
+orient(tFig,'portrait');
 print(tFig,['reladteROIs_' num2str(tnum) '.pdf'],'-dpdf','-painters','-r300');
 clear tFig
+mi.XData=miX;
+mi.YData=miY;
+hh(1,end).Color=[1,1,1];
 
 
 % --- Executes on button press in importerBtn.
