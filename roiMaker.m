@@ -70,9 +70,10 @@ function varargout = roiMaker_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-function returnTypeStrings=returnAllTypes(hObject,eventdata,handles)
+function [returnTypeStrings,typeAllColor]=returnAllTypes(hObject,eventdata,handles)
 % set all known ROI types here
-returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vessel'};
+returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vessel','neuropil'};
+typeAllColor={[0,0.8,0.3],[1,0,0],[0,0,1],[1,0,1],[1,1,0],[0.7,0.3,0],[0.4,0.4,0.4]};
 
 
 function addROIsFromMask(hObject,eventdata,handles,mask)
@@ -193,102 +194,6 @@ nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 selected=[sTr rSTr dTr aTr bTr vTr nTr]; 
 
 
-% --- Executes on selection change in roiSelector.
-function roiSelector_Callback(hObject, eventdata, handles)
-% hObject    handle to roiSelector (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns roiSelector contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from roiSelector
-
-roiNumber=get(handles.roiSelector,'Value');
-
-tt=checkROISelections(hObject, eventdata, handles);
-
-loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-
-% check if they want to overlay a mask
-pMO=get(handles.overlayIndRoiToggle,'Value');
-
-% If somatic
-if tt(1)==1;
-    h=evalin('base','somaticRoiCounter');
-    c=evalin('base','somaticROICenters');
-    b=evalin('base','somaticROIBoundaries');
-elseif tt(2)==1;
-    h=evalin('base','redSomaticRoiCounter');
-    c=evalin('base','redSomaticROICenters');
-    b=evalin('base','redSomaticROIBoundaries');
-elseif tt(3)==1;
-    h=evalin('base','dendriticRoiCounter');
-    c=evalin('base','dendriticROICenters');
-    b=evalin('base','dendriticROIBoundaries');
-elseif tt(4)==1;
-    h=evalin('base','axonalRoiCounter');
-    c=evalin('base','axonalROICenters');
-    b=evalin('base','axonalROIBoundaries');
-elseif tt(5)==1;
-    h=evalin('base','boutonRoiCounter');
-    c=evalin('base','boutonROICenters');
-    b=evalin('base','boutonROIBoundaries');
-elseif tt(6)==1;
-    h=evalin('base','vesselRoiCounter');
-    c=evalin('base','vesselROICenters');
-    b=evalin('base','vesselROIBoundaries');
-elseif tt(7)==1;
-    h=evalin('base','neuropilRoiCounter'); 
-    b=evalin('base','neuropilROIBoundaries');
-    c=evalin('base','neuropilROICenters');
-
-else
-end
-
-% Populate the box:
-for n=1:h
-    roisList{n}=n;
-end
-set(handles.roiSelector, 'String', '');
-set(handles.roiSelector,'String',roisList);
-set(handles.roiSelector,'Value',roiNumber)
-
-% Plot
-sL=get(handles.colormapTextEntry,'String');
-sV=get(handles.colormapTextEntry,'Value');
-fS=sL{sV};
-
-if strcmp(fS,'jet')
-    outColor='k';
-    txtColor=[0 0 0];
-else
-    outColor='g';
-    txtColor=[0 1 1];
-end
-axes(handles.imageWindow);
-hold all 
-for n=1:numel(b)
-    for k=1:numel(c{1,n})
-        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
-        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-    end
-end
-hold all
-n=roiNumber;
-outColor='r';
-txtColor=[1 0 0];
-for k=1:numel(c{1,n})
-    plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
-    text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-end
-
-hold off
-
-set(handles.roiSelector,'Value',roiNumber);
-
-refreshVarListButton_Callback(hObject, eventdata, handles);
-guidata(hObject, handles);
-
-    
 function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -308,17 +213,21 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 % --- Executes on button press in loadMeanProjectionButton.
-function loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
 % main load image
-% hObject    handle to loadMeanProjectionButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 
 a = str2double(get(handles.lowCutEntry,'String'));
 b = str2double(get(handles.highCutEntry,'String'));
 updateHist=1;
 
+if nargin==3
 [imageP imClass]=getWSVar(hObject, eventdata, handles);
+else
+    imageP=defImage;
+    imClass=class(defImage);
+    updateHist=0;
+end
 
 if strcmp(imClass,'logical')
     tMxVl=1;
@@ -452,21 +361,29 @@ end
 
 axes(handles.imageWindow);
 
+roisDisplayToggle(hObject,eventdata,handles,1)
 refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
 function deleteROIButton_Callback(hObject, eventdata, handles)
 
-tt=evalin('base','roiSelectString');
-roiNumber=get(handles.roiSelector,'Value');
+boxNum=get(handles.roiSelector,'Value');
+boxStrings=get(handles.roiSelector,'String');
+specifiedString=boxStrings{boxNum};
+
+stringSplit=strsplit(specifiedString,'_');
 
 
-h=evalin('base',[tt 'RoiCounter']);
-r=evalin('base',[tt 'ROIs']);
-c=evalin('base',[tt 'ROICenters']);
-b=evalin('base',[tt 'ROIBoundaries']);
-pl=evalin('base',[tt 'ROI_PixelLists']);
+typeString=stringSplit{1};
+roiNumber=fix(str2double(stringSplit{2}));
+
+
+h=evalin('base',[typeString 'RoiCounter']);
+r=evalin('base',[typeString 'ROIs']);
+c=evalin('base',[typeString 'ROICenters']);
+b=evalin('base',[typeString 'ROIBoundaries']);
+pl=evalin('base',[typeString 'ROI_PixelLists']);
 
 h=h-1;
 r(roiNumber)=[];
@@ -474,13 +391,13 @@ c(roiNumber)=[];
 b(roiNumber)=[];
 pl(roiNumber)=[];
 
-assignin('base',[tt 'ROIs'],r)
-assignin('base',[tt 'ROICenters'],c)
-assignin('base',[tt 'ROIBoundaries'],b)
-assignin('base',[tt 'RoiCounter'],h)
-assignin('base',[tt 'ROI_PixelLists'],pl)
+assignin('base',[typeString 'ROIs'],r)
+assignin('base',[typeString 'ROICenters'],c)
+assignin('base',[typeString 'ROIBoundaries'],b)
+assignin('base',[typeString 'RoiCounter'],h)
+assignin('base',[typeString 'ROI_PixelLists'],pl)
 
-roisDisplayToggle(hObject, eventdata, handles,tt)
+roisDisplayToggle(hObject, eventdata, handles,1)
 
 % alert the user their neuropil masks will be out of sync.
 g=evalin('base','exist(''neuropilRoiCounter'')');
@@ -490,69 +407,138 @@ else
     set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
 end
 
-
 if roiNumber>1
     set(handles.roiSelector,'Value',roiNumber-1);
 else
     set(handles.roiSelector,'Value',1);
 end
 
-roiSelector_Callback(hObject, eventdata, handles)
+roisDisplayToggle(hObject,eventdata,handles)
+refreshVarListButton_Callback(hObject, eventdata, handles);
+guidata(hObject, handles);
+
+% --- Executes on selection change in roiSelector.
+function roiSelector_Callback(hObject, eventdata, handles)
+
+boxNum=get(handles.roiSelector,'Value');
+boxStrings=get(handles.roiSelector,'String');
+
+if numel(boxNum)>0
+specifiedString=boxStrings{boxNum};
+
+stringSplit=strsplit(specifiedString,'_');
+
+typeString=stringSplit{1};
+roiNumber=fix(str2double(stringSplit{2}));
+
+c=evalin('base',[typeString 'ROICenters']);
+b=evalin('base',[typeString 'ROIBoundaries']);
+
+axes(handles.imageWindow)
+aa=evalin('base','currentImage');
+loadMeanProjectionButton_Callback(hObject, eventdata, handles,aa)
+roisDisplayToggle(hObject,eventdata,handles,1)
+
+hold all
+for n=roiNumber
+    for k=1:numel(c{1,n})
+        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
+            [0,0.1,0.2],'LineWidth',6)
+        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
+            num2str(n),'FontSize',15,'FontWeight','Normal','Color',[0,0,0]);
+    end
+end
+hold off
+else
+end
+
+set(handles.roiSelector,'Value',boxNum);
+
 refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
+function roisDisplayToggle(hObject,eventdata,handles,justUpdate)
 
-function roisDisplayToggle(hObject, eventdata, handles,typeString)
 
-% get a list of known type strings
-allTypes=returnAllTypes(hObject,eventdata,handles);
-% define the non-selected strings as the difference in known and selected
-% sets
-notSelected=setdiff(allTypes,typeString);
-% set selected to 1
-eval(['set(handles.' typeString 'RoisDisplayToggle, ''Value'', 1);'])
-for n=1:numel(notSelected)
-    eval(['set(handles.' notSelected{n} 'RoisDisplayToggle, ''Value'', 0);'])
-end
-
-% set a string to let rest of gui know your intent
-assignin('base','roiSelectString',typeString)
-
-% load the image of interest
-loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-
-% now make and ROI overlay
-h=evalin('base',[typeString 'RoiCounter']);
-c=evalin('base',[typeString 'ROICenters']);
-b=evalin('base',[typeString 'ROIBoundaries']);
-
-% Populate the box:
-for n=1:h
-    roisList{n}=n;
-end
-set(handles.roiSelector, 'String', '');
-set(handles.roiSelector,'String',roisList);
-set(handles.roiSelector,'Value',h)
-
-% Plot
-if strcmp(get(handles.colormapTextEntry,'String'),'jet')
-    outColor='k';
-    txtColor=[0 0 0];
+if nargin==3
+    justUpdate=0;
 else
-    outColor='g';
-    txtColor=[0 1 1];
 end
-axes(handles.imageWindow);
-hold all 
-for n=1:numel(b)
-    for k=1:numel(c{1,n})
-        plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),outColor,'LineWidth',2)
-        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2), num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+
+if justUpdate==0
+    loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+else
+end
+axes(handles.imageWindow)
+
+
+
+[allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
+
+for n=1:numel(allTypes)
+    whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
+end
+
+whoIsOn=find(whoIsOn==1);
+
+if numel(whoIsOn)==0
+    set(handles.roiSelector,'String','');
+else
+end
+
+roiCounter=0;
+for rI=1:numel(whoIsOn)
+
+    typeString=allTypes{whoIsOn(rI)};
+    g=evalin('base',['exist(''' typeString 'RoiCounter'');']);
+    if g==1
+        h=evalin('base',[typeString 'RoiCounter']);
+    else
+        h=0;
+    end
+    if h>0
+        c=evalin('base',[typeString 'ROICenters']);
+        b=evalin('base',[typeString 'ROIBoundaries']);
+
+        % Populate the box:
+
+        if justUpdate==0
+            for n=1:h
+                roiCounter=roiCounter+1;
+                roisList{roiCounter}=[typeString '_' num2str(n)];
+            end
+
+            set(handles.roiSelector, 'String', '');
+            set(handles.roiSelector,'String',roisList);
+            set(handles.roiSelector,'Value',h)
+
+        else
+        end
+
+        % Plot
+        if strcmp(get(handles.colormapTextEntry,'String'),'jet')
+            outColor='k';
+            txtColor=[0 0 0];
+        else
+            outColor=allColors{whoIsOn(rI)};
+            txtColor=allColors{whoIsOn(rI)};
+        end
+
+        hold all
+        for n=1:numel(b)
+            for k=1:numel(c{1,n})
+                plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
+                    outColor,'LineWidth',2)
+                text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
+                    num2str(n),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+            end
+        end
+
+        hold off
+    else
     end
 end
-
-hold off
 
         
 refreshVarListButton_Callback(hObject, eventdata, handles);
@@ -560,26 +546,34 @@ guidata(hObject, handles);
 
 
 function somaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'somatic')
+roisDisplayToggle(hObject, eventdata, handles)
 
 function redSomaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'redSomatic')
+roisDisplayToggle(hObject, eventdata, handles)
 
 function dendriticRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'dendritic')
+roisDisplayToggle(hObject, eventdata, handles)
 
 function axonalRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'axonal')
+roisDisplayToggle(hObject, eventdata, handles)
 
 function boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'bouton')
+roisDisplayToggle(hObject, eventdata, handles)
 
 function neuropilRoisDisplayToggle_Callback(hObject, eventdata, handles)
-roisDisplayToggle(hObject, eventdata, handles,'neuropil')
+roisDisplayToggle(hObject, eventdata, handles)
+
+function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
+roisDisplayToggle(hObject, eventdata, handles)
 
 function lowCutSlider_Callback(hObject, eventdata, handles)
 
 sliderValue = get(handles.lowCutSlider,'Value');
+highSet = get(handles.highCutSlider,'Value');
+if sliderValue>=highSet
+    sliderValue=highSet-0.1;
+else
+end
 set(handles.lowCutEntry,'String', num2str(sliderValue));
 guidata(hObject, handles); 
 
@@ -600,6 +594,11 @@ end
 function highCutSlider_Callback(hObject, eventdata, handles)
 
 sliderValue = get(handles.highCutSlider,'Value');
+lowSet = get(handles.lowCutSlider,'Value');
+if sliderValue<=lowSet
+    sliderValue=lowSet+0.1;
+else
+end
 set(handles.highCutEntry,'String', num2str(sliderValue));
 guidata(hObject, handles);
 
@@ -722,7 +721,7 @@ for n=1:neuropilRoiCounter
     neuropilROIBoundaries{1,n}=bwboundaries(neuropilROIs{1,n});
     neuropilROICenters{1,n}=regionprops(neuropilROIs{1,n},'Centroid');
     neuropilROI_PixelLists{1,n}=regionprops(neuropilROIs{1,n},'PixelList');
-    neuropilROI_PixelLists{1,n}=neuropilROI_PixelLists{1,n}.PixelList;
+%     neuropilROI_PixelLists{1,n}=neuropilROI_PixelLists{1,n}.PixelList;
 end
 
 smoothNeuropilsMask=smoothNeuropilsMask>0;
@@ -1020,7 +1019,7 @@ assignin('base','playState',playState)
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 playStack=double(evalin('base',[selections{selectionsIndex}]));
-
+if size(playStack,3)>1
 % This helps you start from where you left off.
 startFrame=str2num(get(handles.frameTextEntry,'String'));
 if startFrame==size(playStack,3)
@@ -1097,7 +1096,8 @@ ii=1;
     end
     
 
-
+else
+end
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1286,9 +1286,13 @@ function frameSlider_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-sliderValue = fix(get(handles.frameSlider,'Value'));
+sliderValue = get(handles.frameSlider,'Value');
 set(handles.frameTextEntry,'String', num2str(sliderValue));
+guidata(hObject, handles);
 loadMeanProjectionButton_Callback(hObject,eventdata, handles);
+
+
+
 
 
 
@@ -1306,36 +1310,11 @@ end
 
 
 function frameTextEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to frameTextEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of frameTextEntry as text
-%        str2double(get(hObject,'String')) returns contents of frameTextEntry as a double
-
-% frame=get(hObject,'String');
-% selections = get(handles.workspaceVarBox,'String');
-% selectionsIndex = get(handles.workspaceVarBox,'Value');
-% frameFromStack=evalin('base',[selections{selectionsIndex} '(:,:,' frame ')']);
-% axes(handles.imageWindow);
-% a = str2double(get(handles.lowCutEntry,'String'));
-% b = str2double(get(handles.highCutEntry,'String'));
-% 
-% cMap=get(handles.colormapTextEntry,'String');
-% 
-% imshow(frameFromStack,[a b]);
-% colormap(cMap)
-% 
-% assignin('base','currentImage',frameFromStack)
 
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-% somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
-
-
-
-
-% Update handles structure
 guidata(hObject, handles);
+
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1392,7 +1371,6 @@ else
 end
 
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1438,7 +1416,6 @@ else
 end
 
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-dendriteRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1486,22 +1463,12 @@ else
 end
 
 loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 % Update handles structure
 guidata(hObject, handles);
 
 
-% --- Executes on button press in vesselRoisDisplayToggle.
-function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to vesselRoisDisplayToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of vesselRoisDisplayToggle
-
-
-% --- Executes on button press in nnmfButton.
 function nnmfButton_Callback(hObject, eventdata, handles)
 % performs non-negative matrix factorization with defaults
 % this is a 'feature' based PCA that only allows non-negative values.
@@ -1515,8 +1482,8 @@ function nnmfButton_Callback(hObject, eventdata, handles)
 % feature at any momment in time!
 
 tic
-set(handles.feedbackString,'String','starting nnmf prediction')
-pause(0.000001);
+set(handles.feedbackString,'String','performing nnmf prediction')
+pause(0.00000001);
 guidata(hObject, handles);
 
 selections = get(handles.workspaceVarBox,'String');
@@ -1546,7 +1513,7 @@ size(tStack,1)
 size(tStack,2)
 size(tStack,3)
 
-[nm1,nm2,nm3]=nmf(tStack,fNum,'MAX_ITER',200);
+[nm1,nm2,nm3]=nmf(tStack,fNum,'MAX_ITER',150);
 nm1=nm1./max(max(max(nm1)));
 
 nm1=reshape(nm1,s1,s2,fNum);
@@ -1709,18 +1676,15 @@ for n=1:usedNum
     end
 end
 
-set(handles.feedbackString,'String',['segmented ' num2str(goodCount) ' rois'])
-pause(0.00000001);
-guidata(hObject, handles);
 refreshVarListButton_Callback(hObject, eventdata, handles);
-somaRoisDisplayToggle_Callback(hObject, eventdata, handles);
+set(handles.feedbackString,'String',['segmented ' num2str(goodCount) ' rois'])
+
 guidata(hObject, handles);
+curIm=str2double(get(handles.frameTextEntry,'String'));
+set(handles.frameTextEntry,'String',num2str(curIm+1))
+guidata(hObject, handles);
+loadMeanProjectionButton_Callback(hObject, eventdata,handles)
 
-
-
-% for n=1:size(sR,3)
-%     addROIsFromMask(hObject, eventdata, handles,sR(:,:,n))
-% end
 
 
 % --- Executes on button press in autoMaskBtn.
@@ -1746,8 +1710,6 @@ assignin('base','segMask',thMs);
 
 refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
-
-
 
 
 function binarySensEntry_Callback(hObject, eventdata, handles)
@@ -1835,8 +1797,6 @@ evalin('base',['clear ' selectedItem]);
 refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
-
-
 function binaryThrValEntry_Callback(hObject, eventdata, handles)
 % hObject    handle to binaryThrValEntry (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1872,9 +1832,7 @@ eval(['cImage(find(cImage ' eString '))=0']);
 mV=min(min(nonzeros(cImage)));
 cImage=remap(cImage,[mV 0.9],[0 0.9]);
 assignin('base','currentImage',cImage);
-clear cImage
-
-
+loadMeanProjectionButton_Callback(hObject, eventdata, handles,cImage)
 
 function imageCutEntry_Callback(hObject, eventdata, handles)
 % hObject    handle to imageCutEntry (see GCBO)

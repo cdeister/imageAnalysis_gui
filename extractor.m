@@ -17,7 +17,7 @@ function varargout = extractor(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 05-Oct-2017 10:00:22
+% Last Modified by GUIDE v2.5 05-Oct-2017 22:43:47
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -92,30 +92,13 @@ function dendriteExtractCheck_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in axonExtractCheck.
 function axonExtractCheck_Callback(hObject, eventdata, handles)
-% hObject    handle to axonExtractCheck (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of axonExtractCheck
-
-
-% --- Executes on button press in boutonExtractCheck.
 function boutonExtractCheck_Callback(hObject, eventdata, handles)
-% hObject    handle to boutonExtractCheck (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of boutonExtractCheck
-
-% --- Executes on button press in diskExtractButton.
 function diskExtractButton_Callback(hObject, eventdata, handles)
-% hObject    handle to diskExtractButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 set(handles.extractFeedbackString,'String','Extracting ...')
-pause(0.001);
+pause(0.00000001);
 guidata(hObject, handles);
 
 imPath=evalin('base','importPath');
@@ -253,10 +236,20 @@ function extractButton_Callback(hObject, eventdata, handles)
 % hObject    handle to extractButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+
+dStackSize=evalin('base',['size(' selectStack ');']);
+
+if dStackSize(3)>1
+
 set(handles.extractButton,'string','running','ForegroundColor','red','enable','off');
 
 set(handles.extractFeedbackString,'String','Extracting ...')
-pause(0.001);
+pause(0.0000001);
 guidata(hObject, handles);
 
 % ************ handle concatination of roi types
@@ -283,12 +276,7 @@ end
 % ************ end handle concatination of roi types
 
 %--- extract
-selections = get(handles.workspaceVarBox,'String');
-selectionsIndex = get(handles.workspaceVarBox,'Value');
-selectStack=selections{selectionsIndex};
 
-
-dStackSize=evalin('base',['size(' selectStack ');']);
 
 sED=zeros(numel(rois),dStackSize(3));
 tic
@@ -324,6 +312,8 @@ set(handles.extractButton,'string','Extract','ForegroundColor','black','enable',
 % Update handles structure
 refreshWSVarsBtn_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
+else
+end
 
 
 
@@ -463,38 +453,51 @@ end
 hold off
 for n=1:numel(relatedROIs)
     if relatedROIs(n)==tnum
-        col=[0,0,0];
+        sameCell=n;
+        col=[1,1,1];
     else
         col=aa(n,:);
     end
-    h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.2);
+    h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.5);
     hold all
 end
 hold off
 assignin('base','curh',h);
 
 a=gca;
-a.Color=[0.6,0.6,0.6];
+a.Color=[0,0,0];
 
 
 ylim([yLow xLow])
 
+
 for n=1:numel(relatedROIs)
     cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedVals(n);
 end
-sumMasks=sum(cumuMasks,3);
+rgb=cat(3,cumuMasks(:,:,1)*0,cumuMasks(:,:,1)*0,cumuMasks(:,:,1)*0);
+
+if numel(relatedROIs)==1
+    aa(1,:)=[1,1,1];
+else
+end
+for n=1:numel(relatedROIs)
+    g=aa(n,:);
+    if n==sameCell
+        g=[1,1,1];
+    else
+    end
+    rgb=rgb+cat(3,cumuMasks(:,:,n)*g(1),cumuMasks(:,:,n)*g(2),cumuMasks(:,:,n)*g(3));
+end
+    
+    
+% sumMasks=sum(cumuMasks,3);
 clear cumuMasks
 
 axes(handles.roiMaskAxis)
-imagesc(sumMasks,[relatedOffset 1]),colormap jet
+imshow(rgb)
 a=gca;
 a.YTick=[];
 a.XTick=[];
-
-
-
-
-
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1714,12 +1717,28 @@ function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
 tnum=str2double(get(handles.displayedROICounter,'String'));
 hh=evalin('base','curh');
 axes(handles.traceDisplay)
-tFig=figure; %('visible','off');
+tFig=figure('visible','off');
 ta=gca;
 copyobj(hh,ta);
 ta.Box='off';
-ta.TickDir='out'
+ta.TickDir='out';
 
 tFig.PaperPositionMode='manual';
 orient(tFig,'landscape');
 print(tFig,['reladteROIs_' num2str(tnum) '.pdf'],'-dpdf','-painters','-r300');
+clear tFig
+
+
+% --- Executes on button press in importerBtn.
+function importerBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to importerBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+evalin('base','importer')
+
+% --- Executes on button press in roiMakerBtn.
+function roiMakerBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to roiMakerBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+evalin('base','roiMaker')
