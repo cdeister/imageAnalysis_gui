@@ -17,7 +17,7 @@ function varargout = extractor(varargin)
 
 
 
-% Last Modified by GUIDE v2.5 05-Oct-2017 22:43:47
+% Last Modified by GUIDE v2.5 06-Oct-2017 17:51:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -317,9 +317,11 @@ end
 
 
 
-% --- Executes on slider movement.
+
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
+
 % main roi load
+
 sTr=get(handles.somaRoisDisplayToggle, 'Value');
 nTr=get(handles.neuropilRoisDisplayToggle, 'Value');
 bTr=get(handles.boutonRoisDisplayToggle, 'Value');
@@ -341,9 +343,6 @@ tnum=str2double(get(handles.displayedROICounter,'String'));
 
 if sTr
     traces=evalin('base','somaticF');
-
-    class(tnum)
-
     mask=evalin('base',['somaticROIs{' num2str(tnum) '}']);
     maskStr='somaticROIs';
     centroidStr='somaticROICenters';
@@ -395,7 +394,7 @@ selTrace=repmat(selTrace,size(nonSelTraces,1),1);
 
 axes(handles.corAxis)
 curCorr=corr(selTrace',nonSelTraces');
-[csV,csI]=sort(curCorr');
+[csV,csI]=sort(curCorr','descend');
 csV=csV(:,1);
 csI=csI(:,1);
 plot(curCorr','ko','linewidth',1)
@@ -404,34 +403,50 @@ plot([1 size(curCorr,1)],[relatedThreshold relatedThreshold],'r:','linewidth',1)
 hold off
 ylim([-1 1])
 
-
-% related cells by index
 relatedROIs=csI(find(csV>=relatedThreshold));
-relCString=strjoin(arrayfun(@(x) num2str(x),relatedROIs,'UniformOutput',false),',');
-set(handles.relatedCellsReturn,'String',relCString)
+relatedCorrelations=csV(find(csV>=relatedThreshold));
 
-% relation score (correlation etc.)
-relatedVals=csV(find(csV>=relatedThreshold));
-relVString=strjoin(arrayfun(@(x) num2str(x),relatedVals,'UniformOutput',false),',');
-set(handles.relatedValuesReturn,'String',relVString)
 
 % related pairwise distance (Euclidean)
 for n=1:numel(relatedROIs)
     b=evalin('base',[centroidStr '{' num2str(tnum) '}.Centroid;']);
     a=evalin('base',[centroidStr '{' num2str(relatedROIs(n)) '}.Centroid;']);
-    relatedDists(:,n)=sqrt((b(1)-a(1))^2+((b(2)-a(2))^2));
+    relatedDistances(:,n)=sqrt((b(1)-a(1))^2+((b(2)-a(2))^2));
 end
-relDString=strjoin(arrayfun(@(x) num2str(x),relatedDists,'UniformOutput',false),',');
+
+% check for menu sort
+sL=get(handles.sortByMenu,'String');
+sV=get(handles.sortByMenu,'Value');
+
+sortString=sL{sV};
+sortUp=get(handles.sortAscend,'Value');
+if sortUp
+    eval(['[tSrtV tSrtI]=sort(related' sortString ',''ascend'');'])
+else
+    eval(['[tSrtV tSrtI]=sort(related' sortString ',''descend'');'])
+end
+
+relatedROIs=relatedROIs(tSrtI);
+relatedCorrelations=relatedCorrelations(tSrtI);
+relatedDistances=relatedDistances(tSrtI);
+
+relCString=strjoin(arrayfun(@(x) num2str(x),relatedROIs,'UniformOutput',false),',');
+set(handles.relatedCellsReturn,'String',relCString)
+
+relVString=strjoin(arrayfun(@(x) num2str(x),relatedCorrelations,'UniformOutput',false),',');
+set(handles.relatedValuesReturn,'String',relVString)
+
+relDString=strjoin(arrayfun(@(x) num2str(x),relatedDistances,'UniformOutput',false),',');
 set(handles.relatedDistReturn,'String',relDString);
 
 
-if numel(relatedDists)>=2
+if numel(relatedDistances)>=2
     axes(handles.featureHist)
-    nhist(relatedDists,'box');
+    nhist(relatedDistances,'box');
     xlim([0 200])
     
     axes(handles.featurePlot)
-    plot(relatedROIs,relatedDists,'ko')
+    plot(relatedROIs,relatedDistances,'ko')
     hold on
     plot([1 size(curCorr,1)],[20 20],'r:','linewidth',1)
     hold off
@@ -461,6 +476,7 @@ for n=1:numel(relatedROIs)
     hold all
 end
 hold off
+set(h, 'ButtonDownFcn', {@LineSelected, h})
 
 
 assignin('base','curh',h);
@@ -473,7 +489,7 @@ ylim([yLow xLow])
 
 
 for n=1:numel(relatedROIs)
-    cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedVals(n);
+    cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedCorrelations(n);
 end
 rgb=cat(3,false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))));
 
@@ -501,16 +517,11 @@ a.XTick=[];
 
 assignin('base','curHMask',mP);
 
-% Update handles structure
 guidata(hObject, handles);
 
-% --- Executes during object creation, after setting all properties.
-function roiDisplaySlider_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to roiDisplaySlider (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: slider controls usually have a light gray background.
+function roiDisplaySlider_CreateFcn(hObject, eventdata, handles)
+
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
@@ -1442,23 +1453,12 @@ end
 
 
 function yHighTrace_Callback(hObject, eventdata, handles)
-% hObject    handle to yHighTrace (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of yHighTrace as text
-%        str2double(get(hObject,'String')) returns contents of yHighTrace as a double
 roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 
-% --- Executes during object creation, after setting all properties.
 function yHighTrace_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to yHighTrace (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
@@ -1466,43 +1466,20 @@ end
 
 
 function relatedCellsReturn_Callback(hObject, eventdata, handles)
-% hObject    handle to relatedCellsReturn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of relatedCellsReturn as text
-%        str2double(get(hObject,'String')) returns contents of relatedCellsReturn as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function relatedCellsReturn_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to relatedCellsReturn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on button press in groupMarkerBtn.
 function groupMarkerBtn_Callback(hObject, eventdata, handles)
-% hObject    handle to groupMarkerBtn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% g=evalin('base','exist(''tgROIs'')');
-% if g==0
-%     evalin('base','tgROIs=cell(0);');
-%     evalin('base','tgScores=cell(0);');
-% else
-% end
-    
+
 gNum=fix(str2num(get(handles.groupCounter,'String')))+1;
 gIs=str2num(get(handles.relatedCellsReturn,'String'));
 gVs=str2num(get(handles.relatedValuesReturn,'String'));
 gDs=str2num(get(handles.relatedDistReturn,'String'));
+
 if numel(gIs)>1
     assignin('base','tIs',gIs);
     assignin('base','tVs',gVs);
@@ -1524,54 +1501,27 @@ roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 
 function groupCounter_Callback(hObject, eventdata, handles)
-% hObject    handle to groupCounter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of groupCounter as text
-%        str2double(get(hObject,'String')) returns contents of groupCounter as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function groupCounter_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to groupCounter (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
 
 function relatedValuesReturn_Callback(hObject, eventdata, handles)
-% hObject    handle to relatedValuesReturn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of relatedValuesReturn as text
-%        str2double(get(hObject,'String')) returns contents of relatedValuesReturn as a double
 
 
-% --- Executes during object creation, after setting all properties.
 function relatedValuesReturn_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to relatedValuesReturn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
 
-% --- Executes on button press in rcBtn_soma.
+
 function rcBtn_soma_Callback(hObject, eventdata, handles)
-% hObject    handle to rcBtn_soma (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 curROIType=evalin('base','dispROIString');
 
 if strcmp(curROIType,'somaticROI')
@@ -1695,7 +1645,7 @@ evalin('base',['somaticROIs(' killString ')=[];']);
 
 refreshWSVarsBtn_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
-advance=0;
+advance=1;
 
 rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
 set(handles.roiDisplaySlider,'Value',rN)
@@ -1726,7 +1676,6 @@ hh(1,end).Color=[0,0,0];
 copyobj(hh,ta);
 ta.Box='off';
 ta.TickDir='out';
-
 
 subplot(6,2,[2 4])
 tb=gca;
@@ -1760,3 +1709,50 @@ function roiMakerBtn_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 evalin('base','roiMaker')
+
+
+function batchSmoothBtn_Callback(hObject, eventdata, handles)
+
+
+function pixelCountReturn_Callback(hObject, eventdata, handles)
+
+
+function pixelCountReturn_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function sortByMenu_Callback(hObject, eventdata, handles)
+roiDisplaySlider_Callback(hObject, eventdata, handles)
+
+
+function sortByMenu_CreateFcn(hObject, eventdata, handles)
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function sortAscend_Callback(hObject, eventdata, handles)
+roiDisplaySlider_Callback(hObject, eventdata, handles)
+
+function doSomething(hObject, eventdata, handles,cellNum)
+gIs=str2num(get(handles.relatedCellsReturn,'String'));
+disp(gIs(cellNum))
+
+
+function [numSel]=LineSelected(hObject, eventdata, handels)
+set(hObject, 'LineWidth', 2);
+set(handels(handels ~= hObject), 'LineWidth', 0.8);
+sI=(handels==hObject);
+numSel=find(sI==1);
+disp(['trace #' num2str(numSel) ' selected'])
+
+
+

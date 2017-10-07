@@ -11,7 +11,7 @@ function varargout = roiMaker(varargin)
 %
 % Questions: cdeister@brown.edu
 % 
-% Last Modified by GUIDE v2.5 05-Oct-2017 13:28:23
+% Last Modified by GUIDE v2.5 06-Oct-2017 17:46:17
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -47,6 +47,7 @@ handles.output = hObject;
 vars = evalin('base','who');
 set(handles.workspaceVarBox,'String',vars)
 g=evalin('base','exist(''neuropilRoiCounter'')');
+
 if g
     set(handles.neuropilAlertString,'String','');
 else
@@ -231,6 +232,7 @@ end
 
 if strcmp(imClass,'logical')
     tMxVl=1;
+    updateHist=0;
 else
     tMxVl=max(max(imageP(:,:,1)));
 end
@@ -1158,11 +1160,14 @@ axes(handles.roiPreviewWindow);
 imagesc(im2bw(currentImage,roiTh),[0 2]),colormap jet
 assignin('base','candidateRoi',im2bw(currentImage,roiTh))
 assignin('base','candidateRoi_rawVals',currentImage)
-evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
-evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;,clear ''candidateRoi_rawVals'' ')
+evalin('base','scratch.candidateRoi=candidateRoi;')
+evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;')
 
 
-% Update handles structure
+% % Update handles structure
+% guidata(hObject, handles);
+
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 
@@ -1177,18 +1182,17 @@ function roiThresholdEntry_Callback(hObject, eventdata, handles)
 prevAt=evalin('base','exist(''scratch'',''var'')');
 if prevAt
     currentROI=evalin('base','scratch.candidateRoi_rawVals');
-    
     roiTh=str2num(get(handles.roiThresholdEntry,'String'));
     axes(handles.roiPreviewWindow);
     imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
     assignin('base','candidateRoi',im2bw(currentROI,roiTh))
     assignin('base','candidateRoi_rawVals',currentROI)
-    evalin('base','scratch.candidateRoi=candidateRoi;,clear ''candidateRoi'' ')
-    evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;,clear ''candidateRoi_rawVals'' ')
+    evalin('base','scratch.candidateRoi=candidateRoi;')
+    evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;')
 end
     
 
-% Update handles structure
+refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
 % --- Executes during object creation, after setting all properties.
@@ -1719,6 +1723,7 @@ function binarySensEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of binarySensEntry as text
 %        str2double(get(hObject,'String')) returns contents of binarySensEntry as a double
+cMaskToggle_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1804,6 +1809,7 @@ function binaryThrValEntry_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of binaryThrValEntry as text
 %        str2double(get(hObject,'String')) returns contents of binaryThrValEntry as a double
+cMaskToggle_Callback(hObject, eventdata, handles)
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1854,3 +1860,101 @@ function imageCutEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in deDupeRoisBtn.
+function deDupeRoisBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to deDupeRoisBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+sL=get(handles.roiTypeMenu,'String');
+sV=get(handles.roiTypeMenu,'Value');
+roiTypeSelected=sL{sV};
+assignin('base','roiSelectString',roiTypeSelected)
+
+typeMasks=evalin('base',[roiTypeSelected 'ROIs']);
+
+corrCount=0;
+flag1=[];
+flag2=[];
+totalCs=nchoosek(numel(typeMasks),2);
+
+for n=1:numel(typeMasks)
+    for j=(n+1):numel(typeMasks)
+        corrCount=corrCount+1;
+        pCor(:,corrCount)=corr2(typeMasks{n},typeMasks{j});
+        if pCor(:,corrCount)>=0.2
+            flag1=[flag1; n];
+            flag2=[flag2; j];
+        else
+        end
+        if mod(corrCount,1000)==0
+            disp([num2str(corrCount) '/' num2str(totalCs) ' done'])
+        else
+        end
+    end
+end
+
+toNull=[];
+for n=1:numel(flag1)
+    s1=numel(find(typeMasks{flag1(n)}==1));
+    s2=numel(find(typeMasks{flag2(n)}==1));
+    if s1>s2
+        toNull(:,n)=flag2(n);
+    else
+        toNull(:,n)=flag1(n);
+    end
+end
+
+disp(['will remove ' num2str(numel(toNull)) ' potentially duplicated ROIs'])
+
+
+r=evalin('base',[roiTypeSelected 'ROIs']);
+c=evalin('base',[roiTypeSelected 'ROICenters']);
+b=evalin('base',[roiTypeSelected 'ROIBoundaries']);
+pl=evalin('base',[roiTypeSelected 'ROI_PixelLists']);
+
+r(toNull)=[];
+c(toNull)=[];
+b(toNull)=[];
+pl(toNull)=[];
+
+assignin('base',[roiTypeSelected 'ROIs'],r)
+assignin('base',[roiTypeSelected 'ROICenters'],c)
+assignin('base',[roiTypeSelected 'ROIBoundaries'],b)
+assignin('base',[roiTypeSelected 'RoiCounter'],numel(pl))
+assignin('base',[roiTypeSelected 'ROI_PixelLists'],pl)
+
+clear toNull
+
+toNull=[];
+for n=1:numel(typeMasks)
+    if numel(find(typeMasks{n}==1))<3
+        toNull=[toNull; n];
+    else
+    end
+end
+
+if numel(toNull)>=1
+    r=evalin('base',[roiTypeSelected 'ROIs']);
+    c=evalin('base',[roiTypeSelected 'ROICenters']);
+    b=evalin('base',[roiTypeSelected 'ROIBoundaries']);
+    pl=evalin('base',[roiTypeSelected 'ROI_PixelLists']);
+
+    r(toNull)=[];
+    c(toNull)=[];
+    b(toNull)=[];
+    pl(toNull)=[];
+
+    assignin('base',[roiTypeSelected 'ROIs'],r)
+    assignin('base',[roiTypeSelected 'ROICenters'],c)
+    assignin('base',[roiTypeSelected 'ROIBoundaries'],b)
+    assignin('base',[roiTypeSelected 'RoiCounter'],numel(pl))
+    assignin('base',[roiTypeSelected 'ROI_PixelLists'],pl)
+
+    disp(['also removed ' num2str(numel(toNull)) ' tiny ROIs'])
+else
+end
+
+clear toNull s1 s2 n pCor flag1 flag2 corrCount

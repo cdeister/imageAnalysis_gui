@@ -74,7 +74,7 @@ function importButton_Callback(hObject, eventdata, handles)
 set(handles.importFeedbackString,'String','Importing Images ...')
 % Update handles structure
 guidata(hObject, handles);
-pause(0.001)
+pause(0.00000001)
 
 mPF=get(handles.multiPageFlag, 'Value');
 pImport=get(handles.parallelizeRegistrationToggle,'Value');
@@ -160,6 +160,8 @@ if mPF==0
         end
     end
     iT=toc;
+    set(handles.importFeedbackString,'String','Import Images')
+    guidata(hObject, handles);
     
     if bitD==16
         assignin('base',['importedStack_' filterString{1}],uint16(importedImages));
@@ -448,9 +450,8 @@ for n=1:numel(selectionsIndex)
     assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
 end
 
-
-vars = evalin('base','who');
-set(handles.workspaceVarBox,'String',vars)
+axes(handles.imageAxis)
+imagesc(uint16(mP))
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
@@ -484,9 +485,7 @@ guidata(hObject, handles);
 
 % --- Executes on button press in setRegStackButton.
 function setRegStackButton_Callback(hObject, eventdata, handles)
-% hObject    handle to setRegStackButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 if numel(selectionsIndex)>1
@@ -507,22 +506,14 @@ guidata(hObject, handles);
 
 
 
-
-
-% --- Executes on button press in registerButton.
 function registerButton_Callback(hObject, eventdata, handles)
-% hObject    handle to registerButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% get the string for the stack you want to register; this will be a string
 regStackString=evalin('base','stackToRegister');
 
-% todo: allow user to crop what they want
-% the way I do the registration rotates the image, here I offset that
+
 
 set(handles.feedbackString,'String','Working...')
-pause(0.001);
+pause(0.0000001);
 guidata(hObject, handles);
 
 regTemp=evalin('base','regTemplate');
@@ -544,7 +535,6 @@ regTempC=regTemp;
         [out1,out2]=dftregistration(fft2(regTempC),fft2(imReg),subpixelFactor);
         registeredTransformations(:,n)=out1;
         registeredImages(:,:,n)=abs(ifft2(out2));
-        %registeredImages(:,:,n)=imrotate(abs(ifft2(out2)),180);
     end
 t=toc;
 set(handles.feedbackString,'String','')
@@ -572,9 +562,7 @@ guidata(hObject, handles);
 
 % --- Executes on button press in saveStackButton.
 function saveStackButton_Callback(hObject, eventdata, handles)
-% hObject    handle to saveStackButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 
 selection = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -658,33 +646,13 @@ guidata(hObject, handles);
 
 
 function stackObjectNameEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to stackObjectNameEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of stackObjectNameEntry as text
-%        str2double(get(hObject,'String')) returns contents of stackObjectNameEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function stackObjectNameEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to stackObjectNameEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on button press in diskMeanProjectButton.
 function diskMeanProjectButton_Callback(hObject, eventdata, handles)
-% hObject    handle to diskMeanProjectButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
 
 firstIm=str2num(get(handles.firstImageEntry,'string'));
 endIm=str2num(get(handles.endImageEntry,'string'));
@@ -700,8 +668,6 @@ if matlabpool('size')==0
     matlabpool open
 else
 end
-
-
 
 disp('projecting ...')
 
@@ -1032,11 +998,7 @@ guidata(hObject, handles);
 
 % --- Executes on button press in deleteOGStack_toggle.
 function deleteOGStack_toggle_Callback(hObject, eventdata, handles)
-% hObject    handle to deleteOGStack_toggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of deleteOGStack_toggle
 
 
 % --- Executes on button press in applyTransformsButton.
@@ -1070,7 +1032,7 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 imageToPlot=selections{selectionsIndex};
 
 tI=evalin('base',imageToPlot);
-handles.imageAxis
+axes(handles.imageAxis)
 imagesc(tI),colormap jet
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
@@ -1175,30 +1137,22 @@ refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
 
-% --- Executes on button press in getLuminanceButton.
 function getLuminanceButton_Callback(hObject, eventdata, handles)
-% hObject    handle to getLuminanceButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 stackToPlot=selections{selectionsIndex};
 
 evalin('base',['for n=1:size(' stackToPlot ',3),' stackToPlot '_meanLuminance(:,n)=mean2(' stackToPlot '(:,:,n));,end'])
+evalin('base','clear n')
 mlP=evalin('base',[stackToPlot '_meanLuminance;']);
 handles.imageAxis;
 plotVectors(hObject, eventdata,handles,mlP)
-% plot(mlP,'k-')
 
 xlabel('frame')
 ylabel('mean luminance')
-% 
-% a=gca;
-% a.TickDir='out';
-% a.Box='off';
-% a.LineWidth=1;
-% axis square
+
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
@@ -1250,6 +1204,9 @@ selectStack=selections{selectionsIndex};
 s=evalin('base',[selectStack '(:,:,' constrainedFrames{1} ':' constrainedFrames{2} ');']);
 mP=mean(s,3);
 assignin('base',['consMeanProj_' selectStack],uint16(mP));
+
+axes(handles.imageAxis)
+imagesc(uint16(mP))
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 % Update handles structure
