@@ -23,7 +23,7 @@ Greg = Greg*exp(i*transforms(2));
 
 out=abs(ifft2(Greg));
 if strcmp(varClass,'uint16')
-    out=im2uint16(out);
+    out=im2uint16(out,'Indexed');
 else
 end
 

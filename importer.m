@@ -8,9 +8,7 @@ function varargout = importer(varargin)
 % cdeister@brown.edu with any questions
 % last modified: CAD 1/25/2015
 %
-%
-%
-% Last Modified by GUIDE v2.5 01-Oct-2017 01:36:12
+% Last Modified by GUIDE v2.5 07-Oct-2017 23:18:07
 %
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -130,19 +128,14 @@ if mPF==0
     imageSize=size(canaryImport);
     canaryInfo=whos('canaryImport');
     bitD=canaryInfo.class;
-    assignin('base','bitDebug',bitD); % debug 
+    assignin('base','bitDebug',bitD); 
     importedImages=zeros(imageSize(1),imageSize(2),importCount,bitD);
-    if strcmp(bitD,'uint16')==1
-        imType='uint16';
-    elseif strcmp(bitD,'uint32')==1
-        imType='uint32';
-    elseif strcmp(bitD,'uint8')==1
-        imType='uint8';
+    
+    if strcmp(bitD,'uint16')==1 || strcmp(bitD,'uint8')==1 || strcmp(bitD,'uint32')==1
+        eval(['imType=''uint' num2str(bitD) '''' ';'])
     else
         imType='Double';
     end
-    disp(imType)
- 
     
     tic
     if pImport==1
@@ -160,27 +153,20 @@ if mPF==0
         end
     end
     iT=toc;
+    
     set(handles.importFeedbackString,'String','Import Images')
     guidata(hObject, handles);
     
-    if bitD==16
-        assignin('base',['importedStack_' filterString{1}],uint16(importedImages));
-    elseif bitD==8
-        assignin('base',['importedStack_' filterString{1}],uint8(importedImages));
-    elseif bitD==32
-        assignin('base',['importedStack_' filterString{1}],uint32(importedImages));
+    if bitD==8 || bitD==16 || bitD==32
+        assignin('base',['importedStack_' filterString{1}],eval(['uint' num2str(bitD) '(importedImages)']));
     else
         assignin('base',['importedStack_' filterString{1}],double(importedImages));
     end
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
     
 else  % The user wants multi-page tif. This import is a bit different.
     
     bitD=mpTifInfo(1).BitDepth;
-
     mImage=mpTifInfo(1).Width;
-    
     nImage=mpTifInfo(1).Height;
     
     maxImages=length(mpTifInfo);
@@ -190,13 +176,8 @@ else  % The user wants multi-page tif. This import is a bit different.
     else
     end
     
-    if bitD==16
-        imType='uint16';
-    elseif bitD==32
-        imType='uint32';
-        % why are you using 32 bit images? I'm curious shoot me an email please.
-    elseif bitD==8
-        imType='uint8';
+    if bitD==8 || bitD==16 || bitD==32
+        eval(['imType=''uint' num2str(bitD) '''' ';'])
     else
         imType='Double';
     end
@@ -218,228 +199,118 @@ else  % The user wants multi-page tif. This import is a bit different.
             importedStack(:,:,i)=imread([imPath tifFile],'Index',i);
         end
     end
-    set(handles.importFeedbackString,'String','Import Images')
+    set(handles.importButton,'String','Import Images')
+    pause(0.00000000000001)
+    guidata(hObject, handles);
+    
     assignin('base','importedStack',importedStack)
     assignin('base','importedBitDepth',bitD)
     iT=toc;
-    
-    % update var box
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
 end
 
-set(handles.importFeedbackString,'String','Import Images')
 
 disp(['*** done with import, which took ' num2str(iT) ' seconds'])
 refreshVarListButton_Callback(hObject, eventdata, handles)
-% Update handles structure
 guidata(hObject, handles);
 
 
 
 function fileFilterString_Callback(hObject, eventdata, handles)
-% hObject    handle to fileFilterString (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of fileFilterString as text
-%        str2double(get(hObject,'String')) returns contents of fileFilterString as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function fileFilterString_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to fileFilterString (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
 
-% --- Executes on button press in stringFilterToggle.
+
 function stringFilterToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to stringFilterToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of stringFilterToggle
-
-% Update handles structure
 guidata(hObject, handles);
 
-
-% --- Executes on button press in tiffSelectToggle.
 function tiffSelectToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to tiffSelectToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of tiffSelectToggle
 set(handles.pngSelectToggle, 'Value', 0);
-
-% Update handles structure
 guidata(hObject, handles);
 
 
-% --- Executes on button press in pngSelectToggle.
+
 function pngSelectToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to pngSelectToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of pngSelectToggle
 set(handles.tiffSelectToggle, 'Value', 0);
-
-% Update handles structure
 guidata(hObject, handles);
 
 
 
 function firstImageEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to firstImageEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of firstImageEntry as text
-%        str2double(get(hObject,'String')) returns contents of firstImageEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function firstImageEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to firstImageEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
 
 function endImageEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to endImageEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of endImageEntry as text
-%        str2double(get(hObject,'String')) returns contents of endImageEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function endImageEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to endImageEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
 
 function skipFactorEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to skipFactorEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of skipFactorEntry as text
-%        str2double(get(hObject,'String')) returns contents of skipFactorEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function skipFactorEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to skipFactorEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on button press in skipFactorToggle.
 function skipFactorToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to skipFactorToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of skipFactorToggle
-
-
-% --- Executes on button press in setDirectoryButton.
 function setDirectoryButton_Callback(hObject, eventdata, handles)
-% hObject    handle to setDirectoryButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 mPF=get(handles.multiPageFlag, 'Value');
 
 if mPF==0
     imPath=uigetdir();
-    assignin('base','importPath',imPath);
-    filterString={get(handles.fileFilterString,'String')};
-    filteredFiles = dir([imPath filesep '*' filterString{1} '*']); % '*.' imageType{1}
-    assignin('base','filteredFiles',filteredFiles);
-    eNum=numel(filteredFiles);
-    set(handles.endImageEntry,'string',num2str(eNum))
+    if imPath~=0
+        assignin('base','importPath',imPath);
+        filterString={get(handles.fileFilterString,'String')};
+        filteredFiles = dir([imPath filesep '*' filterString{1} '*']); % '*.' imageType{1}
+        assignin('base','filteredFiles',filteredFiles);
+        eNum=numel(filteredFiles);
+        set(handles.endImageEntry,'string',num2str(eNum))
+    else
+    end
 elseif mPF==1
-    % todo: all files flag
     [tifFile,imPath]=uigetfile('*.*','Select your tif file');
-    mpTifInfo=imfinfo([imPath tifFile]);
-    imageCount=length(mpTifInfo);
-    set(handles.endImageEntry,'string',num2str(imageCount));
-    assignin('base','mpTifInfo',mpTifInfo);
-    assignin('base','importPath',imPath);
-    assignin('base','tifFile',tifFile);
+    if imPath~=0
+        mpTifInfo=imfinfo([imPath tifFile]);
+        imageCount=length(mpTifInfo);
+        set(handles.endImageEntry,'string',num2str(imageCount));
+        assignin('base','mpTifInfo',mpTifInfo);
+        assignin('base','importPath',imPath);
+        assignin('base','tifFile',tifFile);
+    else
+    end
 end
 
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
-% Update handles structure
 guidata(hObject, handles);
 
-
-% --- Executes on selection change in workspaceVarBox.
 function workspaceVarBox_Callback(hObject, eventdata, handles)
-% hObject    handle to workspaceVarBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns workspaceVarBox contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from workspaceVarBox
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
-% Update handles structure
 guidata(hObject, handles);
 
 
-% --- Executes during object creation, after setting all properties.
-function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to workspaceVarBox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: listbox controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
+function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
+
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
 
-% --- Executes on button press in meanProjectButton.
+
 function meanProjectButton_Callback(hObject, eventdata, handles)
-% hObject    handle to meanProjectButton (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -447,14 +318,17 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 for n=1:numel(selectionsIndex)
     s=evalin('base',selections{selectionsIndex(n)});
     mP=mean(s,3);
-    assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
+    if strcmp(class(s),'uint16')
+        assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
+    else
+        assignin('base',['meanProj_' selections{selectionsIndex(n)}],double(mP));
+    end
 end
 
 axes(handles.imageAxis)
 imagesc(uint16(mP))
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
-% Update handles structure
 guidata(hObject, handles);
 
 
@@ -1001,7 +875,7 @@ function deleteOGStack_toggle_Callback(hObject, eventdata, handles)
 
 
 
-% --- Executes on button press in applyTransformsButton.
+
 function applyTransformsButton_Callback(hObject, eventdata, handles)
 % hObject    handle to applyTransformsButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1365,10 +1239,8 @@ function Untitled_1_Callback(hObject, eventdata, handles)
 
 
 
-% --- Executes on button press in plotVectorButton.
-function plotVectorButton_Callback(hObject, eventdata, handles)
-% hObject    handle to plotVectorButton (see GCBO)
 
+function plotVectorButton_Callback(hObject, eventdata, handles)
 
 vP=getWSVar(hObject, eventdata, handles);
 plotVectors(hObject, eventdata,handles,vP)
@@ -1377,11 +1249,8 @@ refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
 
-% --- Executes on button press in deleteSelectionBtn.
+
 function deleteSelectionBtn_Callback(hObject, eventdata, handles)
-% hObject    handle to deleteSelectionBtn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
@@ -1389,4 +1258,14 @@ selectedItem=selections{selectionsIndex};
 evalin('base',['clear ' selectedItem]);
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
+
+
+function saveWorkspaceBtn_Callback(hObject, eventdata, handles)
+set(handles.feedbackString,'String','saving...')
+pause(0.0000001);
+guidata(hObject, handles);
+evalin('base','save(''matAnalysis'',''-v7.3'')')
+set(handles.feedbackString,'String','')
+pause(0.0000001);
 guidata(hObject, handles);

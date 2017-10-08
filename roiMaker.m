@@ -11,7 +11,7 @@ function varargout = roiMaker(varargin)
 %
 % Questions: cdeister@brown.edu
 % 
-% Last Modified by GUIDE v2.5 06-Oct-2017 17:46:17
+% Last Modified by GUIDE v2.5 07-Oct-2017 23:39:08
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -54,14 +54,11 @@ else
     set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
 end
 
-% Update handles structure
 guidata(hObject, handles);
 
 % UIWAIT makes roiMaker wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
-
-% --- Outputs from this function are returned to the command line.
 function varargout = roiMaker_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
@@ -75,7 +72,6 @@ function [returnTypeStrings,typeAllColor]=returnAllTypes(hObject,eventdata,handl
 % set all known ROI types here
 returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vessel','neuropil'};
 typeAllColor={[0,0.8,0.3],[1,0,0],[0,0,1],[1,0,1],[1,1,0],[0.7,0.3,0],[0.4,0.4,0.4]};
-
 
 function addROIsFromMask(hObject,eventdata,handles,mask)
 
@@ -163,7 +159,6 @@ end
 eval([typeString 'RoisDisplayToggle_Callback(handles.somaticRoisDisplayToggle,eventdata,handles)'])
 refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
-
 
 function somaButton_Callback(hObject, eventdata, handles)
 freehandROI(hObject,eventdata,handles,'somatic')
@@ -459,9 +454,7 @@ set(handles.roiSelector,'Value',boxNum);
 refreshVarListButton_Callback(hObject, eventdata, handles);
 guidata(hObject, handles);
 
-
 function roisDisplayToggle(hObject,eventdata,handles,justUpdate)
-
 
 if nargin==3
     justUpdate=0;
@@ -473,8 +466,6 @@ if justUpdate==0
 else
 end
 axes(handles.imageWindow)
-
-
 
 [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
 
@@ -1803,33 +1794,17 @@ refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
 
 function binaryThrValEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to binaryThrValEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of binaryThrValEntry as text
-%        str2double(get(hObject,'String')) returns contents of binaryThrValEntry as a double
 cMaskToggle_Callback(hObject, eventdata, handles)
 
-
-% --- Executes during object creation, after setting all properties.
 function binaryThrValEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to binaryThrValEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on button press in cutByBtn.
 function cutByBtn_Callback(hObject, eventdata, handles)
-% hObject    handle to cutByBtn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 cImage=evalin('base','currentImage');
 eString=get(handles.imageCutEntry,'String');
 disp(eString)
@@ -1841,32 +1816,16 @@ assignin('base','currentImage',cImage);
 loadMeanProjectionButton_Callback(hObject, eventdata, handles,cImage)
 
 function imageCutEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to imageCutEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of imageCutEntry as text
-%        str2double(get(hObject,'String')) returns contents of imageCutEntry as a double
 cutByBtn_Callback(hObject, eventdata, handles)
 
-% --- Executes during object creation, after setting all properties.
 function imageCutEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to imageCutEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on button press in deDupeRoisBtn.
 function deDupeRoisBtn_Callback(hObject, eventdata, handles)
-% hObject    handle to deDupeRoisBtn (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 sL=get(handles.roiTypeMenu,'String');
 sV=get(handles.roiTypeMenu,'Value');
@@ -1958,3 +1917,9 @@ else
 end
 
 clear toNull s1 s2 n pCor flag1 flag2 corrCount
+
+function somaButton_KeyPressFcn(hObject, eventdata, handles)
+if get(gcf,'currentcharacter') == 'h'
+disp('yo')
+else
+end
