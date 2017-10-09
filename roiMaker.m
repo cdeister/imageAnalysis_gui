@@ -198,12 +198,7 @@ wsClass=class(wsObj);
 
 % --- Executes during object creation, after setting all properties.
 function roiSelector_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to roiSelector (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: listbox controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
@@ -1012,16 +1007,38 @@ assignin('base','playState',playState)
 selections = get(handles.workspaceVarBox,'String');
 selectionsIndex = get(handles.workspaceVarBox,'Value');
 playStack=double(evalin('base',[selections{selectionsIndex}]));
-if size(playStack,3)>1
-% This helps you start from where you left off.
-startFrame=str2num(get(handles.frameTextEntry,'String'));
-if startFrame==size(playStack,3)
-    startFrame=1;
+size(playStack)
+if size(playStack,3)>1 & size(playStack,4)<=1
+    playRGB=0;
+elseif size(playStack,3)>1 & size(playStack,4)>1
+    playRGB=1;
 else
 end
 
+    
+if size(playStack,3)>1 && playRGB==0
+    % This helps you start from where you left off.
+    startFrame=str2num(get(handles.frameTextEntry,'String'));
+    if startFrame==size(playStack,3)
+        startFrame=1;
+    else
+    end
+
+elseif size(playStack,4)>1 && playRGB==1
+    startFrame=str2num(get(handles.frameTextEntry,'String')); 
+    if startFrame==size(playStack,4)
+        startFrame=1;
+    else
+    end
+end
+
+
 sliderMin = 1;
-sliderMax = size(playStack,3); % this is variable
+if playRGB==0
+    sliderMax = size(playStack,3); % this is variable
+elseif playRGB==1
+    sliderMax = size(playStack,4); % this is variable
+end
 sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
 
 
@@ -1059,7 +1076,7 @@ b = get(handles.highCutEntry,'String');
 lowCut=str2double(a);
 highCut=str2double(b);
 
-
+if playRGB==0
 ii=1;
     for i=startFrame:size(playStack,3)
         pS=evalin('base','playState');
@@ -1086,10 +1103,38 @@ ii=1;
             assignin('base','currentImage',ii)
             break
         end  
-    end
-    
+    end    
 
-else
+mfactor=1;
+elseif playRGB==1
+    ii=1;
+    for i=startFrame:size(playStack,4)
+        pS=evalin('base','playState');
+        if pS==1
+            ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
+            ii=ii.*cMask;
+%             set(handles.frameTextEntry,'String',num2str(i));
+%             set(handles.frameSlider, 'Value', i);
+            h=imshow(ii);
+%             colormap(gca,cMap);
+            daspect([1 1 1])
+            drawnow;
+            delete(h);
+        elseif pS==0
+            set(handles.frameTextEntry,'String',num2str(i));
+            set(handles.frameSlider, 'Value', i);
+            guidata(hObject, handles);
+            ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
+            ii=ii.*cMask;
+            imshow(ii);
+%             colormap(gca,cMap);
+            daspect([1 1 1])
+            axes(handles.imageWindow);
+            assignin('base','currentImage',ii)
+            break
+        end  
+    end   
+   
 end
 % Update handles structure
 guidata(hObject, handles);
@@ -1695,10 +1740,22 @@ if size(tI,3)>1
     tI=tI(:,:,stackInd);
 end
 
+medFilter=get(handles.medianFilterToggle,'Value');
+if medFilter==1
+    tI=medfilt2(tI);
+else
+end
+
+wienerFilter=get(handles.wienerFilterToggle,'Value');
+if wienerFilter==1
+    tI=wiener2(tI);
+else
+end
+
 ogMs=double(tI)./max(max(double(tI)));
 bthr=0;
 thMs=imbinarize(ogMs,'adaptive','sensitivity',sens);
-thMs=medfilt2(thMs);
+thMs=thMs;
 axes(handles.imageWindow)
 imshow(thMs)
 assignin('base','segMask',thMs);

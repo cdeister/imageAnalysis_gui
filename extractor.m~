@@ -487,7 +487,7 @@ function plotROI(hObject, eventdata, handles)
         end
         hold off
         assignin('base','curh',h);
-        set(h,'ButtonDownFcn',{@LineSelected,h,eventdata,handles})
+        set(h,'ButtonDownFcn',{@LineSelected,h})
         
         % related pairwise distance (Euclidean) b is the primary reference
         for n=1:numel(relatedROIs)
@@ -1134,12 +1134,12 @@ function sortAscend_Callback(hObject, eventdata, handles)
     roiDisplaySlider_Callback(hObject, eventdata, handles)
 
 function [numSel]=LineSelected(hObject, eventdata, handels)
-    set(hObject, 'LineWidth', 1.5);
-    set(handels(handels ~= hObject), 'LineWidth', 0.4);
+    set(hObject, 'LineWidth', 2);
+    set(handels(handels ~= hObject), 'LineWidth', 0.8);
     sI=(handels==hObject);
     numSel=find(sI==1);
-    set(handles.feedbackString,'String',['trace #' num2str(numSel)])
-    
+    set(handles.feedbackString,'String',['trace #' num2str(numSel) ' selected'])
+    disp(['trace #' num2str(numSel) ' selected'])
     assignin('base','selectedTraceNum',numSel)
 
 function killGroupBtn_Callback(hObject, eventdata, handles)
@@ -1376,11 +1376,11 @@ function saveWSBtn_Callback(hObject, eventdata, handles)
 
 function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     
-    
+    set(handles.feedbackString,'String',['yo'])
     pause(0.0000000000001);
     guidata(hObject, handles);
     
-    
+    disp('engaged')
     
 %     selections = get(handles.workspaceVarBox,'String');    
     frmWinSize=get(handles.movBaselineWinEntry,'String');

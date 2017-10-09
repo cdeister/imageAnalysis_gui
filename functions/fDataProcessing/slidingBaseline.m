@@ -6,13 +6,19 @@ function [out]=slidingBaseline(data,windowSize,quantileThresh)
 %and the last window/2 values into the last pad.
 
 out=zeros(numel(data),1);
-outStd=zeros(numel(data),1);
-padD=zeros(numel(data)+windowSize,1);
-padD((windowSize/2)+1:end-(windowSize/2))=data;
-padD(1:(windowSize/2))=data((windowSize/2)+1:((windowSize/2)+1)+((windowSize/2)-1));
-padD(end-((windowSize/2)-1):end)=data(end-((windowSize/2)-1):end);
+% outStd=zeros(numel(data),1);
+if mod(windowSize,2)
+    windowSize=windowSize+1;
+else
+end
+halfInd=fix(windowSize/2);
 
-startQuant=windowSize/2;
+padD=zeros(numel(data)+windowSize,1);
+padD(halfInd+1:end-halfInd)=data;
+padD(1:halfInd)=data(halfInd+1:(halfInd+1)+(halfInd-1));
+padD(end-(halfInd-1):end)=data(end-(halfInd-1):end);
+
+startQuant=halfInd;
 for n=1:numel(out)
     td=padD((n+startQuant)-startQuant:(n+startQuant)+(startQuant-1));
     out(n)=quantile(td,quantileThresh);

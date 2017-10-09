@@ -26,13 +26,41 @@ end
 uniqueTypes=unique(typeList);
 for n=1:numel(uniqueTypes)
 	g=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'F'')']);
+    gd=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'F_DF'')']);
+    gBL=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'F_nonBL'')']);
     h=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'ROIs'')']);
+    BLCT=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'F_BLCutOffs'')']);
+    BLT=evalin(scopeString,['exist(' '''' uniqueTypes{n} 'BL'')']);
+
+    somaticF_BLCutOffs
 	
     roisToDelete=numberList(strcmp(typeList,uniqueTypes{n}));
     if g==1
         evalin(scopeString,[uniqueTypes{n} 'F([' num2str(roisToDelete) '],:)=[];'])
     else
     end
+
+    if gd==1
+        evalin(scopeString,[uniqueTypes{n} 'F_DF([' num2str(roisToDelete) '],:)=[];'])
+    else
+    end
+
+    if gBL==1
+        evalin(scopeString,[uniqueTypes{n} 'F_nonBL([' num2str(roisToDelete) '],:)=[];'])
+    else
+    end
+
+    if BLCT==1
+        evalin(scopeString,[uniqueTypes{n} 'F_BLCutOffs([' num2str(roisToDelete) '],:)=[];'])
+    else
+    end
+
+    if BLT==1
+        evalin(scopeString,[uniqueTypes{n} 'BL([' num2str(roisToDelete) '],:)=[];'])
+    else
+    end
+
+    
     
     if h==1
         roiCount=evalin(scopeString,['numel(' uniqueTypes{n} 'ROIs)']);
