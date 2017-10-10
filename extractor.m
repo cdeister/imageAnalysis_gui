@@ -370,25 +370,18 @@ function plotROI(hObject, eventdata, handles)
     % plot the mask too
     
     axes(handles.roiMaskAxis)
-    % plot mask
+        
+    mainMask=evalin('base',[mainType 'ROIs{' num2str(mainTypeID) '}']); %*relatedCorrelations(n);
+    g=[1,1,1]; % the mainROI color is white
+    rgb=cat(3,mainMask*g(1),mainMask*g(2),mainMask*g(3));
+    
+    
     if holdLast
         lAx=gca;
         lastMask=lAx.Children.CData;
-    else
-    end
-        
-    mainMask=evalin('base',[mainType 'ROIs{' num2str(mainTypeID) '}']); %*relatedCorrelations(n);
-    invMain=double(1-mainMask);
-    g=[0,0,0]; % the mainROI color is black
-    rgb=cat(3,invMain,invMain,invMain);
-    wRGB=cat(3,ones(size(mainMask))*g(1),ones(size(mainMask))*g(2),ones(size(mainMask))*g(3));
-    rgb=rgb+wRGB;
-    clear wRGB
-    
-    if holdLast
-        g=[1,0,0]; % the current color is black
-        wRGB=cat(3,ones(size(mainMask))*g(1),ones(size(mainMask))*g(2),ones(size(mainMask))*g(3));
-        rgb=(lastMask+wRGB).*rgb;
+        g=[1,0,0]; % the current color is white, hold is red
+        % last mask is already rgb
+        rgb=(lastMask+rgb)
     end
     
     
@@ -449,48 +442,14 @@ function plotROI(hObject, eventdata, handles)
             'MarkerFaceColor',[0.0,0.5,1.0],'SizeData',70)
         hold off
         
-        % keep the traces and masks of interest
-        % the primary is in all, but this is convinent.
-        primarySubgroupID=find(relatedROIs==mainROIBoxID);
-        nonPrimarySubgroupID=setdiff(1:numel(relatedROIs),primarySubgroupID);
         
         % get primary and secondary masks based on their previous ids
         primaryMask=allROIMasks{mainROIBoxID};
         primaryCentroid=allROICentroids{mainROIBoxID};
-        
-        % shrink the total mask and traces to the related ones (including
-        % primary)
-        allTraces=allTraces(relatedROIs,:);
-        allROIMasks=allROIMasks(relatedROIs);
-        allROICentroids=allROICentroids(relatedROIs);
-        
-        % now get the roi types for all realted
-        allRelatedTypeStrings=allROIStrings(relatedROIs);
-        for n=1:numel(allRelatedTypeStrings)
-            tSplt=strsplit(allRelatedTypeStrings{n},'_');
-            tAcum(n)=tSplt(1);
-        end
-        allRelatedTypeStrings=tAcum;
-        primaryTypeString=allRelatedTypeStrings(primarySubgroupID);
-        nonPrimaryTypeString=allRelatedTypeStrings(nonPrimarySubgroupID);
-        
-        % plot the related traces exclude the primary as we've plotted it.
-        axes(handles.traceDisplay)
-        % add to accumulating h's for making figures etc.
-        lastH=numel(h);
-        
-        for n=1:numel(nonPrimarySubgroupID)
-            hold all
-            h(n+lastH)=plot(allTraces(nonPrimarySubgroupID(n),:)','Color',...
-                allColors{strcmp(allTypes,nonPrimaryTypeString{n})},...
-                'LineWidth',allWidths(strcmp(allTypes,nonPrimaryTypeString{n}))); 
-        end
-        hold off
-        assignin('base','curh',h);
-        set(h,'ButtonDownFcn',{@LineSelected,h,eventdata,handles})
-        
+
         % related pairwise distance (Euclidean) b is the primary reference
         for n=1:numel(relatedROIs)
+            relatedPixelCounts(:,n)=numel(find(allROIMasks{n}==1));
             b=primaryCentroid.Centroid;
             a=allROICentroids{n}.Centroid;
             relatedDistances(:,n)=sqrt((b(1)-a(1))^2+((b(2)-a(2))^2));
@@ -507,30 +466,110 @@ function plotROI(hObject, eventdata, handles)
         else
             eval(['[tSrtV tSrtI]=sort(related' sortString ',''descend'');'])
         end
+        % allROIStrings
 
         relatedROIs=relatedROIs(tSrtI);
         relatedCorrelations=relatedCorrelations(tSrtI);
         relatedDistances=relatedDistances(tSrtI);
+        relatedPixelCounts=relatedPixelCounts(tSrtI);
 
-        relCString=strjoin(arrayfun(@(x) num2str(x),relatedROIs,'UniformOutput',false),',');
-        set(handles.relatedCellsReturn,'String',relCString)
+        
+        % shrink the total mask and traces to the related ones (including
+        % primary)
+        % keep the traces and masks of interest
+        % the primary is in all, but this is convinent.
+        primarySubgroupID=find(relatedROIs==mainROIBoxID);
+        nonPrimarySubgroupID=setdiff(1:numel(relatedROIs),primarySubgroupID);
+        
+        allTraces=allTraces(relatedROIs,:);
+        allROIMasks=allROIMasks(relatedROIs);
+        allROICentroids=allROICentroids(relatedROIs);
+        
+        % now get the roi types for all realted
+        allRelatedTypeStrings=allROIStrings(relatedROIs);
+        for n=1:numel(allRelatedTypeStrings)
+            tSplt=strsplit(allRelatedTypeStrings{n},'_');
+            tAcum(n)=tSplt(1);
+        end
+        
+        allRelatedTypeStrings=tAcum;
+        primaryTypeString=allRelatedTypeStrings(primarySubgroupID);
+        nonPrimaryTypeString=allRelatedTypeStrings(nonPrimarySubgroupID);
+
+        % update the masks
+        axes(handles.roiMaskAxis)
+        lAx=gca;
+        lastMask=lAx.Children.CData;
+        % last mask is already rgb
+        rVals=fix(tSrtV*10);
+        vRange=max(rVals)-min(rVals);
+        mapValNum=numel(rVals)*1;
+
+
+        aa=colormap(jet(mapValNum));
+        rgb=zeros(size(lastMask));
+        for n=1:numel(nonPrimarySubgroupID)
+            mainMask=allROIMasks{nonPrimarySubgroupID(n)};
+            g=aa(n,:);
+            trgb=cat(3,mainMask*g(1),mainMask*g(2),mainMask*g(3));
+            rgb=(rgb+trgb);
+        end
+        rgb=lastMask+rgb;
+        mP=imshow(rgb);
+        mCA=gca;
+        mCA.YTick=[];
+        mCA.XTick=[];
+    
+        assignin('base','curHMask',mP);
+        
+        % plot the related traces exclude the primary as we've plotted it.
+        axes(handles.traceDisplay)
+        % add to accumulating h's for making figures etc.
+        lastH=numel(h);
+        
+        for n=1:numel(nonPrimarySubgroupID)
+            % allColors{strcmp(allTypes,nonPrimaryTypeString{n})},
+            g=aa(n,:);
+            hold all
+            h(n+lastH)=plot(allTraces(nonPrimarySubgroupID(n),:)','Color',g,...
+                'LineWidth',allWidths(strcmp(allTypes,nonPrimaryTypeString{n}))); 
+        end
+        hold off
+        assignin('base','curh',h);
+        set(h,'ButtonDownFcn',{@LineSelected,h})
+        
+
+        relCString=strjoin(allROIStrings(relatedROIs),',');
+        set(handles.relatedCellsReturn,'String',relCString);
 
         relVString=strjoin(arrayfun(@(x) num2str(x),relatedCorrelations,'UniformOutput',false),',');
         set(handles.relatedValuesReturn,'String',relVString)
+        % assignin('base','dbugV',relatedCorrelations') %todo: 3dplot
 
         relDString=strjoin(arrayfun(@(x) num2str(x),relatedDistances,'UniformOutput',false),',');
         set(handles.relatedDistReturn,'String',relDString);
+        % assignin('base','dbugD',relatedDistances)
 
-        relatedDistances=[1]; % debug
+        relPCString=strjoin(arrayfun(@(x) num2str(x),relatedPixelCounts,'UniformOutput',false),',');
+        set(handles.relatedPixelCountReturn,'String',relPCString);
+        % assignin('base','dbugPC',relatedPixelCounts)
+        
+
+        % relatedDistances=[1]; % debug
         if numel(relatedDistances)>=2
             axes(handles.featureHist)
             nhist(relatedDistances,'box');
             xlim([0 200])
 
             axes(handles.featurePlot)
-            plot(relatedROIs,relatedDistances,'ko')
-            plot([],[])
-            hold on
+
+            
+            for n=1:numel(relatedROIs)
+                g=aa(n,:);
+                plot(relatedROIs(n),relatedDistances(n),'o','Color',g)
+                hold all
+            end
+
             plot([1 size(curCorr,1)],[20 20],'r:','linewidth',1)
             hold off
             ylim([0 200])
@@ -554,181 +593,11 @@ function plotROI(hObject, eventdata, handles)
     end
     
     
-    
-    
-    clear  mainTrace
+    clear  mainTrace allTraces allROIMasks allROICentroids
     guidata(hObject, handles);
     
-    
-    
-    
-   
 
 
-
-
-
-%     if numel(selectedTypes)>0
-%         for k=1:numel(selectedTypes)
-%             pltDF=get(handles.plotAsDFToggle,'Value');
-%             if pltDF
-%                 traces=evalin('base',[selectedTypes{k} 'F_DF;']);
-%             else
-%                 traces=evalin('base',[selectedTypes{k} 'F;']);
-%             end
-%             mask=evalin('base',[selectedTypes{k} 'ROIs{' num2str(tnum) '}']);
-%             maskStr=[selectedTypes{k} 'ROIs'];
-%             centroidStr=[selectedTypes{k} 'ROICenters'];
-%             eval(['gTraces_' num2str(k) '=traces;'])
-%         end
-%     else
-%         returnBit=1;
-%     end
-
-    
-
-% 
-%     selTrace=traces(tnum,:);
-%     nonSelTraces=traces(1:size(traces,1),:);
-%     selTrace=repmat(selTrace,size(nonSelTraces,1),1);
-
-
-%     axes(handles.corAxis)
-%     curCorr=corr(selTrace',nonSelTraces');
-%     [csV,csI]=sort(curCorr','descend');
-%     csV=csV(:,1);
-%     csI=csI(:,1);
-%     plot(curCorr','ko','linewidth',1)
-%     hold on
-%     plot([1 size(curCorr,1)],[relatedThreshold relatedThreshold],'r:','linewidth',1)
-%     hold off
-%     ylim([-1 1])
-
-%     relatedROIs=csI(find(csV>=relatedThreshold));
-%     relatedCorrelations=csV(find(csV>=relatedThreshold));
-
-
-%     % related pairwise distance (Euclidean)
-%     for n=1:numel(relatedROIs)
-%         b=evalin('base',[centroidStr '{' num2str(tnum) '}.Centroid;']);
-%         a=evalin('base',[centroidStr '{' num2str(relatedROIs(n)) '}.Centroid;']);
-%         relatedDistances(:,n)=sqrt((b(1)-a(1))^2+((b(2)-a(2))^2));
-%     end
-
-%     % check for menu sort
-%     sL=get(handles.sortByMenu,'String');
-%     sV=get(handles.sortByMenu,'Value');
-
-%     sortString=sL{sV};
-%     sortUp=get(handles.sortAscend,'Value');
-%     if sortUp
-%         eval(['[tSrtV tSrtI]=sort(related' sortString ',''ascend'');'])
-%     else
-%         eval(['[tSrtV tSrtI]=sort(related' sortString ',''descend'');'])
-%     end
-% 
-%     relatedROIs=relatedROIs(tSrtI);
-%     relatedCorrelations=relatedCorrelations(tSrtI);
-%     relatedDistances=relatedDistances(tSrtI);
-% 
-%     relCString=strjoin(arrayfun(@(x) num2str(x),relatedROIs,'UniformOutput',false),',');
-%     set(handles.relatedCellsReturn,'String',relCString)
-% 
-%     relVString=strjoin(arrayfun(@(x) num2str(x),relatedCorrelations,'UniformOutput',false),',');
-%     set(handles.relatedValuesReturn,'String',relVString)
-% 
-%     relDString=strjoin(arrayfun(@(x) num2str(x),relatedDistances,'UniformOutput',false),',');
-%     set(handles.relatedDistReturn,'String',relDString);
-
-% 
-%     if numel(relatedDistances)>=2
-%         axes(handles.featureHist)
-%         nhist(relatedDistances,'box');
-%         xlim([0 200])
-%         
-%         axes(handles.featurePlot)
-%         plot(relatedROIs,relatedDistances,'ko')
-%         hold on
-%         plot([1 size(curCorr,1)],[20 20],'r:','linewidth',1)
-%         hold off
-%         ylim([0 200])
-%     else
-%     end
-
-
-
-%     if numel(relatedROIs)>1
-%         aa=colormap(jet(numel(relatedROIs)*3));
-%         aa=aa(1:3:end,:);
-%     else
-%         col=[0,0,0];
-%     end
-%     if holdLast
-%         hold all
-%     else
-%         hold off
-%     end
-
-%     for n=1:numel(relatedROIs)
-%         if relatedROIs(n)==tnum
-%             sameCell=n;
-%             col=[1,1,1];
-%         else
-%             col=aa(n,:);
-%         end
-%         h(n)=plot(traces(relatedROIs(n),:)','Color',col,'LineWidth',1.1);
-%         hold all
-%     end
-%     
-%     hold off
-%     set(h, 'ButtonDownFcn', {@LineSelected, h})
-
-
-%     assignin('base','curh',h);
-% 
-%     a=gca;
-%     a.Color=[0,0,0];
-
-
-    
-
-% 
-%     for n=1:numel(relatedROIs)
-%         cumuMasks(:,:,n)=evalin('base',[maskStr '{' num2str(relatedROIs(n)) '}'])*relatedCorrelations(n);
-%     end
-%     rgb=cat(3,false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))),false(size(cumuMasks(:,:,1))));
-% 
-%     if numel(relatedROIs)==1
-%         aa(1,:)=[1,1,1];
-%     else
-%     end
-%     for n=1:numel(relatedROIs)
-%         g=aa(n,:);
-%         if n==sameCell
-%             g=[1,1,1];
-%         else
-%         end
-%         rgb=rgb+cat(3,cumuMasks(:,:,n)*g(1),cumuMasks(:,:,n)*g(2),cumuMasks(:,:,n)*g(3));
-%     end
-        
-       
-%     clear cumuMasks
-% 
-%     axes(handles.roiMaskAxis)
-%     mP=imshow(rgb);
-%     a=gca;
-%     a.YTick=[];
-%     a.XTick=[];
-
-    
-%     clear mask
-%     for k=1:numel(selectedTypes)
-%         eval(['clear gTraces_' num2str(k)])
-%     end
-% 
-%     assignin('base','curHMask',mP);
-
-    
    
 
 function displayedROICounter_Callback(hObject, eventdata, handles)
@@ -765,6 +634,7 @@ function displayedROICounter_Callback(hObject, eventdata, handles)
 % *********************************************************************
 % *********** These Functions Deal With the roiDisplayToggles *********
 % *********************************************************************
+
 function [returnTypeStrings,typeAllColor,lWidths]=returnAllTypes(hObject,eventdata,handles)
     % set all known ROI types here
     returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vessel','neuropil'};
@@ -778,7 +648,7 @@ function [typeList]=getKnownROITypes(hObject, eventdata, handles)
     'axonal','dendritic','somatic','redSomatic'};
     % todo: fix names with 'knownTypes', the typeList is a temp hack.
 
-function genericDispalyTypeToggle(hObject, eventdata, handles,typeString,toggleString)
+function genericDispalyTypeToggle(hObject, eventdata, handles)
     
     [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
 
@@ -857,32 +727,32 @@ function genericDispalyTypeToggle(hObject, eventdata, handles,typeString,toggleS
     guidata(hObject, handles);
 
 function somaticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'somatic','somaRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function dendriticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'dendritic','dendriteRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function boutonROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'bouton','boutonRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function axonalROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'axonal','axonRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function vesselROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'vessel','vascularRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function redSomaticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
-    genericDispalyTypeToggle(hObject, eventdata, handles,'redSomatic','redSomaticRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function neuropilROIs_DisplayToggle_Callback(hObject, eventdata, handles)
 
-    genericDispalyTypeToggle(hObject, eventdata, handles,'neuropil','neuropilRois')
+    genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 
@@ -973,7 +843,8 @@ function relatedCellsReturn_Callback(hObject, eventdata, handles)
 function groupMarkerBtn_Callback(hObject, eventdata, handles)
 
     gNum=fix(str2num(get(handles.groupCounter,'String')))+1;
-    gIs=str2num(get(handles.relatedCellsReturn,'String'));
+    % gIs=str2num(get(handles.relatedCellsReturn,'String'));
+    gIs=get(handles.relatedCellsReturn,'String');
     gVs=str2num(get(handles.relatedValuesReturn,'String'));
     gDs=str2num(get(handles.relatedDistReturn,'String'));
 
@@ -1000,7 +871,7 @@ function groupCounter_Callback(hObject, eventdata, handles)
 
 function relatedValuesReturn_Callback(hObject, eventdata, handles)
 
-function rcBtn_soma_Callback(hObject, eventdata, handles)
+function rcBtn_generic_Callback(hObject, eventdata, handles)
 
     curROIType=evalin('base','dispROIString');
 
@@ -1067,25 +938,25 @@ function keepFirstBtn_Callback(hObject, eventdata, handles)
     somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 function killSelectedBtn_Callback(hObject, eventdata, handles)
-    tnum=str2double(get(handles.displayedROICounter,'String'));
-    killString=num2str(tnum);
-
-    evalin('base',['somaticF(' killString ',:)=[];']);
-    evalin('base','somaticRoiCounter=size(somaticF,1);');
-    evalin('base',['somaticROI_PixelLists(' killString ')=[];']);
-    evalin('base',['somaticROIBoundaries(' killString ')=[];']);
-    evalin('base',['somaticROICenters(' killString ')=[];']);
-    evalin('base',['somaticROIs(' killString ')=[];']);
-
+    
+    selections = get(handles.roiSelector,'String');
+    selectionsIndex = get(handles.roiSelector,'Value');
+    selectedSplit=strsplit(selections{selectionsIndex},'_');
+    tString=selectedSplit(1);
+    tID=str2double(selectedSplit(2));
+    deleteROI(tID,tString);
+    genericDispalyTypeToggle(hObject, eventdata, handles)
+    
+    if selectionsIndex>1
+        nV=selectionsIndex;
+    else
+        nV=1;
+    end
+    
+    set(handles.roiSelector,'Value',nV);
+    roiSelector_Callback(hObject, eventdata, handles)
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-    advance=1;
-
-    rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
-    set(handles.roiDisplaySlider,'Value',rN)
-    guidata(hObject, handles);
-    roiDisplaySlider_Callback(hObject, eventdata, handles)
-    somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
 function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
 
@@ -1102,7 +973,7 @@ function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
     tFig=figure('visible','off');
     subplot(6,2,[5 6 7 8 9 10 11 12])
     ta=gca;
-    hh(1,end).Color=[0,0,0];
+    % hh(1,end).Color=[0,0,0];
     copyobj(hh,ta);
     ta.Box='off';
     ta.TickDir='out';
@@ -1123,7 +994,7 @@ function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
     clear tFig
     mi.XData=miX;
     mi.YData=miY;
-    hh(1,end).Color=[1,1,1];
+    % hh(1,end).Color=[1,1,1];
 
 function sortByMenu_Callback(hObject, eventdata, handles)
     
@@ -1252,8 +1123,8 @@ function endImageEntry_CreateFcn(hObject, eventdata, handles)
         set(hObject,'BackgroundColor','white');
     end
 function batchSmoothBtn_Callback(hObject, eventdata, handles)
-function pixelCountReturn_Callback(hObject, eventdata, handles)
-function pixelCountReturn_CreateFcn(hObject, eventdata, handles)
+function relatedPixelCountReturn_Callback(hObject, eventdata, handles)
+function relatedPixelCountReturn_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
@@ -1311,9 +1182,17 @@ function movBaselineWinEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+function typeSelectorMenu_CreateFcn(hObject, eventdata, handles)
+
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function medianExtractToggle_Callback(hObject, eventdata, handles)
 
 
 % ****************** Standard MATLAB GUI Opening Functions
+
 function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
     % This function has no output args, see OutputFcn.
     % hObject    handle to figure
@@ -1344,13 +1223,11 @@ function varargout = extractor_OutputFcn(hObject, eventdata, handles)
     % Get default command line output from handles structure
     varargout{1} = handles.output;    
 
+% ****************** end
+
+% ****************** New Stuff
 
 function plotAsDFToggle_Callback(hObject, eventdata, handles)
-
-
-function plotSelectedROI_Callback(hObject, eventdata, handles)
-
-
 function roiSelector_Callback(hObject, eventdata, handles)
     
     roiSelectionNum=get(handles.roiSelector,'Value');
@@ -1363,26 +1240,14 @@ function roiSelector_Callback(hObject, eventdata, handles)
     set(handles.displayedROICounter,'String', num2str(sliderValue));
     
     guidata(hObject, handles)
-    
     plotROI(hObject, eventdata, handles)
-
-
-
 function holdCurrentROILinesToggle_Callback(hObject, eventdata, handles)
-
-
-function saveWSBtn_Callback(hObject, eventdata, handles)
-
-
 function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     
     
     pause(0.0000000000001);
     guidata(hObject, handles);
-    
-    
-    
-%     selections = get(handles.workspaceVarBox,'String');    
+        
     frmWinSize=get(handles.movBaselineWinEntry,'String');
     typeID=get(handles.typeSelectorMenu,'Value');
     tString=get(handles.typeSelectorMenu,'String');
@@ -1408,34 +1273,18 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
 
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
-
 function movBaselineWinEntry_Callback(hObject, eventdata, handles)
-
 function makeDFFBtn_Callback(hObject, eventdata, handles)
 function quantDFEntry_Callback(hObject, eventdata, handles)
-
 function useQuantForDFToggle_Callback(hObject, eventdata, handles)
-
-function medianExtractToggle_Callback(hObject, eventdata, handles)
-
+function saveWSBtn_Callback(hObject, eventdata, handles)
 function deleteSelection_Callback(hObject, eventdata, handles)
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     selectedItem=selections{selectionsIndex};
     evalin('base',['clear ' selectedItem]);
-
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+    
     guidata(hObject, handles);
 
-
 function typeSelectorMenu_Callback(hObject, eventdata, handles)
-
-
-function typeSelectorMenu_CreateFcn(hObject, eventdata, handles)
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end

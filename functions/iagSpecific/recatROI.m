@@ -1,4 +1,4 @@
-function deleteROI(numberList,typeList,scopeString)
+function recatROI(targROI,targTypeString,scopeString)
 
 % deleteROI: deletes all elements associated with program created ROIs
 %
