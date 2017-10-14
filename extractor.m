@@ -1009,7 +1009,6 @@ function [numSel]=LineSelected(hObject, eventdata, handels)
     set(handels(handels ~= hObject), 'LineWidth', 0.4);
     sI=(handels==hObject);
     numSel=find(sI==1);
-    set(handles.feedbackString,'String',['trace #' num2str(numSel)])
     
     assignin('base','selectedTraceNum',numSel)
 
