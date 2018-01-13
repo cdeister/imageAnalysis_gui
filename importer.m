@@ -5,9 +5,10 @@ function varargout = importer(varargin)
 % 
 % Operations can be done all in memory or from disk.
 %
-% v1.0
+% v1.1 -- HDF Support
+%
 % cdeister@brown.edu with any questions
-% last modified: CAD 10/13/2017
+% last modified: CAD 1/12/2018
 %
 
 
@@ -36,6 +37,7 @@ function importButton_Callback(hObject, eventdata, handles)
     
 
     mPF=get(handles.multiPageFlag, 'Value');
+    hdfF=get(handles.importFromHDF, 'Value');
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
     % @@@ Check to see if the user 
@@ -67,9 +69,6 @@ function importButton_Callback(hObject, eventdata, handles)
         imPath=evalin('base','metaData.importPath');
         tifFile=evalin('base','metaData.tifFile');
         mpTifInfo=evalin('base','metaData.mpTifInfo');
-% %         evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ''mpTifInfo''')
-% %         evalin('base','metaData.importPath=importPath;,clear ''importPath''')
-% %         evalin('base','metaData.tifFile=tifFile;,clear ''tifFile''')
         firstIm=str2num(get(handles.firstImageEntry,'string'));
         endIm=str2num(get(handles.endImageEntry,'string'));
     
@@ -128,7 +127,8 @@ function importButton_Callback(hObject, eventdata, handles)
             set(handles.feedbackString,'String',['Importing ...'])
             pause(0.00000000000000001)
             guidata(hObject, handles);
-            for n=1:tempFiltFiles
+            numImages=numel(tempFiltFiles);
+            for n=1:numImages
                 if mod(n,500)==0
                     set(handles.importButton,'String',[num2str(n) '/' num2str(numImages)])
                     pause(0.00000000000000001)
@@ -599,6 +599,8 @@ function selectDiskMeanProjectButton_Callback(hObject, eventdata, handles)
 function filterDiskProjectToggle_Callback(hObject, eventdata, handles)
 
 function multiPageFlag_Callback(hObject, eventdata, handles)
+    set(handles.importFromHDF, 'Value',0);
+    
 function stackSplit_textAppend_Callback(hObject, eventdata, handles)
 
 function stackSplit_everyOtherToggle_Callback(hObject, eventdata, handles)
@@ -1045,3 +1047,111 @@ function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+
+
+% --- Executes on button press in binPixels.
+function binPixels_Callback(hObject, eventdata, handles)
+% hObject    handle to binPixels (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function binPixelsByEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to binPixelsByEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of binPixelsByEntry as text
+%        str2double(get(hObject,'String')) returns contents of binPixelsByEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function binPixelsByEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to binPixelsByEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in averageStackFrames.
+function averageStackFrames_Callback(hObject, eventdata, handles)
+% hObject    handle to averageStackFrames (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function edit18_Callback(hObject, eventdata, handles)
+% hObject    handle to edit18 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit18 as text
+%        str2double(get(hObject,'String')) returns contents of edit18 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit18_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit18 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in importFromHDF.
+function importFromHDF_Callback(hObject, eventdata, handles)
+% hObject    handle to importFromHDF (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of importFromHDF
+set(handles.multiPageFlag, 'Value',0);
+
+
+% --- Executes on button press in memoryMapToggle.
+function memoryMapToggle_Callback(hObject, eventdata, handles)
+% hObject    handle to memoryMapToggle (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of memoryMapToggle
+if get(handles.memoryMapToggle, 'Value')==1
+    set(handles.multiPageFlag, 'Value',0);
+    set(handles.importFromHDF, 'Value',1);
+else
+end
+    
+
+
+% --- Executes on selection change in hdfPopSelector.
+function hdfPopSelector_Callback(hObject, eventdata, handles)
+% hObject    handle to hdfPopSelector (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns hdfPopSelector contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from hdfPopSelector
+
+
+% --- Executes during object creation, after setting all properties.
+function hdfPopSelector_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to hdfPopSelector (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
