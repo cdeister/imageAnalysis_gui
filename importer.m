@@ -256,7 +256,7 @@ function importButton_Callback(hObject, eventdata, handles)
         end
         
         set(handles.importButton,'String','Import Images')
-        set(handles.feedbackString,'String',['Imported ' num2str(numel(imRange)) ...
+        set(handles.feedbackString,'String',['Imported ' num2str(size(tData,3)) ...
             ' Images'])
         pause(0.00000000000000001)
         guidata(hObject, handles);
