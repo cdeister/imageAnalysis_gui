@@ -1197,8 +1197,10 @@ selections = get(handles.workspaceVarBox,'String');
 s=evalin('base',selections{selectionsIndex});
 if numel(size(s))==3
     
-    testBin=squeeze(mean(reshape(s,size(s,1),size(s,2),muBy,size(s,3)/muBy),3));
-    assignin('base',['frameAvg_' selections{selectionsIndex}],testBin);
+    testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,512/binPix,2000))),2));
+    assignin('base',['binned_' selections{selectionsIndex}],testBin);
+
+
 else
 end
 
