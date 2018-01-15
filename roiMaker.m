@@ -256,7 +256,10 @@ function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
             guidata(hObject, handles);
         else
         end
-        imageP=imageP(:,:,stackInd);
+        try
+            imageP=imageP(:,:,stackInd);
+        catch
+        end
 
         sliderMin = 1;
         sliderMax = fix(stackNum); % this is variable
@@ -439,7 +442,6 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
     
         % this executes for all
         axes(handles.imageWindow)
-        assignin('base','debug',gca)
         [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
         % reset the box
         set(handles.roiSelector,'String','');
@@ -1481,10 +1483,17 @@ function [curFrame]=trackFrame(hObject, eventdata, handles)
     % debug
 
 function cMaskToggle_Callback(hObject, eventdata, handles)
+    
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectedItem=selections{selectionsIndex};
+    curFrame=get(handles.frameTextEntry,'String');
+    
     try currentFrame=evalin('base','metaData.currentFrame');
     catch
         currentFrame=trackFrame(hObject, eventdata, handles);
     end
+    
     set(handles.frameTextEntry,'String',num2str(currentFrame))
     guidata(hObject, handles);
 
@@ -1495,8 +1504,7 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
     cImage=a.CurrentAxes.Children(end).CData;
     cMask=imbinarize(cImage,binaryThreshold);
     assignin('base','cMask',cMask);
-    evalin('base','metaData.currentMask=cMask;, clear ''cMask'' ')
-    
+    evalin('base','metaData.currentMask=cMask;')
     
     loadMeanProjectionButton_Callback(hObject,eventdata,handles,cMask)
     
@@ -1509,8 +1517,12 @@ function curImageToMaskButton_Callback(hObject, eventdata, handles)
     axes(handles.roiPreviewWindow);
     tA=gca;
     cMask=tA.Children.CData;
+    
     assignin('base','tcMask',cMask)
-    evalin('base','metaData.currentMask=tcMask;,clear ''tcMask''');
+    evalin('base','metaData.currentMask=tcMask;');
+    
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
 
 
 function segmentMaskBtn_Callback(hObject, eventdata, handles)
@@ -1547,7 +1559,7 @@ function segmentMaskBtn_Callback(hObject, eventdata, handles)
 
         refreshVarListButton_Callback(hObject, eventdata, handles);
         set(handles.feedbackString,'String',['segmented ' num2str(goodCount) ' rois'])   
-        % loadMeanProjectionButton_Callback(hObject, eventdata,handles,sR)
+        loadMeanProjectionButton_Callback(hObject, eventdata,handles,sR)
 
         try 
             curIm=evalin('base','metaData.currentFrame');
@@ -1653,7 +1665,6 @@ function cutByBtn_Callback(hObject, eventdata, handles)
     cImage=remap(cImage,[preMin preMax],[newMin newMax]);
     assignin('base','currentImage',cImage);
     evalin('base','metaData.currentImage=currentImage;');
-    % ,clear ''currentImage'''
     loadMeanProjectionButton_Callback(hObject,eventdata,handles,cImage);
 
 function imageCutEntry_Callback(hObject, eventdata, handles)
@@ -1724,26 +1735,129 @@ function somaButton_KeyPressFcn(hObject, eventdata, handles)
     end
 
 function clusterMaskBtn_Callback(hObject, eventdata, handles)
-    maxClustNum=fix(str2double(get(handles.maxClusterEntry,'String')));
-    minROI=fix(str2double(get(handles.minRoiEntry,'String')));
-    fCnt=fix(str2double(get(handles.gXCorImageCountEntry,'String')));
-    cMask=evalin('base','metaData.currentMask');
-    tImStack=evalin('base','sstack');
-    rsStack=reshape(tImStack,size(cMask,1)*size(cMask,2),fCnt);
-    clear tImStack
-    cMaskPx=find(cMask==1);
-    afg=rsStack(cMaskPx,:);
-    cIDs=clusterdata(afg,'maxclust',maxClustNum);
-    clustNums=unique(cIDs);
-    clustStats=tabulate(cIDs);
-    badClusts=find(clustStats(:,2)<6);
-    goodClusts=setdiff(clustNums,badClusts);
-    disp(goodClusts)
-    if numel(goodClusts)>0
-        disp(goodClusts)
-    else
-    end
+    ccimage=evalin('base','ccimage');
+    stImg=ccimage-mean2(ccimage);
+    stImgThr=0.19;
 
+    imLn=size(stImg,1);
+    imPx=size(stImg,2);
+
+    thrMask=zeros(imLn,imPx);
+    thrPX=find(stImg>stImgThr);
+
+    for n=1:numel(thrPX)
+        cline=ceil(thrPX(n)/imLn);
+        cpixel=thrPX(n)-(imLn*(cline-1));
+        thrMask(cpixel,cline)=1;
+    end
+    
+    minROISize=4;
+    pROIs=bwboundaries(thrMask,'holes');
+    pROIsizes=fix(cellfun(@numel,pROIs)/2);
+    
+    szROIs=find(pROIsizes>=minROISize);
+    usedNum=numel(szROIs);
+    usedROIsizes=pROIsizes(szROIs);
+    segMasks=zeros(imLn,imPx,usedNum);
+
+    for n=1:usedNum
+        tROI=pROIs{szROIs(n)};
+        segMasks(:,:,n)=roipoly(imLn,imPx,tROI(:,2),tROI(:,1));
+    end
+    
+    poolCounter=0;
+    dataToClusterOn=ccimage-mean2(ccimage);
+    
+    for p=1:size(segMasks,3)
+        mNum=p;
+        ws=usedROIsizes(mNum);
+        dataThrIDs=find(segMasks(:,:,mNum)==1);
+        dataThrVals=dataToClusterOn(segMasks(:,:,mNum)==1);
+        if numel(dataThrIDs)>1
+            clear seg2Masks
+            fMask=zeros(imLn,imPx);
+            fMaskData=zeros(imLn,imPx);
+
+
+
+            for n=1:numel(dataThrIDs)
+                cline=ceil(dataThrIDs(n)/imLn);
+                cpixel=dataThrIDs(n)-(imLn*(cline-1));
+                fMaskData(cpixel,cline)=dataThrVals(n);
+                fMask(cpixel,cline)=1;
+            end
+
+
+
+            mClust=ceil(ws/15);
+            minROISize=3;
+
+            clusData=clusterdata(fMaskData(fMask==1),'maxclust',mClust);
+            clusPXs=find(fMask==1);
+
+            cNum=numel(unique(clusData));
+            clusMask=zeros(imLn,imPx);
+
+            % kill small
+            smallClusts=[];
+            bigClusts=[];
+            bigClustSize=[];
+            smCnt=0;
+
+            for n=1:cNum
+                tC=find(clusData==n);
+                if numel(tC)<minROISize
+                    smCnt=smCnt+1;
+                    smallClusts(smCnt)=n;
+                else
+                end
+            end
+
+
+            for n=1:numel(clusPXs)
+
+                cline=ceil(clusPXs(n)/imLn);
+                cpixel=clusPXs(n)-(imLn*(cline-1));
+                if ismember(clusData(n),smallClusts)
+                    clusMask(cpixel,cline)=0;
+                else
+                    clusMask(cpixel,cline)=1;
+                end
+
+            end
+
+
+            minROISize2=2;
+            pROIs=bwboundaries(clusMask,'holes','conn',8);
+            pROIsizes=fix(cellfun(@numel,pROIs)/2);
+            stROIs=find(pROIsizes>=minROISize2);
+            usedNum=numel(stROIs);
+        
+            poolRois=zeros(imLn,imPx,usedNum);
+            for n=1:usedNum
+                tempROIMask=zeros(imLn,imPx);
+                tROI=pROIs{stROIs(n)};
+                for k=1:fix(numel(tROI)/2)
+                    tempROIMask(tROI(k,1),tROI(k,2))=1; 
+                end
+                poolRois(:,:,n)=imfill(tempROIMask);
+            end
+        
+            for k=1:size(poolRois,3)
+%                 poolCounter=poolCounter+1;
+%                 poolClusMasks(:,:,poolCounter)=poolRois(:,:,k);
+                addROIsFromMask(hObject, eventdata, handles,poolRois(:,:,k));
+            end
+            clear poolRois
+                
+        else
+        end
+    end
+    
+refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
+
+    
 function maxClusterEntry_Callback(hObject, eventdata, handles)
     
 

@@ -247,8 +247,10 @@ function importButton_Callback(hObject, eventdata, handles)
 
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
-
+        
+        tic
         if numel(dsSize)==3
+
             tData=h5read([tP tH],['/' tDS_select]);
             tData=permute(tData,[3,2,1]);
         else

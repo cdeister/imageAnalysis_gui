@@ -262,15 +262,17 @@ function extractButton_Callback(hObject, eventdata, handles)
     if medianFlag~=1
         for n=1:dStackSize(3)
             for q=1:numel(rois)
+     
                 aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
-                sED(q,n)=mean(aIm(rois{q}(:,:)));    
+                
+                sED(q,n)=mean(aIm(rois{q}(:,:)==1));    
             end
         end
     else
         for n=1:dStackSize(3)
             for q=1:numel(rois)
                 aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
-                sED(q,n)=median(aIm(rois{q}(:,:)));    
+                sED(q,n)=median(aIm(rois{q}(:,:)==1));    
             end
         end
     end

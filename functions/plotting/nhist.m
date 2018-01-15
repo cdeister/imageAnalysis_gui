@@ -599,7 +599,7 @@ for k=1:num2Plot
   Values=cellValues{k};
 %  warn error if there is only one point of data
   if length(Values)<2 
-      warning(['maybe a histogram is not the best method to graph your single number in plot#:' num2str(k)]);
+%       warning(['maybe a histogram is not the best method to graph your single number in plot#:' num2str(k)]);
   end
   
 % warn the user if they chose a dumb bounds (but not retarded ones)
