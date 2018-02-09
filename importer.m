@@ -307,7 +307,6 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
         end
         
     elseif hdfF==1
-        disp("yup")
         [hdfFile,imPath]=uigetfile('*.*','Select your hdf file');
         if imPath~=0
             disp(imPath)
