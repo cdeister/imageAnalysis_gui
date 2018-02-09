@@ -727,10 +727,20 @@ function splitStackButton_Callback(hObject, eventdata, handles)
     ogStackSize=evalin('base',['size(' selectStack ',3)']);
     ab=get(handles.stackSplit_textAppend,'String');
     stackStrings=strsplit(ab,',');
+    if numel(stackStrings) ~= splitCount
+        appendIt=1;
+    else
+        appendIt=0;
+    end
 
     if splitType==1
-        for n=1:splitCount;
-            evalin('base',[stackStrings{n} '=' selectStack '(:,:,' num2str(n) ':' ...
+        for n=1:splitCount
+            if appendIt==1
+                tStr=['St_' num2str(n)];
+            else
+               tStr=stackStrings{n};
+            end
+            evalin('base',[tStr '=' selectStack '(:,:,' num2str(n) ':' ...
                 num2str(splitCount) ':' num2str(ogStackSize-(splitCount-n)) ');'])
         end
         if deleteOG==1

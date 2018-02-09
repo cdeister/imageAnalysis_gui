@@ -7,12 +7,12 @@ function varargout = roiMaker(varargin)
 % No Documentation (yet)
 %
 %
-% V1.0
-% 10/12/2017
+% V1.1
+% still a few selection bugs.
+% 02/01/2018
 % Questions: cdeister@brown.edu
-% Most Code: Chris Deister & Jakob Voigts (mfactor smoothing code! & speedy XCorr)
+% Code: Chris Deister & Jakob Voigts (mfactor smoothing code! & speedy XCorr)
 % Global XCorr Segmentation Idea: Stephan Junek et al., 2009 & Spencer Smith
-% Global XCorr implimentation 
 
 
 
