@@ -1,4 +1,3 @@
-function varargout = roiMaker(varargin)
 % ROIMAKER 
 % 
 % roiMaker is a simple gui and set of processes for making various ROIs in
@@ -14,6 +13,9 @@ function varargout = roiMaker(varargin)
 % Code: Chris Deister & Jakob Voigts (mfactor smoothing code! & speedy XCorr)
 % Global XCorr Segmentation Idea: Stephan Junek et al., 2009 & Spencer Smith
 
+
+
+function varargout = roiMaker(varargin)
 
 
 %***************************************************************
@@ -35,28 +37,72 @@ if nargout
 else
     gui_mainfcn(gui_State, varargin{:});
 end
-% End initialization code - DO NOT EDIT
 
+% ************************************************
+% ***************** Creator Functions ************
+% ************************************************
 
-% --- Executes just before roiMaker is made visible.
 function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
 
     handles.output = hObject;
-
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
     g=evalin('base','exist(''neuropilRoiCounter'')');
-
     if g
         set(handles.neuropilAlertString,'String','');
     else
         set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
     end
+    if computer == 'MACI64'
+        macHeaderSize=12;
+        macFontSize=11;
+        macUIDecSize=10;
+        uiElements={'somaButton','redSomaButton','dendriteButton','axonButton',...
+        'boutonButton','vesselButton','loadMeanProjectionButton','deleteROIButton',...
+        'roiSelector','somaticRoisDisplayToggle','redSomaticRoisDisplayToggle',...
+        'dendriticRoisDisplayToggle','axonalRoisDisplayToggle','boutonRoisDisplayToggle',...
+        'neuropilRoisDisplayToggle','vesselRoisDisplayToggle','lowCutSlider',...
+        'highCutSlider','lowCutEntry','highCutEntry','makeNeuropilMasks',...
+        'neuropilPixelSpreadEntry','workspaceVarBox','refreshVarListButton',...
+        'meanProjectButton','stdevProjectionButton','maxProjectionButton',...
+        'getGXcorButton','gXCorImageCountEntry','gXCorSmoothToggle','playStackMovButton',...
+        'pasueMovieButton','localXCorButton','roiThresholdEntry','pcaButton',...
+        'colormapTextEntry','frameSlider','frameTextEntry','addToSomasButton',...
+        'addToDendritesButton','addToBoutonsButton','nnmfButton','featureCountEntry',...
+        'medianFilterToggle','wienerFilterToggle','importerButton','extractorButton',...
+        'cMaskToggle','curImageToMaskButton','segmentMaskBtn','autoMaskBtn','binarySensEntry',...
+        'minRoiEntry','manROIBtn','roiTypeMenu','deleteWSVar','binaryThrValEntry','cutByBtn',...
+        'imageCutEntry','deDupeRoisBtn','clusterMaskBtn','maxClusterEntry','manROIBtn_Generic',...
+        'overlayIndRoiToggle','feedbackString','neuropilAlertString'};
 
+        for n=1:numel(uiElements)
+            eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
+        end
+        
+        decUIElements={'text14','text12','text13','text16','text17','text19',...
+        'text10','text6','text7','text8','imageWindow'};
+        for n=1:numel(decUIElements)
+            eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
+        end
+        
+        titleUIElements={'uipanel3','uipanel2','uipanel6','uipanel8','uipanel4',...
+        'uipanel9','uipanel10','uipanel3'};
+        for n=1:numel(titleUIElements)
+            eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
+        end
+    else
+    end
+    refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
 function varargout = roiMaker_OutputFcn(hObject, eventdata, handles) 
 
     varargout{1} = handles.output;
+    
+% ************************************************
+% ***************** General Functions ************
+% ************************************************
+
 function [returnTypeStrings,typeAllColor]=returnAllTypes(hObject,eventdata,handles)
     
     % set all known ROI types here
@@ -104,6 +150,62 @@ function addROIsFromMask(hObject,eventdata,handles,mask)
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    wsObj=evalin('base',selections{selectionsIndex});
+    wsClass=class(wsObj);
+function [curFrame]=trackFrame(hObject, eventdata, handles)
+    curFrame=fix(str2double(get(handles.frameTextEntry,'String')));        
+    assignin('base','currentFrame',curFrame)
+    evalin('base','metaData.currentFrame=currentFrame;,clear ''currentFrame''');
+function plotSomeROIs(hObject,eventdata,handles,plotRemainder,roisToPlot)
+    
+    if numel(roisToPlot)
+        axes(handles.imageWindow)
+        a=gcf;
+        try
+            cI=a.CurrentAxes.Children(end).CData;
+            loadMeanProjectionButton_Callback(hObject,eventdata,handles,cI);
+        catch
+            loadMeanProjectionButton_Callback(hObject,eventdata,handles);
+        end
+        hold all
+        if plotRemainder
+            roisDisplayToggle(hObject,eventdata,handles,1)
+            hold all
+        else
+        end
+        
+        for n=1:numel(roisToPlot)    
+            stringSplit=strsplit(roisToPlot{n},'_');
+            typeString=stringSplit{1};
+            roiNumber=fix(str2double(stringSplit{2}));
+            c{n}=evalin('base',[typeString 'ROICenters([' num2str(roiNumber) ']);']);
+            b{n}=evalin('base',[typeString 'ROIBoundaries([' num2str(roiNumber) ']);']);
+        end
+        plotAnROI(hObject,eventdata,handles,c,b)
+        hold off
+        refreshVarListButton_Callback(hObject, eventdata, handles);
+        guidata(hObject, handles);
+    else
+    end
+function plotAnROI(hObject,eventdata,handles,roiCenters,roiBoundaries,boundaryColors)
+    if nargin==5
+        boundaryColors=repmat({[1 0 0]},1,numel(roiCenters));        
+    else
+    end
+    if numel(roiCenters)>0
+        for n=1:numel(roiCenters)
+            c=roiCenters{n};
+            b=roiBoundaries{n};
+            for k=1:numel(c)
+                plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',boundaryColors{n},'LineWidth',2.5)
+                % text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),num2str(n),'FontSize',10,'FontWeight','Bold','Color',textColors{n});
+            end
+        end
+    else
+    end
 function freehandROI(hObject,eventdata,handles,typeString)
 
     g=evalin('base',['exist(' '''' typeString ''  'RoiCounter'')']);
@@ -150,6 +252,180 @@ function freehandROI(hObject,eventdata,handles,typeString)
     % eval([typeString 'RoisDisplayToggle_Callback(handles.' typeString 'RoisDisplayToggle,eventdata,handles,1)'])
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
+
+    if nargin==3
+        justUpdate=0;
+        useTxtLabels=1;
+    end
+
+    if nargin == 4
+        useTxtLabels=1;
+    end
+    % if justUpdate~=2
+        % if you don't want to update clear all and start again
+        % note no hold
+        if justUpdate==0
+            loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+        else
+        end
+    
+        % this executes for all
+        axes(handles.imageWindow)
+        [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
+        % reset the box
+        set(handles.roiSelector,'String','');
+        guidata(hObject, handles);
+
+        % see who is (still) on
+        for n=1:numel(allTypes)
+            whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
+        end
+        whoIsOn=find(whoIsOn==1);
+
+        roiCounter=0;
+        for rI=1:numel(whoIsOn)
+            typeString=allTypes{whoIsOn(rI)};
+            g=evalin('base',['exist(''' typeString 'ROICenters'');']);
+            if g==1
+                c=evalin('base',[typeString 'ROICenters']);
+                b=evalin('base',[typeString 'ROIBoundaries']);
+                if numel(c) ~= 0
+                    plotRange=1:numel(c);
+                    allCount=numel(c);
+
+                    for n=1:allCount
+                        roiCounter=roiCounter+1;
+                        roisList{roiCounter}=[typeString '_' num2str(n)];
+                    end
+
+                    cVal=get(handles.roiSelector,'Value');
+                    set(handles.roiSelector, 'String', '');
+                    set(handles.roiSelector,'String',roisList);
+                    if cVal~=1
+                        set(handles.roiSelector,'Value',cVal)
+                    else
+                        set(handles.roiSelector,'Value',1)
+                    end
+
+
+                    % Plot
+                    if strcmp(get(handles.colormapTextEntry,'String'),'jet')
+                        outColor='k';
+                        txtColor=[0 0 0];
+                    else
+                        outColor=allColors{whoIsOn(rI)};
+                        txtColor=allColors{whoIsOn(rI)};
+                    end
+
+                    hold all
+                    for n=1:numel(plotRange)            
+                        for k=1:numel(c{1,n})
+                            plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
+                                outColor,'LineWidth',2)
+                            if useTxtLabels
+                                text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
+                                    num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+                            else
+                            end
+                        end
+                    end
+                    hold off
+                else
+                end
+            else
+            end
+        end
+        refreshVarListButton_Callback(hObject, eventdata, handles);
+        guidata(hObject, handles);
+function roiSelection(hObject,eventdata,handles)
+
+    cI=evalin('base','metaData.currentImage');
+    axes(handles.imageWindow)
+    loadMeanProjection(hObject,eventdata,handles,cI);
+   
+    [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
+
+    for n=1:numel(allTypes)
+        whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
+    end
+
+    whoIsOn=find(whoIsOn==1);
+
+    if numel(whoIsOn)==0
+        set(handles.roiSelector,'String','');
+    else
+    end
+
+    roiCounter=0;
+    lastTypeNumber=0;
+    for rI=1:numel(whoIsOn)
+        typeString=allTypes{whoIsOn(rI)};
+        g=evalin('base',['exist(''' typeString 'RoiCounter'');']);
+        if g==1
+            if numel(indRange)==0
+                c=evalin('base',[typeString 'ROICenters']);
+                b=evalin('base',[typeString 'ROIBoundaries']);
+                plotRange=1:numel(c);
+                allCount=numel(c);
+            else
+                plotRange=indRange;
+                
+            end
+
+            c=evalin('base',[typeString 'ROICenters([' num2str(plotRange) '])']);
+            b=evalin('base',[typeString 'ROIBoundaries([' num2str(plotRange) '])']);
+            
+
+            % Populate the box:
+            if justUpdate==0
+                for n=1:allCount                    
+                    roisList{n}=[typeString '_' num2str(n)];
+                end
+
+                set(handles.roiSelector, 'String', '');
+                set(handles.roiSelector,'String',roisList);
+                set(handles.roiSelector,'Value',plotRange(end))
+            else
+            end
+
+            % Plot
+            if strcmp(get(handles.colormapTextEntry,'String'),'jet')
+                outColor='k';
+                txtColor=[0 0 0];
+            else
+                outColor=allColors{whoIsOn(rI)};
+                txtColor=allColors{whoIsOn(rI)};
+            end
+
+            hold all
+            for n=1:numel(plotRange)
+                
+                for k=1:numel(c{1,n})
+                    plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
+                        outColor,'LineWidth',2)
+                    if useTxtLabels
+                        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
+                            num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+                    else
+                    end
+                end
+            end
+
+            hold off
+        else
+        end
+    end
+
+        
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
+    
+% ************************************************
+% **************** Callback Functions ************
+% ************************************************
+
+
 function somaButton_Callback(hObject, eventdata, handles)
 
     freehandROI(hObject,eventdata,handles,'somatic')
@@ -168,19 +444,6 @@ function boutonButton_Callback(hObject, eventdata, handles)
 function vesselButton_Callback(hObject, eventdata, handles)
 
     freehandROI(hObject,eventdata,handles,'vessel')
-
-function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
-    selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-    wsObj=evalin('base',selections{selectionsIndex});
-    wsClass=class(wsObj);
-
-function roiSelector_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
 
     a = str2double(get(handles.lowCutEntry,'String'));
@@ -322,7 +585,6 @@ function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function deleteROIButton_Callback(hObject, eventdata, handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -356,56 +618,6 @@ function deleteROIButton_Callback(hObject, eventdata, handles)
     roisDisplayToggle(hObject,eventdata,handles)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-    
-function plotAnROI(hObject,eventdata,handles,roiCenters,roiBoundaries,boundaryColors)
-    if nargin==5
-        boundaryColors=repmat({[1 0 0]},1,numel(roiCenters));        
-    else
-    end
-    if numel(roiCenters)>0
-        for n=1:numel(roiCenters)
-            c=roiCenters{n};
-            b=roiBoundaries{n};
-            for k=1:numel(c)
-                plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',boundaryColors{n},'LineWidth',2.5)
-                % text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),num2str(n),'FontSize',10,'FontWeight','Bold','Color',textColors{n});
-            end
-        end
-    else
-    end
-  
-function plotSomeROIs(hObject,eventdata,handles,plotRemainder,roisToPlot)
-    
-    if numel(roisToPlot)
-        axes(handles.imageWindow)
-        a=gcf;
-        try
-            cI=a.CurrentAxes.Children(end).CData;
-            loadMeanProjectionButton_Callback(hObject,eventdata,handles,cI);
-        catch
-            loadMeanProjectionButton_Callback(hObject,eventdata,handles);
-        end
-        hold all
-        if plotRemainder
-            roisDisplayToggle(hObject,eventdata,handles,1)
-            hold all
-        else
-        end
-        
-        for n=1:numel(roisToPlot)    
-            stringSplit=strsplit(roisToPlot{n},'_');
-            typeString=stringSplit{1};
-            roiNumber=fix(str2double(stringSplit{2}));
-            c{n}=evalin('base',[typeString 'ROICenters([' num2str(roiNumber) ']);']);
-            b{n}=evalin('base',[typeString 'ROIBoundaries([' num2str(roiNumber) ']);']);
-        end
-        plotAnROI(hObject,eventdata,handles,c,b)
-        hold off
-        refreshVarListButton_Callback(hObject, eventdata, handles);
-        guidata(hObject, handles);
-    else
-    end
-    
 function roiSelector_Callback(hObject,eventdata,handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -421,208 +633,28 @@ function roiSelector_Callback(hObject,eventdata,handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
-function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
-
-    if nargin==3
-        justUpdate=0;
-        useTxtLabels=1;
-    end
-
-    if nargin == 4
-        useTxtLabels=1;
-    end
-    % if justUpdate~=2
-        % if you don't want to update clear all and start again
-        % note no hold
-        if justUpdate==0
-            loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-        else
-        end
-    
-        % this executes for all
-        axes(handles.imageWindow)
-        [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
-        % reset the box
-        set(handles.roiSelector,'String','');
-        guidata(hObject, handles);
-
-        % see who is (still) on
-        for n=1:numel(allTypes)
-            whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
-        end
-        whoIsOn=find(whoIsOn==1);
-
-        roiCounter=0;
-        for rI=1:numel(whoIsOn)
-            typeString=allTypes{whoIsOn(rI)};
-            g=evalin('base',['exist(''' typeString 'ROICenters'');']);
-            if g==1
-                c=evalin('base',[typeString 'ROICenters']);
-                b=evalin('base',[typeString 'ROIBoundaries']);
-                if numel(c) ~= 0
-                    plotRange=1:numel(c);
-                    allCount=numel(c);
-
-                    for n=1:allCount
-                        roiCounter=roiCounter+1;
-                        roisList{roiCounter}=[typeString '_' num2str(n)];
-                    end
-
-                    cVal=get(handles.roiSelector,'Value');
-                    set(handles.roiSelector, 'String', '');
-                    set(handles.roiSelector,'String',roisList);
-                    if cVal~=1
-                        set(handles.roiSelector,'Value',cVal)
-                    else
-                        set(handles.roiSelector,'Value',1)
-                    end
-
-
-                    % Plot
-                    if strcmp(get(handles.colormapTextEntry,'String'),'jet')
-                        outColor='k';
-                        txtColor=[0 0 0];
-                    else
-                        outColor=allColors{whoIsOn(rI)};
-                        txtColor=allColors{whoIsOn(rI)};
-                    end
-
-                    hold all
-                    for n=1:numel(plotRange)            
-                        for k=1:numel(c{1,n})
-                            plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
-                                outColor,'LineWidth',2)
-                            if useTxtLabels
-                                text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
-                                    num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-                            else
-                            end
-                        end
-                    end
-                    hold off
-                else
-                end
-            else
-            end
-        end
-        refreshVarListButton_Callback(hObject, eventdata, handles);
-        guidata(hObject, handles);
-    % else
-    % end
-
-function roiSelection(hObject,eventdata,handles)
-
-    cI=evalin('base','metaData.currentImage');
-    axes(handles.imageWindow)
-    loadMeanProjection(hObject,eventdata,handles,cI);
-   
-    [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
-
-    for n=1:numel(allTypes)
-        whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
-    end
-
-    whoIsOn=find(whoIsOn==1);
-
-    if numel(whoIsOn)==0
-        set(handles.roiSelector,'String','');
-    else
-    end
-
-    roiCounter=0;
-    lastTypeNumber=0;
-    for rI=1:numel(whoIsOn)
-        typeString=allTypes{whoIsOn(rI)};
-        g=evalin('base',['exist(''' typeString 'RoiCounter'');']);
-        if g==1
-            if numel(indRange)==0
-                c=evalin('base',[typeString 'ROICenters']);
-                b=evalin('base',[typeString 'ROIBoundaries']);
-                plotRange=1:numel(c);
-                allCount=numel(c);
-            else
-                plotRange=indRange;
-                
-            end
-
-            c=evalin('base',[typeString 'ROICenters([' num2str(plotRange) '])']);
-            b=evalin('base',[typeString 'ROIBoundaries([' num2str(plotRange) '])']);
-            
-
-            % Populate the box:
-            if justUpdate==0
-                for n=1:allCount                    
-                    roisList{n}=[typeString '_' num2str(n)];
-                end
-
-                set(handles.roiSelector, 'String', '');
-                set(handles.roiSelector,'String',roisList);
-                set(handles.roiSelector,'Value',plotRange(end))
-            else
-            end
-
-            % Plot
-            if strcmp(get(handles.colormapTextEntry,'String'),'jet')
-                outColor='k';
-                txtColor=[0 0 0];
-            else
-                outColor=allColors{whoIsOn(rI)};
-                txtColor=allColors{whoIsOn(rI)};
-            end
-
-            hold all
-            for n=1:numel(plotRange)
-                
-                for k=1:numel(c{1,n})
-                    plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
-                        outColor,'LineWidth',2)
-                    if useTxtLabels
-                        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
-                            num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-                    else
-                    end
-                end
-            end
-
-            hold off
-        else
-        end
-    end
-
-        
-    refreshVarListButton_Callback(hObject, eventdata, handles);
-    guidata(hObject, handles);
-
 function somaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
     % cState=get(handles.somaticRoisDisplayToggle,'Value');
     roisDisplayToggle(hObject, eventdata, handles)
-
 function redSomaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function dendriticRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function axonalRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function boutonRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function neuropilRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
-
 function lowCutSlider_Callback(hObject, eventdata, handles)
 
     sliderValue = get(handles.lowCutSlider,'Value');
@@ -635,13 +667,6 @@ function lowCutSlider_Callback(hObject, eventdata, handles)
     guidata(hObject, handles); 
 
     loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-
-function lowCutSlider_CreateFcn(hObject, eventdata, handles)
-
-    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor',[.9 .9 .9]);
-    end
-
 function highCutSlider_Callback(hObject, eventdata, handles)
 
     sliderValue = get(handles.highCutSlider,'Value');
@@ -654,13 +679,6 @@ function highCutSlider_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 
     loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-
-function highCutSlider_CreateFcn(hObject, eventdata, handles)
-
-    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor',[.9 .9 .9]);
-    end
-
 function lowCutEntry_Callback(hObject, eventdata, handles)
 
     input = str2num(get(hObject,'String'));
@@ -679,13 +697,6 @@ function lowCutEntry_Callback(hObject, eventdata, handles)
     set(handles.lowCutSlider,'Value',input);
     guidata(hObject, handles);
     lowCutSlider_Callback(hObject, eventdata, handles)
-
-function lowCutEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function highCutEntry_Callback(hObject, eventdata, handles)
 
     input = str2num(get(hObject,'String'));
@@ -703,13 +714,6 @@ function highCutEntry_Callback(hObject, eventdata, handles)
     set(handles.highCutSlider,'Value',input);
     guidata(hObject, handles);
     highCutSlider_Callback(hObject, eventdata, handles)
-
-function highCutEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function makeNeuropilMasks_Callback(hObject, eventdata, handles)
 
 
@@ -774,25 +778,10 @@ function makeNeuropilMasks_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function neuropilPixelSpreadEntry_Callback(hObject, eventdata, handles)
 
     guidata(hObject, handles);
-
-function neuropilPixelSpreadEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function workspaceVarBox_Callback(hObject, eventdata, handles)
-
-function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function refreshVarListButton_Callback(hObject, eventdata, handles)
 
     vars = evalin('base','who');
@@ -800,7 +789,6 @@ function refreshVarListButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function meanProjectButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -821,7 +809,6 @@ function meanProjectButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function stdevProjectionButton_Callback(hObject, eventdata, handles)
 
 
@@ -836,7 +823,6 @@ function stdevProjectionButton_Callback(hObject, eventdata, handles)
     set(handles.workspaceVarBox,'String',vars)
         
     guidata(hObject, handles);
-
 function maxProjectionButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -850,7 +836,6 @@ function maxProjectionButton_Callback(hObject, eventdata, handles)
     set(handles.workspaceVarBox,'String',vars)
         
     guidata(hObject, handles);
-
 function getGXcorButton_Callback(hObject, eventdata, handles)
 
     % Poll Params
@@ -955,17 +940,8 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function gXCorImageCountEntry_Callback(hObject, eventdata, handles)
-
-function gXCorImageCountEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
-
 function playStackMovButton_Callback(hObject, eventdata, handles)
     % main play
     playState=1;
@@ -1104,12 +1080,10 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     end
     % Update handles structure
     guidata(hObject, handles);
-
 function pasueMovieButton_Callback(hObject, eventdata, handles)
 
     playState=0;
     assignin('base','playState',playState)
-
 function localXCorButton_Callback(hObject, eventdata, handles)
 
     I=evalin('base','ccimage');
@@ -1163,7 +1137,6 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     roisDisplayToggle(hObject, eventdata, handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
 
@@ -1184,13 +1157,6 @@ function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
-function roiThresholdEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function pcaButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -1227,17 +1193,9 @@ function pcaButton_Callback(hObject, eventdata, handles)
     refreshVarListButton_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
-
 function colormapTextEntry_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-
-function colormapTextEntry_CreateFcn(hObject, eventdata, handles)
-    
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function frameSlider_Callback(hObject, eventdata, handles)
     % fix and ceil are unreliable here. 
     sliderValue = get(handles.frameSlider,'Value');    
@@ -1245,25 +1203,11 @@ function frameSlider_Callback(hObject, eventdata, handles)
     trackFrame(hObject, eventdata, handles);
     guidata(hObject, handles);
     loadMeanProjectionButton_Callback(hObject,eventdata, handles);
-
-function frameSlider_CreateFcn(hObject, eventdata, handles)
-
-    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor',[.9 .9 .9]);
-    end
-
 function frameTextEntry_Callback(hObject, eventdata, handles)
 
     trackFrame(hObject, eventdata, handles);
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
-function frameTextEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function addToSomasButton_Callback(hObject, eventdata, handles)
 
     g=evalin('base','exist(''somaticRoiCounter'')');
@@ -1304,7 +1248,6 @@ function addToSomasButton_Callback(hObject, eventdata, handles)
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 
     guidata(hObject, handles);
-
 function addToDendritesButton_Callback(hObject, eventdata, handles)
 
     g=evalin('base','exist(''dendriticRoiCounter'')');
@@ -1346,7 +1289,6 @@ function addToDendritesButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function addToBoutonsButton_Callback(hObject, eventdata, handles)
 
     g=evalin('base','exist(''boutonRoiCounter'')');
@@ -1388,7 +1330,6 @@ function addToBoutonsButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-
 function nnmfButton_Callback(hObject, eventdata, handles)
     % performs non-negative matrix factorization with defaults
     % this is a 'feature' based PCA that only allows non-negative values.
@@ -1450,38 +1391,20 @@ function nnmfButton_Callback(hObject, eventdata, handles)
     pause(0.000000001);
     guidata(hObject, handles);
     refreshVarListButton_Callback(hObject, eventdata, handles)
-
 function featureCountEntry_Callback(hObject, eventdata, handles)
-
-function featureCountEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function medianFilterToggle_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-
 function wienerFilterToggle_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
-
 function importerButton_Callback(hObject, eventdata, handles)
 
     evalin('base','importer')
-
 function extractorButton_Callback(hObject, eventdata, handles)
 
 
     evalin('base','extractor')
-
-function [curFrame]=trackFrame(hObject, eventdata, handles)
-    curFrame=fix(str2double(get(handles.frameTextEntry,'String')));        
-    assignin('base','currentFrame',curFrame)
-    evalin('base','metaData.currentFrame=currentFrame;,clear ''currentFrame''');
-    % debug
-
 function cMaskToggle_Callback(hObject, eventdata, handles)
     
     selections = get(handles.workspaceVarBox,'String');
@@ -1510,7 +1433,6 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function curImageToMaskButton_Callback(hObject, eventdata, handles)
 
 
@@ -1523,8 +1445,6 @@ function curImageToMaskButton_Callback(hObject, eventdata, handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
-
 function segmentMaskBtn_Callback(hObject, eventdata, handles)
 
     sR=evalin('base','metaData.currentMask');
@@ -1604,35 +1524,12 @@ function autoMaskBtn_Callback(hObject, eventdata, handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function binarySensEntry_Callback(hObject, eventdata, handles)
 
     cMaskToggle_Callback(hObject, eventdata, handles)
-
-function binarySensEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function minRoiEntry_Callback(hObject, eventdata, handles)
-
-function minRoiEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function manROIBtn_Generic_Callback(hObject, eventdata, handles)
-
 function roiTypeMenu_Callback(hObject, eventdata, handles)
-
-function roiTypeMenu_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function deleteWSVar_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -1641,17 +1538,9 @@ function deleteWSVar_Callback(hObject, eventdata, handles)
     evalin('base',['clear ' selectedItem]);
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function binaryThrValEntry_Callback(hObject, eventdata, handles)
 
     cMaskToggle_Callback(hObject, eventdata, handles)
-
-function binaryThrValEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function cutByBtn_Callback(hObject, eventdata, handles)
 
     cImage=double(evalin('base','currentImage'));
@@ -1666,17 +1555,9 @@ function cutByBtn_Callback(hObject, eventdata, handles)
     assignin('base','currentImage',cImage);
     evalin('base','metaData.currentImage=currentImage;');
     loadMeanProjectionButton_Callback(hObject,eventdata,handles,cImage);
-
 function imageCutEntry_Callback(hObject, eventdata, handles)
 
     cutByBtn_Callback(hObject, eventdata, handles)
-
-function imageCutEntry_CreateFcn(hObject, eventdata, handles)
-
-    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-        set(hObject,'BackgroundColor','white');
-    end
-
 function deDupeRoisBtn_Callback(hObject, eventdata, handles)
 
     % get pixel counts per roi
@@ -1723,17 +1604,9 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
         toKill=[];
     end
 
-    %%
     deleteROI(toKill,repmat({roiTypeSelected},1,numel(toKill)));
     disp(['deleted ' num2str(numel(toKill)) ' potential dupes'])
     roisDisplayToggle(hObject,eventdata,handles)
-
-function somaButton_KeyPressFcn(hObject, eventdata, handles)
-    if get(gcf,'currentcharacter') == 'h'
-    
-    else
-    end
-
 function clusterMaskBtn_Callback(hObject, eventdata, handles)
     ccimage=evalin('base','ccimage');
     stImg=ccimage-mean2(ccimage);
@@ -1844,8 +1717,6 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
             end
         
             for k=1:size(poolRois,3)
-%                 poolCounter=poolCounter+1;
-%                 poolClusMasks(:,:,poolCounter)=poolRois(:,:,k);
                 addROIsFromMask(hObject, eventdata, handles,poolRois(:,:,k));
             end
             clear poolRois
@@ -1853,12 +1724,8 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
         else
         end
     end
-    
-refreshVarListButton_Callback(hObject, eventdata, handles)
-guidata(hObject, handles);
-
-    
 function maxClusterEntry_Callback(hObject, eventdata, handles)
+
     
 
 % **************************************************************
@@ -1867,6 +1734,102 @@ function maxClusterEntry_Callback(hObject, eventdata, handles)
 
 function maxClusterEntry_CreateFcn(hObject, eventdata, handles)
 
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function roiSelector_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function somaButton_KeyPressFcn(hObject, eventdata, handles)
+    if get(gcf,'currentcharacter') == 'h'
+    
+    else
+    end
+function imageCutEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function binaryThrValEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function roiTypeMenu_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function minRoiEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function lowCutSlider_CreateFcn(hObject, eventdata, handles)
+
+    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor',[.9 .9 .9]);
+    end
+function frameSlider_CreateFcn(hObject, eventdata, handles)
+
+    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor',[.9 .9 .9]);
+    end
+function featureCountEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function frameTextEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function binarySensEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function highCutSlider_CreateFcn(hObject, eventdata, handles)
+
+    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor',[.9 .9 .9]);
+    end
+function colormapTextEntry_CreateFcn(hObject, eventdata, handles)
+
+    
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function gXCorImageCountEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function roiThresholdEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function highCutEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function workspaceVarBox_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function neuropilPixelSpreadEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function lowCutEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');

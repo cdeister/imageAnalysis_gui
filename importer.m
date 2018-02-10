@@ -1248,8 +1248,8 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
     handles.output = hObject;
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
-    guidata(hObject, handles);
     
+
     if computer == 'MACI64'
         macHeaderSize=12;
         macFontSize=11;
@@ -1290,7 +1290,7 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         for n=1:numel(titleUIElements)
             eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
         end
-        
+    guidata(hObject, handles);
 
         
     else
