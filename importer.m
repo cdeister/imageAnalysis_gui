@@ -258,7 +258,6 @@ function importButton_Callback(hObject, eventdata, handles)
             dispSize=size(tData,3);
         elseif numel(dsSize)~=2
             tData=h5read([tP tH],['/' tDS_select]);
-            assignin('base','debugVec',tData);
             dispSize=numel(tData);
         end
         
@@ -282,7 +281,6 @@ function importButton_Callback(hObject, eventdata, handles)
             ' Images'])
         pause(0.00000000000000001)
         guidata(hObject, handles);
-        assignin('base','thing',tdUse);
         assignin('base',tdUse,tData)
         iT=toc;
 
@@ -802,7 +800,7 @@ function inspectImageButton_Callback(hObject, eventdata, handles)
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     imageToPlot=selections{selectionsIndex};
 
-    tI=evalin('base',imageToPlot);
+    tI=evalin('base',[imageToPlot '(:,:,1)']);
     axes(handles.imageAxis)
     imagesc(tI),colormap jet
 
@@ -895,13 +893,17 @@ function getLuminanceButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 
 function plotVectors(hObject, eventdata,handles,uvector)
-    plot(uvector,'k-')
-    a=gca;
-    a.TickDir='out';
-    a.Box='off';
-    a.LineWidth=1;
-    axis square
-    guidata(hObject, handles);
+    try 
+        plot(uvector,'k-')
+        a=gca;
+        a.TickDir='out';
+        a.Box='off';
+        a.LineWidth=1;
+        axis square
+        guidata(hObject, handles);
+    catch
+        g=1;
+    end
 function constrainedMeanEntry_Callback(hObject, eventdata, handles)
 
 function contrainedMeanProjectButton_Callback(hObject, eventdata, handles)
@@ -1054,14 +1056,24 @@ function saveWorkspaceBtn_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String','saving...')
     pause(0.0000000001);
     guidata(hObject, handles);
+    try
+        savePath=evalin('base','metaData.importPath');
+    catch
+        savePath=[pwd filesep];
+    end
     try 
-        tStr=evalin('base','metaData.tifFile');
+        try
+            tStr=evalin('base','metaData.tifFile');
+        catch
+            tStr=evalin('base','metaData.hdfFile');
+        end
         tSplt=strsplit(tStr,'.');
         aStr=tSplt{1};
     catch
         aStr='1';
     end
-    evalin('base',['save(''matAnalysis_' aStr ''',''-v7.3'')'])
+   
+    evalin('base',['save(' '''' savePath 'mat_' aStr ''',''-v7.3'')'])
     pause(0.0000000001);
     set(handles.feedbackString,'String','')
     guidata(hObject, handles);
@@ -1297,7 +1309,8 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
             'compressStackToggle','diskMeanProjectButton','stackObjectNameEntry',...
             'saveDirectoryButton','saveStackButton','refreshVarListButton',...
             'registerButton','setRegStackButton','templateButton','meanProjectButton',...
-            'workspaceVarBox','setDirectoryButton','importButton'};
+            'workspaceVarBox','setDirectoryButton','importButton','stackResizeButton',...
+            'resizeStackXEntry','resizeStackYEntry','resizeStackZEntry'};
         for n=1:numel(uiElements)
             eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
         end
@@ -1321,3 +1334,90 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
 function varargout = importer_OutputFcn(hObject, eventdata, handles) 
     
     varargout{1} = handles.output;
+
+
+
+function resizeStackXEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to resizeStackXEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of resizeStackXEntry as text
+%        str2double(get(hObject,'String')) returns contents of resizeStackXEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function resizeStackXEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to resizeStackXEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function resizeStackYEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to resizeStackYEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of resizeStackYEntry as text
+%        str2double(get(hObject,'String')) returns contents of resizeStackYEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function resizeStackYEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to resizeStackYEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function resizeStackZEntry_Callback(hObject, eventdata, handles)
+% hObject    handle to resizeStackZEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of resizeStackZEntry as text
+%        str2double(get(hObject,'String')) returns contents of resizeStackZEntry as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function resizeStackZEntry_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to resizeStackZEntry (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in stackResizeButton.
+function stackResizeButton_Callback(hObject, eventdata, handles)
+
+zDim=get(handles.resizeStackZEntry,'String');
+yDim=get(handles.resizeStackYEntry,'String');
+xDim=get(handles.resizeStackXEntry,'String');
+
+
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+selectStack=selections{selectionsIndex};
+
+evalin('base',[selectStack '=' selectStack '(' yDim ',' xDim ',' zDim ');']);
+
+
+
