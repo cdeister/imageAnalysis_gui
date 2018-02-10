@@ -76,9 +76,9 @@ function importButton_Callback(hObject, eventdata, handles)
         assignin('base','mpTifInfo',mpTifInfo);
         assignin('base','tifFile',tifFile);
         assignin('base','imPath',imPath);
-        evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ''mpTifInfo''')
-        evalin('base','metaData.importPath=importPath;,clear ''importPath''')
-        evalin('base','metaData.tifFile=tifFile;,clear ''tifFile''')
+        evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ans ''mpTifInfo''')
+        evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+        evalin('base','metaData.tifFile=tifFile;,clear ans ''tifFile''')
     
 
     elseif pathExists==0 && hdfF==1
@@ -92,8 +92,8 @@ function importButton_Callback(hObject, eventdata, handles)
         assignin('base','importPath',imPath);
         assignin('base','hdfFile',hdfFile);
 
-        evalin('base','metaData.importPath=importPath;,clear ''importPath''')
-        evalin('base','metaData.hdfFile=hdfFile;,clear ''hdfFile''')
+        evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+        evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
     
     
     elseif pathExists==1 && hdfF==1
@@ -246,6 +246,7 @@ function importButton_Callback(hObject, eventdata, handles)
         tDS_select=tDS{selectVal};
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
+        evalin('base','clear ans')
 
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
@@ -287,7 +288,7 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
             eNum=numel(filteredFiles);
             set(handles.endImageEntry,'string',num2str(eNum))
             evalin('base','metaData.filteredFiles=filteredFiles;')
-            evalin('base','metaData.importPath=importPath;,clear ''importPath''')
+            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
             
         else
         end
@@ -301,9 +302,9 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
             assignin('base','mpTifInfo',mpTifInfo);
             assignin('base','importPath',imPath);
             assignin('base','tifFile',tifFile);
-            evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ''mpTifInfo''')
-            evalin('base','metaData.importPath=importPath;,clear ''importPath''')
-            evalin('base','metaData.tifFile=tifFile;,clear ''tifFile''')
+            evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ans ''mpTifInfo''')
+            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+            evalin('base','metaData.tifFile=tifFile;,clear ans ''tifFile''')
         else
         end
         
@@ -319,8 +320,8 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
             assignin('base','importPath',imPath);
             assignin('base','hdfFile',hdfFile);
             
-            evalin('base','metaData.importPath=importPath;,clear ''importPath''')
-            evalin('base','metaData.hdfFile=hdfFile;,clear ''hdfFile''')
+            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+            evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
 
         else
         end
@@ -514,7 +515,7 @@ function saveStackButton_Callback(hObject, eventdata, handles)
 
     set(handles.feedbackString,'String','done saving stack');
     guidata(hObject, handles);
-    evalin('base','clear ''stackObject''')
+    evalin('base','clear ans ''stackObject''')
 
 
     refreshVarListButton_Callback(hObject, eventdata, handles)

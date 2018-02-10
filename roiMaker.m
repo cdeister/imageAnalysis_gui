@@ -786,8 +786,6 @@ function refreshVarListButton_Callback(hObject, eventdata, handles)
 
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars);
-
-    % Update handles structure
     guidata(hObject, handles);
 function meanProjectButton_Callback(hObject, eventdata, handles)
 
@@ -848,31 +846,35 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
 
     numImages=evalin('base',['size(' selectStack ',3)']);
 
-        
-    sstack= [];
-    c=0;
-    ff=fspecial('gaussian',11,0.5);
+    if filterState==1    
+        corStack=[];
+        c=0;
+        ff=fspecial('gaussian',11,0.5);
+        nstack=min(imsToCor,numImages);
+        for n=1:nstack
+            c=c+1;
+            if (rem(n,100)==0)
+                set(handles.feedbackString,'String',['finished ' num2str(n)...
+                    ' of ' num2str(nstack) ' | ' num2str(round(100*(n./nstack))) '% done'])
+                pause(0.0000001);
+                guidata(hObject, handles);
+            end
 
-    nstack=min(imsToCor,numImages);
-
-    for n=1:nstack
-        c=c+1;
-        
-        if (rem(n,100)==0)
-            set(handles.feedbackString,'String',['finished ' num2str(n)...
-                ' of ' num2str(numImages) ' | ' num2str(round(100*(n./nstack))) '% done'])
-            pause(0.0000001);
-            guidata(hObject, handles);
-    %         fprintf('%d/%d (%d%%)\n',n,numImages,round(100*(n./nstack)));
+            fnum=n;
+            evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
+            I=evalin('base',evalStr);
+            I=conv2(double(I),ff,'same');
+            corStack(:,:,n)=I;
+            assignin('base','corStack',corStack);
         end
-
-        fnum=n;
-        evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
-        I=evalin('base',evalStr);
-        I=conv2(double(I),ff,'same');
-        sstack(:,:,n)=I;
+    elseif filterState==0
+        nstack=min(imsToCor,numImages);
+        evalin('base',['corStack=double(' selectStack '(:,:,1:' num2str(nstack) '));'])
+        corStack=evalin('base','corStack');
+    else
     end
-    assignin('base','sstack',sstack);
+
+    
 
     % make local Xcorr and/or PCA
     % global xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
@@ -885,10 +887,10 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
     w=1; % window size
 
     % Initialize and set up parameters
-    ymax=size(sstack,1);
-    xmax=size(sstack,2);
-    numFrames=size(sstack,3);
-    ccimage=zeros(ymax,xmax);
+    ymax=size(corStack,1);
+    xmax=size(corStack,2);
+    numFrames=size(corStack,3);
+    cimg=zeros(ymax,xmax);
 
     for y=1+w:ymax-w
         
@@ -902,13 +904,13 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
         
         for x=1+w:xmax-w
             % Center pixel
-            thing1 = reshape(sstack(y,x,:)-mean(sstack(y,x,:),3),[1 1 numFrames]); 
+            thing1 = reshape(corStack(y,x,:)-mean(corStack(y,x,:),3),[1 1 numFrames]); 
             % Extract center pixel's time course and subtract its mean
             ad_a   = sum(thing1.*thing1,3);    % Auto corr, for normalization laterdf
             
             % Neighborhood
-            a = sstack(y-w:y+w,x-w:x+w,:);         % Extract the neighborhood
-            b = mean(sstack(y-w:y+w,x-w:x+w,:),3); % Get its mean
+            a = corStack(y-w:y+w,x-w:x+w,:);         % Extract the neighborhood
+            b = mean(corStack(y-w:y+w,x-w:x+w,:),3); % Get its mean
             thing2 = bsxfun(@minus,a,b);       % Subtract its mean
             ad_b = sum(thing2.*thing2,3);      % Auto corr, for normalization later
             
@@ -916,19 +918,19 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
             ccs = sum(bsxfun(@times,thing1,thing2),3)./sqrt(bsxfun(@times,ad_a,ad_b));
             % Cross corr with normalization
             ccs((numel(ccs)+1)/2) = [];        % Delete the middle point
-            ccimage(y,x) = mean(ccs(:));       % Get the mean cross corr of the local neighborhood
+            cimg(y,x) = mean(ccs(:));       % Get the mean cross corr of the local neighborhood
         end
     end
 
-    m=mean(ccimage(:));
-    ccimage(1,:)=m;
-    ccimage(end,:)=m;
-    ccimage(:,1)=m;
-    ccimage(:,end)=m;
+    m=mean(cimg(:));
+    cimg(1,:)=m;
+    cimg(end,:)=m;
+    cimg(:,1)=m;
+    cimg(:,end)=m;
 
 
-    assignin('base',['ccimage_' selectStack],ccimage);
-    assignin('base','ccimage',ccimage);
+    assignin('base',['cimg_' selectStack],cimg);
+    assignin('base','cimg',cimg);
     set(handles.feedbackString,'String','! done with xcor')
     pause(0.00001);
     guidata(hObject, handles);
@@ -1086,34 +1088,35 @@ function pasueMovieButton_Callback(hObject, eventdata, handles)
     assignin('base','playState',playState)
 function localXCorButton_Callback(hObject, eventdata, handles)
 
-    I=evalin('base','ccimage');
-    sstack=evalin('base','sstack');
+    cimg=evalin('base','cimg');
+    roiTh=str2num(get(handles.roiThresholdEntry,'String'));
+    corStack=evalin('base','corStack');
 
     [x,y]=ginput(1);
     %iterative region growing
-    ref= (squeeze(sstack(ceil(y),ceil(x),:) ));
+    ref= (squeeze(corStack(ceil(y),ceil(x),:) ));
 
-    xc=I.*0;
+    xc=cimg.*0;
     xc(ceil(y),ceil(x))=0.9; % seed
 
     it=1;
         while it<50
             sig=find(xc>0.04);
-            mask=I.*0; mask(sig)=1;
+            mask=cimg.*0; mask(sig)=1;
             mask=conv2(mask,ones(5),'same')>0;
             update=find((xc==0).*(mask==1));
             if numel(update)<1
                 it=500;
             end
             for fillin=update'
-                [a,b]=ind2sub(size(I),fillin);
-                c=corrcoef(squeeze(sstack(a,b,:)),ref);
+                [a,b]=ind2sub(size(cimg),fillin);
+                c=corrcoef(squeeze(corStack(a,b,:)),ref);
                 xc(a,b)=c(2,1);
             end
             it=it+1;
         end
 
-    localCorMaskPlot=(1-mask).*I./10+ ((xc*1));
+    localCorMaskPlot=(1-mask).*cimg./10+ ((xc*1));
     imagesc(localCorMaskPlot),axis off
     colormap jet
     currentImage=localCorMaskPlot;
@@ -1121,7 +1124,7 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     daspect([1 1 1]);
 
     axes(handles.cdfWindow);
-    cdfplot(reshape(localCorMaskPlot,numel(I),1))
+    cdfplot(reshape(localCorMaskPlot,numel(cimg),1))
 
     roiTh=str2num(get(handles.roiThresholdEntry,'String'));
     axes(handles.roiPreviewWindow);
@@ -1164,7 +1167,7 @@ function pcaButton_Callback(hObject, eventdata, handles)
 
     imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
     stack=evalin('base',[selections{selectionsIndex}]);
-    pcaimage=evalin('base','ccimage');
+    pcaimage=evalin('base','cimg');
 
     set(handles.feedbackString,'String','computing PCA ROI estimate')
     pause(0.00001);
@@ -1495,7 +1498,6 @@ function segmentMaskBtn_Callback(hObject, eventdata, handles)
         set(handles.feedbackString,'String','image is not a mask');
         guidata(hObject, handles);
     end
-
 function autoMaskBtn_Callback(hObject, eventdata, handles)
 
     
@@ -1608,8 +1610,8 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
     disp(['deleted ' num2str(numel(toKill)) ' potential dupes'])
     roisDisplayToggle(hObject,eventdata,handles)
 function clusterMaskBtn_Callback(hObject, eventdata, handles)
-    ccimage=evalin('base','ccimage');
-    stImg=ccimage-mean2(ccimage);
+    cimg=evalin('base','cimg');
+    stImg=cimg-mean2(cimg);
     stImgThr=0.19;
 
     imLn=size(stImg,1);
@@ -1639,7 +1641,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
     end
     
     poolCounter=0;
-    dataToClusterOn=ccimage-mean2(ccimage);
+    dataToClusterOn=cimg-mean2(cimg);
     
     for p=1:size(segMasks,3)
         mNum=p;
@@ -1727,7 +1729,6 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
 function maxClusterEntry_Callback(hObject, eventdata, handles)
 
     
-
 % **************************************************************
 % **************** Junkyard ************************************
 % **************************************************************
