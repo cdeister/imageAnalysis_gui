@@ -3,10 +3,10 @@ function varargout = importer(varargin)
 % IMPORTER is a simple gui for importing image files into matlab and
 % performing some basic pre-processing.
 %
-% v1.1 -- HDF Support
+% v1.2 -- HDF Support; Scales text up on a Mac.
 %
 % cdeister@brown.edu with any questions
-% last modified: CAD 1/12/2018
+% last modified: CAD 2/10/2018
 
 
 % matlab gui init stuff
@@ -28,9 +28,11 @@ else
 end
 
 
+
+
+
 % main import procedure
 function importButton_Callback(hObject, eventdata, handles)
-
     mPF=get(handles.multiPageFlag, 'Value');
     hdfF=get(handles.importFromHDF, 'Value');
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
@@ -270,7 +272,6 @@ function importButton_Callback(hObject, eventdata, handles)
     disp(['*** done with import, which took ' num2str(iT) ' seconds'])
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function setDirectoryButton_Callback(hObject, eventdata, handles)
 
     mPF=get(handles.multiPageFlag, 'Value');
@@ -527,7 +528,6 @@ function saveDirectoryButton_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
 function stackObjectNameEntry_Callback(hObject, eventdata, handles)
-
 function diskMeanProjectButton_Callback(hObject, eventdata, handles)
 
     firstIm=str2num(get(handles.firstImageEntry,'string'));
@@ -680,12 +680,9 @@ function selectDiskMeanProjectButton_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
 function filterDiskProjectToggle_Callback(hObject, eventdata, handles)
-
 function multiPageFlag_Callback(hObject, eventdata, handles)
     set(handles.importFromHDF, 'Value',0);
-    
 function stackSplit_textAppend_Callback(hObject, eventdata, handles)
-
 function stackSplit_everyOtherToggle_Callback(hObject, eventdata, handles)
 
 
@@ -704,7 +701,6 @@ function stackSplit_serialToggle_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
 function splitStackCountEntry_Callback(hObject, eventdata, handles)
-
 function splitStackButton_Callback(hObject, eventdata, handles)
 
     splitCount=str2num(get(handles.splitStackCountEntry,'String'));
@@ -847,7 +843,6 @@ function inspectStackButton_Callback(hObject, eventdata, handles)
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function parallelizeImportToggle_Callback(hObject, eventdata, handles)
 function importWorkerEntry_Callback(hObject, eventdata, handles)
 
@@ -881,7 +876,7 @@ function getLuminanceButton_Callback(hObject, eventdata, handles)
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 
-    function plotVectors(hObject, eventdata,handles,uvector)
+function plotVectors(hObject, eventdata,handles,uvector)
     plot(uvector,'k-')
     a=gca;
     a.TickDir='out';
@@ -1056,15 +1051,6 @@ function saveWorkspaceBtn_Callback(hObject, eventdata, handles)
 
 % ----------------------- junkyard
 %
-% ****** Generic Startup Functions
-function importer_OpeningFcn(hObject, eventdata, handles, varargin)
-    handles.output = hObject;
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
-    guidata(hObject, handles);
-function varargout = importer_OutputFcn(hObject, eventdata, handles) 
-    
-    varargout{1} = handles.output;
 function firstImageEntry_Callback(hObject, eventdata, handles)
 function firstImageEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -1098,43 +1084,36 @@ function appendProjTextEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function stackObjectNameEntry_CreateFcn(hObject, eventdata, handles)
     
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function stackSplit_textAppend_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function splitStackCountEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function importWorkerEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function constrainedMeanEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function outlierThresholdEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
 function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
@@ -1169,19 +1148,7 @@ clear s testBin
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
-
-
-
 function binPixelsEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to binPixelsEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of binPixelsEntry as text
-%        str2double(get(hObject,'String')) returns contents of binPixelsEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function binPixelsEntry_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to binPixelsEntry (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1192,9 +1159,6 @@ function binPixelsEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
-% --- Executes on button press in averageStackBy.
 function averageStackBy_Callback(hObject, eventdata, handles)
 % hObject    handle to averageStackBy (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1217,19 +1181,7 @@ clear s testBin
 
 refreshVarListButton_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
-
-
-
 function averageStackByEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to averageStackByEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of averageStackByEntry as text
-%        str2double(get(hObject,'String')) returns contents of averageStackByEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function averageStackByEntry_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to averageStackByEntry (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1240,9 +1192,6 @@ function averageStackByEntry_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
-
-% --- Executes on button press in importFromHDF.
 function importFromHDF_Callback(hObject, eventdata, handles)
 % hObject    handle to importFromHDF (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1250,9 +1199,6 @@ function importFromHDF_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of importFromHDF
 set(handles.multiPageFlag, 'Value',0);
-
-
-% --- Executes on button press in memoryMapToggle.
 function memoryMapToggle_Callback(hObject, eventdata, handles)
 % hObject    handle to memoryMapToggle (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1264,10 +1210,6 @@ if get(handles.memoryMapToggle, 'Value')==1
     set(handles.importFromHDF, 'Value',1);
 else
 end
-    
-
-
-% --- Executes on selection change in hdfPopSelector.
 function hdfPopSelector_Callback(hObject, eventdata, handles)
 % hObject    handle to hdfPopSelector (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1290,11 +1232,6 @@ if numel(dsSize)==3
     set(handles.endImageEntry,'String',num2str(dsSize(1)));
 else
 end
-    
-
-
-
-% --- Executes during object creation, after setting all properties.
 function hdfPopSelector_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to hdfPopSelector (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -1305,3 +1242,60 @@ function hdfPopSelector_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+% ****** Generic Startup Functions
+function importer_OpeningFcn(hObject, eventdata, handles, varargin)
+    handles.output = hObject;
+    vars = evalin('base','who');
+    set(handles.workspaceVarBox,'String',vars)
+    guidata(hObject, handles);
+    
+    if computer == 'MACI64'
+        macHeaderSize=12;
+        macFontSize=11;
+        macUIDecSize=10;
+        uiElements={'importButton','hdfPopSelector','memoryMapToggle',...
+            'importFromHDF','averageStackByEntry','averageStackBy',...
+            'binPixelsEntry','binPixels','registrationWorkerEntry',...
+            'outlierThresholdEntry','constrainedMeanEntry',...
+            'importWorkerEntry','splitStackCountEntry','stackSplit_textAppend',...
+            'stackObjectNameEntry','appendProjTextEntry','workspaceVarBox',...
+            'skipFactorEntry','stringFilterToggle','stringFilterToggle',...
+            'fileFilterString','endImageEntry','firstImageEntry',...
+            'saveWorkspaceBtn','deleteSelectionBtn','plotVectorButton',...
+            'extractorButton','roiMakerButton','diskLumValButton',...
+            'tossOutlierButton','outlierThresholdEntry','contrainedMeanProjectButton',...
+            'constrainedMeanEntry','getLuminanceButton','inferRunningButton',...
+            'registrationWorkerEntry','parallelizeRegistrationToggle','importWorkerEntry',...
+            'parallelizeImportToggle','inspectStackButton','inspectImageButton',...
+            'applyTransformsButton','deleteOGStack_toggle','splitStackButton',...
+            'splitStackCountEntry','stackSplit_serialToggle','stackSplit_everyOtherToggle',...
+            'stackSplit_textAppend','multiPageFlag','filterDiskProjectToggle',...
+            'selectDiskMeanProjectButton','saveRegTiffsToggle','diskRegisterButton',...
+            'compressStackToggle','diskMeanProjectButton','stackObjectNameEntry',...
+            'saveDirectoryButton','saveStackButton','refreshVarListButton',...
+            'registerButton','setRegStackButton','templateButton','meanProjectButton',...
+            'workspaceVarBox','setDirectoryButton','importButton'};
+        for n=1:numel(uiElements)
+            eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
+        end
+        
+        decUIElements={'imageContainString','pickFrameString','startNumTxt',...
+            'startToText','endFText','text5','text11','text13','text12','imageAxis'};
+        for n=1:numel(decUIElements)
+            eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
+        end
+        
+        titleUIElements={'uipanel9','importPanel','uipanel7','uipanel8','uipanel10','uipanel3'};
+        for n=1:numel(titleUIElements)
+            eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
+        end
+        
+
+        
+    else
+    end
+        
+function varargout = importer_OutputFcn(hObject, eventdata, handles) 
+    
+    varargout{1} = handles.output;
