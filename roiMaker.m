@@ -1187,11 +1187,6 @@ function pcaButton_Callback(hObject, eventdata, handles)
 
     set(handles.feedbackString,'String','done with PCA')
     pause(0.00001);
-
-
-
-
-
     guidata(hObject, handles);
     refreshVarListButton_Callback(hObject, eventdata, handles)
     % Update handles structure

@@ -253,20 +253,37 @@ function importButton_Callback(hObject, eventdata, handles)
         
         tic
         if numel(dsSize)==3
-
             tData=h5read([tP tH],['/' tDS_select]);
             tData=permute(tData,[3,2,1]);
-        else
-            disp('your hdf dataset is not an image stack')
+            dispSize=size(tData,3);
+        elseif numel(dsSize)~=2
+            tData=h5read([tP tH],['/' tDS_select]);
+            assignin('base','debugVec',tData);
+            dispSize=numel(tData);
         end
         
+        tdSplit=strsplit(tDS_select, '-');
+        tdUse='';
+        if numel(tdSplit)>1
+            for n=1:numel(tdSplit)
+                if n==1
+                    tdUse=[tdUse tdSplit{n}]
+                else
+                    tdUse=[tdUse '_' tdSplit{n}]
+                end
+            end
+        else
+            tdUse=tDS_select;
+        end
+                    
+        
         set(handles.importButton,'String','Import Images')
-        set(handles.feedbackString,'String',['Imported ' num2str(size(tData,3)) ...
+        set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ...
             ' Images'])
         pause(0.00000000000000001)
         guidata(hObject, handles);
-        
-        assignin('base','importedStack',tData)
+        assignin('base','thing',tdUse);
+        assignin('base',tdUse,tData)
         iT=toc;
 
     end
@@ -1218,20 +1235,24 @@ function hdfPopSelector_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns hdfPopSelector contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from hdfPopSelector
+try
+    selectVal=get(handles.hdfPopSelector,'Value');
+    tDS=get(handles.hdfPopSelector,'String');
+    tDS_select=tDS{selectVal};
+    tP=evalin('base','metaData.importPath');
+    tH=evalin('base','metaData.hdfFile');
 
-selectVal=get(handles.hdfPopSelector,'Value');
-tDS=get(handles.hdfPopSelector,'String');
-tDS_select=tDS{selectVal};
-tP=evalin('base','metaData.importPath');
-tH=evalin('base','metaData.hdfFile');
+    tSInfo=h5info([tP tH],['/' tDS_select]);
+    dsSize=tSInfo.Dataspace.Size;
 
-tSInfo=h5info([tP tH],['/' tDS_select]);
-dsSize=tSInfo.Dataspace.Size;
-
-if numel(dsSize)==3
-    set(handles.firstImageEntry,'String',num2str(1));
-    set(handles.endImageEntry,'String',num2str(dsSize(1)));
-else
+    if numel(dsSize)==3
+        set(handles.firstImageEntry,'String',num2str(1));
+        set(handles.endImageEntry,'String',num2str(dsSize(1)));
+    elseif numel(dsSize)~=3
+        set(handles.endImageEntry,'String',num2str(dsSize(1)));
+    end
+catch
+    a=1;
 end
 function hdfPopSelector_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to hdfPopSelector (see GCBO)
