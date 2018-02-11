@@ -1316,7 +1316,8 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         end
         
         decUIElements={'imageContainString','pickFrameString','startNumTxt',...
-            'startToText','endFText','text5','text11','text13','text12','imageAxis'};
+            'startToText','endFText','text5','text11','text13','text12','imageAxis',...
+            'text35','text36','text37'};
         for n=1:numel(decUIElements)
             eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
         end
@@ -1418,6 +1419,3 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 selectStack=selections{selectionsIndex};
 
 evalin('base',[selectStack '=' selectStack '(' yDim ',' xDim ',' zDim ');']);
-
-
-
