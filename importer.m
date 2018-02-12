@@ -1284,7 +1284,7 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.workspaceVarBox,'String',vars)
     
 
-    if computer == 'MACI64'
+    if strcmp(computer,'MACI64')
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;

@@ -53,7 +53,7 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     else
         set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
     end
-    if computer == 'MACI64'
+    if strcmp(computer,'MACI64')
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;
@@ -952,7 +952,6 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     playStack=double(evalin('base',[selections{selectionsIndex}]));
-    size(playStack)
     if size(playStack,3)>1 & size(playStack,4)<=1
         playRGB=0;
     elseif size(playStack,3)>1 & size(playStack,4)>1
@@ -1013,7 +1012,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     cMap=sL{sV};
 
 
-    mfactor=0.3;
+    mfactor=0.4;
 
     a = get(handles.lowCutEntry,'String');
     b = get(handles.highCutEntry,'String');
@@ -1057,10 +1056,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
             if pS==1
                 ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
                 ii=ii.*cMask;
-    %             set(handles.frameTextEntry,'String',num2str(i));
-    %             set(handles.frameSlider, 'Value', i);
                 h=imshow(ii);
-    %             colormap(gca,cMap);
                 daspect([1 1 1])
                 drawnow;
                 delete(h);
@@ -1071,7 +1067,6 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
                 ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
                 ii=ii.*cMask;
                 imshow(ii);
-    %             colormap(gca,cMap);
                 daspect([1 1 1])
                 axes(handles.imageWindow);
                 assignin('base','currentImage',ii)
@@ -1083,7 +1078,6 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
 function pasueMovieButton_Callback(hObject, eventdata, handles)
-
     playState=0;
     assignin('base','playState',playState)
 function localXCorButton_Callback(hObject, eventdata, handles)
@@ -1196,7 +1190,7 @@ function colormapTextEntry_Callback(hObject, eventdata, handles)
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 function frameSlider_Callback(hObject, eventdata, handles)
     % fix and ceil are unreliable here. 
-    sliderValue = get(handles.frameSlider,'Value');    
+    sliderValue = ceil(get(handles.frameSlider,'Value'));
     set(handles.frameTextEntry,'String', num2str(sliderValue));
     trackFrame(hObject, eventdata, handles);
     guidata(hObject, handles);
