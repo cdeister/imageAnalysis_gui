@@ -106,9 +106,18 @@ function importButton_Callback(hObject, eventdata, handles)
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
 
+        % some of my hdfs lead with frame number
+        % todo: correct this hack.
+        if dsSize(1)>dsSize(3)
+            imDim=dsSize(1);
+        else
+            imDim=dsSize(3);
+        end
+        assignin('base','imDim',imDim)
+
         if numel(dsSize)==3
             set(handles.firstImageEntry,'String',num2str(1));
-            set(handles.endImageEntry,'String',num2str(dsSize(1)));
+            set(handles.endImageEntry,'String',num2str(imDim));
         else
         end
      
@@ -254,8 +263,14 @@ function importButton_Callback(hObject, eventdata, handles)
         tic
         if numel(dsSize)==3
             tData=h5read([tP tH],['/' tDS_select]);
-            tData=permute(tData,[3,2,1]);
+            if dsSize(1)>dsSize(3)
+                tData=permute(tData,[3,2,1]);
+                dispSize=size(tData,3);
+            else
+            end
             dispSize=size(tData,3);
+            
+            
         elseif numel(dsSize)~=2
             tData=h5read([tP tH],['/' tDS_select]);
             dispSize=numel(tData);
@@ -626,7 +641,7 @@ function diskRegisterButton_Callback(hObject, eventdata, handles)
 
     tic
     if saveTiffFlag==0
-        parfor n=firstIm:endIm,
+        parfor n=firstIm:endIm
             [out1,~]=dftregistration(fft2(regTemp),fft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
             registeredTransformations(:,n)=out1;
         end
@@ -636,7 +651,7 @@ function diskRegisterButton_Callback(hObject, eventdata, handles)
     elseif saveTiffFlag==1
         % pre-alloc the stack
         registeredImages=zeros(size(regTemp,1),size(regTemp,2),totalImagesPossible,'uint16');
-        parfor n=firstIm:endIm,
+        parfor n=firstIm:endIm
             [out1,out2]=dftregistration(fft2(regTemp),fft2(imread([imPath filesep filteredFiles(n,1).name],'tif')),subpixelFactor);
             registeredTransformations(:,n)=out1;
             registeredImages(:,:,n)=abs(ifft2(out2));
@@ -1258,8 +1273,13 @@ try
     dsSize=tSInfo.Dataspace.Size;
 
     if numel(dsSize)==3
+        if dsSize(1)>dsSize(3)
+            imDim=dsSize(1);
+        else
+            imDim=dsSize(3);
+        end
         set(handles.firstImageEntry,'String',num2str(1));
-        set(handles.endImageEntry,'String',num2str(dsSize(1)));
+        set(handles.endImageEntry,'String',num2str(imDim));
     elseif numel(dsSize)~=3
         set(handles.endImageEntry,'String',num2str(dsSize(1)));
     end
