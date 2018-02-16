@@ -55,7 +55,7 @@ if numel(convertablePaths)>0
     
         % a) parse xml
         tic
-        disp('parsing xml ... this can be slow with MATLAB')
+        disp('parsing xml ... this can be slow with MATLAB; up to 2 min for a massive XML')
         % note: xml parsing in MATLAB is SLOW compared to other languages.
         % this step is currently one of the slowest in the script.
         xmlDir=dir([fPath filesep convertablePaths{h} filesep '*xml']);
@@ -63,6 +63,15 @@ if numel(convertablePaths)>0
         clear xmlDir
         xmlFile=xml2struct([fPath filesep convertablePaths{h} filesep xmlName]);
         disp(['... xml parsed in ' num2str(toc) ' seconds'])
+        
+        % get frame count and times.
+        
+        md.frameCount=numel(xmlFile.PVScan.Sequence.Frame);
+        md.absTime=zeros(md.frameCount,1);
+        for q=1:md.frameCount
+            md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
+        end
+            
 
         % assign metadata
         md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
@@ -97,7 +106,11 @@ if numel(convertablePaths)>0
 
         % create hdf set
         hdfDSet=[filesep convertablePaths{h}];
+        hdfDSetTime=[filesep convertablePaths{h} '_absTime'];
+        
         h5create(hdfName,hdfDSet,[yDim xDim Inf],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
+        h5create(hdfName,hdfDSetTime,[md.frameCount 1],'Datatype','double');
+        h5write(hdfName,hdfDSetTime,md.absTime,[1 1],[md.frameCount 1]);
 
         h5writeatt(hdfName,hdfDSet,'scanType',md.scanType);
         h5writeatt(hdfName,hdfDSet,'scanTimestamp',md.scanTimestamp);
@@ -108,6 +121,7 @@ if numel(convertablePaths)>0
         h5writeatt(hdfName,hdfDSet,'scanLines',md.dimLines);
         h5writeatt(hdfName,hdfDSet,'scanPixels',md.dimPixels);
         h5writeatt(hdfName,hdfDSet,'pixelSizeXYZ',md.pixelSizeXYZ);
+        h5writeatt(hdfName,hdfDSet,'frameCount',md.frameCount);
 
          % ------------ Camera Conversion block
         if strcmp(md.scanType,'Camera')

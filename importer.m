@@ -37,7 +37,6 @@ function importButton_Callback(hObject, eventdata, handles)
     hdfF=get(handles.importFromHDF, 'Value');
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
-    
     try
         evalin('base','metaData.importPath');
         disp('importing images ...')
@@ -63,8 +62,8 @@ function importButton_Callback(hObject, eventdata, handles)
         imPath=evalin('base','metaData.importPath');
         tifFile=evalin('base','metaData.tifFile');
         mpTifInfo=evalin('base','metaData.mpTifInfo');
-        firstIm=str2num(get(handles.firstImageEntry,'string'));
-        endIm=str2num(get(handles.endImageEntry,'string'));
+         firstIm=str2num(get(handles.firstImageEntry,'string'));
+         endIm=str2num(get(handles.endImageEntry,'string'));
     
     % User has set not path, and does want multi-page tif.    
     elseif pathExists==0 && mPF==1 && hdfF==0
@@ -97,30 +96,31 @@ function importButton_Callback(hObject, eventdata, handles)
     
     
     elseif pathExists==1 && hdfF==1
+        
         selectVal=get(handles.hdfPopSelector,'Value');
         tDS=get(handles.hdfPopSelector,'String');
         tDS_select=tDS{selectVal};
+        
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
 
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
+        zOne=get(handles.zDimFlip,'Value');
 
-        % some of my hdfs lead with frame number
+        % some hdfs lead with frame number
         % todo: correct this hack.
-        if dsSize(1)>dsSize(3)
-            imDim=dsSize(1);
-        else
-            imDim=dsSize(3);
-        end
-        assignin('base','imDim',imDim)
-
         if numel(dsSize)==3
-            set(handles.firstImageEntry,'String',num2str(1));
-            set(handles.endImageEntry,'String',num2str(imDim));
+            if zOne
+                imDim=dsSize(1);
+            else
+                imDim=dsSize(3);
+            end
         else
+            [~,imDim]=max(dsSize);
         end
-     
+%          set(handles.firstImageEntry,'String',num2str(1));
+%         set(handles.endImageEntry,'String',num2str(imDim));
     end
         
 
@@ -135,8 +135,6 @@ function importButton_Callback(hObject, eventdata, handles)
         filteredFiles=resortImageFileMap(filteredFiles);
         assignin('base','filteredFiles',filteredFiles)
         importCount=fix(((endIm-firstIm)+1)/skipBy);
-        % disp(imPath)
-        % disp(filteredFiles(1,1).name)
         canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
         imageSize=size(canaryImport);
         canaryInfo=whos('canaryImport');
@@ -256,22 +254,40 @@ function importButton_Callback(hObject, eventdata, handles)
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
         evalin('base','clear ans')
+        
 
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
+        zOne=get(handles.zDimFlip,'Value');
         
-        tic
-        if numel(dsSize)==3
-            tData=h5read([tP tH],['/' tDS_select]);
-            if dsSize(1)>dsSize(3)
-                tData=permute(tData,[3,2,1]);
-                dispSize=size(tData,3);
-            else
-            end
+        
+        if zOne==1 && numel(dsSize)==3
+            tic
+            firstIm=str2num(get(handles.firstImageEntry,'string'));
+            endIm=str2num(get(handles.endImageEntry,'string'));
+            assignin('base','dsSize',dsSize);
+            assignin('base','firstIm',firstIm);
+            assignin('base','endIm',endIm);
+            cStride=(endIm-firstIm)+1;
+            tData=h5read([tP tH],['/' tDS_select],[firstIm 1 1],[cStride dsSize(2) dsSize(3)]);
+            tData=permute(tData,[3,2,1]);
             dispSize=size(tData,3);
-            
-            
-        elseif numel(dsSize)~=2
+        
+        
+        elseif zOne==0 && numel(dsSize)==3
+            tic
+            firstIm=str2num(get(handles.firstImageEntry,'string'));
+            endIm=str2num(get(handles.endImageEntry,'string'));
+            assignin('base','dsSize',dsSize);
+            assignin('base','firstIm',firstIm);
+            assignin('base','endIm',endIm);
+            cStride=(endIm-firstIm)+1;
+            tData=h5read([tP tH],['/' tDS_select],[1 1 firstIm],[dsSize(1) dsSize(2) cStride]);
+%             tData=permute(tData,[3,2,1]);
+            dispSize=size(tData,3);
+        
+        
+        elseif numel(dsSize)~=3
             tData=h5read([tP tH],['/' tDS_select]);
             dispSize=numel(tData);
         end
@@ -281,9 +297,9 @@ function importButton_Callback(hObject, eventdata, handles)
         if numel(tdSplit)>1
             for n=1:numel(tdSplit)
                 if n==1
-                    tdUse=[tdUse tdSplit{n}]
+                    tdUse=[tdUse tdSplit{n}];
                 else
-                    tdUse=[tdUse '_' tdSplit{n}]
+                    tdUse=[tdUse '_' tdSplit{n}];
                 end
             end
         else
@@ -779,7 +795,7 @@ function splitStackButton_Callback(hObject, eventdata, handles)
         end
     elseif splitType==0
         chunkSize=fix(ogStackSize/splitCount);
-        for n=1:splitCount;
+        for n=1:splitCount
             evalin('base',[stackStrings{n} '=' selectStack '(:,:,1+' num2str((n-1)*chunkSize) ':' num2str((n)*chunkSize) ');'])
         end
         if deleteOG==1
@@ -975,7 +991,7 @@ function diskLumValButton_Callback(hObject, eventdata, handles)
     feedbackBlockSize=2000;
     sImageImRate=0.002;
 
-    imPath=evalin('base','importPath');
+    imPath=evalin('base','Path');
     fileList=evalin('base','metaData.filteredFiles');
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     disp(['first image= ' num2str(firstIm)])  % **** debug
@@ -1308,7 +1324,7 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;
-        uiElements={'importButton','hdfPopSelector','memoryMapToggle',...
+        uiElements={'zDimFlip','importButton','hdfPopSelector','memoryMapToggle',...
             'importFromHDF','averageStackByEntry','averageStackBy',...
             'binPixelsEntry','binPixels','registrationWorkerEntry',...
             'outlierThresholdEntry','constrainedMeanEntry',...
@@ -1439,3 +1455,12 @@ selectionsIndex = get(handles.workspaceVarBox,'Value');
 selectStack=selections{selectionsIndex};
 
 evalin('base',[selectStack '=' selectStack '(' yDim ',' xDim ',' zDim ');']);
+
+
+% --- Executes on button press in zDimFlip.
+function zDimFlip_Callback(hObject, eventdata, handles)
+% hObject    handle to zDimFlip (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of zDimFlip
