@@ -77,19 +77,37 @@ if numel(convertablePaths)>0
         md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
         md.scanTimestamp=xmlFile.PVScan.Attributes.date;
         md.bitDepth=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,2}.Attributes.value);
+        
         if strcmp(md.scanType,'Camera')
             md.dwelltime=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,5}.Attributes.value);
             md.frameDelta=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,10}.Attributes.value);
-        else
-            md.dwelltime=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,9}.Attributes.value);
-            md.frameDelta=0;
-        end
-        md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,16}.IndexedValue.Attributes.value);
-        md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,17}.Attributes.value);
-        md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,25}.Attributes.value);
-        md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,1}.Attributes.value),...
+            md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,25}.Attributes.value);
+            md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,17}.Attributes.value);
+            md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,1}.Attributes.value),...
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,2}.Attributes.value),...
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,3}.Attributes.value)];
+%             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,16}.IndexedValue.Attributes.value);
+            md.pmtGain=[0,0,0,0];
+            md.numChans=1;
+        else
+            md.dwelltime=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,5}.Attributes.value);
+            md.frameDelta=0;
+            md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,21}.Attributes.value);
+            md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,13}.Attributes.value);
+            md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,1}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,2}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,3}.Attributes.value)];
+            md.pmtGain=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,1}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,2}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,3}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,4}.Attributes.value)];
+            md.numChans=numel(find(md.pmtGain>0));
+%             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,12}.IndexedValue.Attributes.value);
+        end
+        
+        
+        
+        
 
         xDim=md.dimPixels;
         yDim=md.dimLines;
@@ -117,11 +135,14 @@ if numel(convertablePaths)>0
         h5writeatt(hdfName,hdfDSet,'bitDepth',md.bitDepth);
         h5writeatt(hdfName,hdfDSet,'dwelltime',md.dwelltime);
         h5writeatt(hdfName,hdfDSet,'frameRate',md.frameDelta);
-        h5writeatt(hdfName,hdfDSet,'pockelsValue',md.pockelsValue);
+%         h5writeatt(hdfName,hdfDSet,'pockelsValue',md.pockelsValue);
         h5writeatt(hdfName,hdfDSet,'scanLines',md.dimLines);
         h5writeatt(hdfName,hdfDSet,'scanPixels',md.dimPixels);
         h5writeatt(hdfName,hdfDSet,'pixelSizeXYZ',md.pixelSizeXYZ);
         h5writeatt(hdfName,hdfDSet,'frameCount',md.frameCount);
+        h5writeatt(hdfName,hdfDSet,'pmtGains',md.pmtGain);
+        h5writeatt(hdfName,hdfDSet,'numChans',md.numChans);
+
 
          % ------------ Camera Conversion block
         if strcmp(md.scanType,'Camera')
@@ -129,7 +150,7 @@ if numel(convertablePaths)>0
                 fName=rawNames{n};
                 m = memmapfile([workingPath filesep fName],'Format','uint16');
                 chunkSize=numel(m.Data)+lastExtraSize;
-                totalFramesInRawChunk=fix(chunkSize/totalPixelsPerFrame);
+                totalFramesInRawChunk=fix(chunkSize/(totalPixelsPerFrame*md.numChans));
                 curExtraSize=(chunkSize)-(totalFramesInRawChunk*xDim*yDim);
                 curExtra=m.Data(end-curExtraSize+1:end);
 
@@ -158,12 +179,55 @@ if numel(convertablePaths)>0
                 clear m
             end
             disp(['******* done with dataset: wrote ' num2str(frmWrt) ' frames to your hdf'])
+        
+        elseif strcmp(md.scanType,'Galvo')
+            for n=1:numel(rawNames)
+                mSamp=fix(md.dwelltime/0.4);    
+                fName=rawNames{n};
+                m = memmapfile([workingPath filesep fName],'Format','uint16');
+
+                chunkSize=numel(m.Data)+lastExtraSize;
+                totalFramesInRawChunk=fix(chunkSize/(totalPixelsPerFrame*md.numChans*mSamp));
+                curExtraSize=(chunkSize)-(totalFramesInRawChunk*(totalPixelsPerFrame*md.numChans*mSamp));
+                curExtra=m.Data(end-curExtraSize+1:end);
+
+                testPix=totalPixelsPerFrame*md.numChans*mSamp;
+                tIM=uint16(zeros(yDim,xDim,md.numChans));
+                
+                for k=1:totalFramesInRawChunk
+                    if k==1
+                        gg=vertcat(lastExtra,m.Data(1:testPix-lastExtraSize));
+                    elseif k>1   
+                        gg=m.Data(((testPix*(k-1))-lastExtraSize+1):(testPix*(k-1)-lastExtraSize)+testPix);
+                    end
+                    
+                    for l=1:md.numChans*mSamp
+                        tF(:,l)=gg(l:md.numChans*mSamp:end);
+                    end
+                    for x=1:md.numChans
+                        tIM(:,:,x)=reshape(mean(tF(:,x:mSamp:end),2),xDim,yDim)';
+                        frmWrt=frmWrt+1;
+                        h5write(hdfName,hdfDSet,tIM(:,:,x),[1 1 frmWrt],[yDim xDim 1]);
+                    end                        
+                    if mod(k,5000)==0
+                        disp(['finished ' num2str(k) '/' num2str(totalFramesInRawChunk) ' in chunk ' num2str(n) '/' num2str(numel(rawNames))])
+                    else
+                    end
+                    clear gg tFrame
+                end
+                disp(['done with chunk '  num2str(n) '/' num2str(numel(rawNames))])
+                lastExtra=curExtra;
+                lastExtraSize=curExtraSize;
+                clear m tF
+            end
+            disp(['******* done with dataset: wrote ' num2str(frmWrt) ' frames to your hdf'])
         else
         end
     end
 else
     disp('no paths with CYCLE*RAW* files exist in any part of your path')
 end
+    
 
 % 
 % %% import a previously converted tif

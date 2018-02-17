@@ -93,6 +93,12 @@ function importButton_Callback(hObject, eventdata, handles)
 
         evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
         evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
+        
+        handles.hdfPopSelector__Callback(hObject, eventdata, handles);
+        
+        
+        
+        
     
     
     elseif pathExists==1 && hdfF==1
@@ -106,21 +112,7 @@ function importButton_Callback(hObject, eventdata, handles)
 
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
-        zOne=get(handles.zDimFlip,'Value');
 
-        % some hdfs lead with frame number
-        % todo: correct this hack.
-        if numel(dsSize)==3
-            if zOne
-                imDim=dsSize(1);
-            else
-                imDim=dsSize(3);
-            end
-        else
-            [~,imDim]=max(dsSize);
-        end
-%          set(handles.firstImageEntry,'String',num2str(1));
-%         set(handles.endImageEntry,'String',num2str(imDim));
     end
         
 
@@ -283,7 +275,6 @@ function importButton_Callback(hObject, eventdata, handles)
             assignin('base','endIm',endIm);
             cStride=(endIm-firstIm)+1;
             tData=h5read([tP tH],['/' tDS_select],[1 1 firstIm],[dsSize(1) dsSize(2) cStride]);
-%             tData=permute(tData,[3,2,1]);
             dispSize=size(tData,3);
         
         
@@ -1288,17 +1279,19 @@ try
     tSInfo=h5info([tP tH],['/' tDS_select]);
     dsSize=tSInfo.Dataspace.Size;
 
-    if numel(dsSize)==3
-        if dsSize(1)>dsSize(3)
-            imDim=dsSize(1);
-        else
-            imDim=dsSize(3);
+    zOne=get(handles.zDimFlip,'Value');
+        if numel(dsSize)==3
+            if zOne
+                imDim=dsSize(1);
+            else
+                imDim=dsSize(3);
+            end
+        elseif numel(dsSize)~=3
+            [~,imDim]=dsSize(max(dsSize));
         end
+        
         set(handles.firstImageEntry,'String',num2str(1));
         set(handles.endImageEntry,'String',num2str(imDim));
-    elseif numel(dsSize)~=3
-        set(handles.endImageEntry,'String',num2str(dsSize(1)));
-    end
 catch
     a=1;
 end
