@@ -32,17 +32,17 @@ end
 subDirectories=subDirectories(nonDorDirs);
 
 goodDirs=0;
+convertablePaths={};
 for h=1:numel(subDirectories)
     tDir=dir([fPath filesep subDirectories{h} filesep 'CYCLE*RAWDATA*']);
     if numel(tDir)>0
         goodDirs=goodDirs+1;
         convertablePaths{goodDirs}=subDirectories{h};
     else
-        convertablePaths={};
     end
 end
 clear h goodDirs nonDorDirs subDirectories dirPath tDir
-
+%%
 % Convert
 tName=strsplit(fPath,filesep);
 tName=tName{end};
@@ -65,16 +65,25 @@ if numel(convertablePaths)>0
         disp(['... xml parsed in ' num2str(toc) ' seconds'])
         
         % get frame count and times.
-        
-        md.frameCount=numel(xmlFile.PVScan.Sequence.Frame);
-        md.absTime=zeros(md.frameCount,1);
-        for q=1:md.frameCount
-            md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
+        md.volScan=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,35}.Attributes.value);
+        md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
+        if md.volScan==0 
+            md.frameCount=numel(xmlFile.PVScan.Sequence.Frame);
+            md.absTime=zeros(md.frameCount,1);
+            for q=1:md.frameCount
+                md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
+            end
+%         elseif md.volScan==1
+%             md.volumeCount=numel(xmlFile.PVScan.Sequence);
+%             md.absTime=zeros(md.frameCount,1);
+%             for q=1:md.frameCount
+%                 md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
+%             end
         end
             
 
         % assign metadata
-        md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
+        
         md.scanTimestamp=xmlFile.PVScan.Attributes.date;
         md.bitDepth=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,2}.Attributes.value);
         
@@ -89,6 +98,7 @@ if numel(convertablePaths)>0
 %             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,16}.IndexedValue.Attributes.value);
             md.pmtGain=[0,0,0,0];
             md.numChans=1;
+            md.resMultiSamp=0;
         else
             md.dwelltime=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,5}.Attributes.value);
             md.frameDelta=0;
@@ -103,7 +113,14 @@ if numel(convertablePaths)>0
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,4}.Attributes.value)];
             md.numChans=numel(find(md.pmtGain>0));
 %             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,12}.IndexedValue.Attributes.value);
+            md.resMultiSamp=0;
         end
+        
+        if strcmp(md.scanType,'ResonantGalvo')
+            md.resMultiSamp=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,27}.Attributes.value);
+        else
+        end
+            
         
         
         
@@ -142,6 +159,8 @@ if numel(convertablePaths)>0
         h5writeatt(hdfName,hdfDSet,'frameCount',md.frameCount);
         h5writeatt(hdfName,hdfDSet,'pmtGains',md.pmtGain);
         h5writeatt(hdfName,hdfDSet,'numChans',md.numChans);
+        h5writeatt(hdfName,hdfDSet,'resMultiSamp',md.resMultiSamp);
+        h5writeatt(hdfName,hdfDSet,'volScan',md.volScan);
 
 
          % ------------ Camera Conversion block
@@ -221,10 +240,66 @@ if numel(convertablePaths)>0
                 clear m tF
             end
             disp(['******* done with dataset: wrote ' num2str(frmWrt) ' frames to your hdf'])
+        
+        elseif strcmp(md.scanType,'ResonantGalvo') && md.volScan==0
+            for n=1:numel(rawNames)
+                try
+                    mSamp=md.resMultiSamp;
+                    totalPixelsPerFrame=(xDim*mSamp)*yDim;
+                    fName=rawNames{n};
+                    m = memmapfile([workingPath filesep fName],'Format','uint16');
+
+                    chunkSize=numel(m.Data)+lastExtraSize;
+                    totalFramesInRawChunk=fix(chunkSize/(totalPixelsPerFrame*md.numChans*mSamp));
+                    curExtraSize=(chunkSize)-(totalFramesInRawChunk*(totalPixelsPerFrame*md.numChans*mSamp));
+                    curExtra=m.Data(end-curExtraSize+1:end);
+
+                    testPix=totalPixelsPerFrame*md.numChans;
+                    tIM=uint16(zeros(yDim,xDim,md.numChans));
+
+                    for k=1:totalFramesInRawChunk
+                        if k==1
+                            gg=vertcat(lastExtra,m.Data(1:testPix-lastExtraSize));
+                        elseif k>1   
+                            gg=m.Data(((testPix*(k-1))-lastExtraSize+1):(testPix*(k-1)-lastExtraSize)+testPix);
+                        end
+
+                        for l=1:md.numChans
+                            tF(:,l)=gg(l:md.numChans:end);
+                        end
+                        for x=1:md.numChans
+                            tty=tF(:,x:mSamp:end);
+                            taa=reshape(tty,xDim*2*mSamp,yDim/2)';
+                            taa(:,1:xDim*mSamp)=fliplr(taa(:,1:xDim*mSamp));
+                            tp1=taa(:,1:xDim*3);
+                            tp2=taa(:,(xDim*3)+1:end);
+                            tp3(1:2:yDim,1:xDim*3)=tp1;
+                            tp3(2:2:yDim,1:xDim*3)=tp2;
+                            tp3=squeeze(mean(reshape(tp3,512,3,512),2));                     
+                            tIM(:,:,x)=tp3;
+                            frmWrt=frmWrt+1;
+                            h5write(hdfName,hdfDSet,tIM(:,:,x),[1 1 frmWrt],[yDim xDim 1]);
+                        end                        
+                        if mod(k,5000)==0
+                            disp(['finished ' num2str(k) '/' num2str(totalFramesInRawChunk) ' in chunk ' num2str(n) '/' num2str(numel(rawNames))])
+                        else
+                        end
+                        clear gg tFrame
+                    end
+                    disp(['done with chunk '  num2str(n) '/' num2str(numel(rawNames))])
+                    lastExtra=curExtra;
+                    lastExtraSize=curExtraSize;
+                    clear m tF
+                catch
+                    clear m tF
+                end
+            end
+            disp(['******* done with dataset: wrote ' num2str(frmWrt) ' frames to your hdf'])
         else
         end
     end
 else
+    %md.resMultiSamp
     disp('no paths with CYCLE*RAW* files exist in any part of your path')
 end
     
