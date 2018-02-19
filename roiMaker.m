@@ -94,7 +94,6 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function varargout = roiMaker_OutputFcn(hObject, eventdata, handles) 
 
     varargout{1} = handles.output;
@@ -201,7 +200,6 @@ function plotAnROI(hObject,eventdata,handles,roiCenters,roiBoundaries,boundaryCo
             b=roiBoundaries{n};
             for k=1:numel(c)
                 plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',boundaryColors{n},'LineWidth',2.5)
-                % text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),num2str(n),'FontSize',10,'FontWeight','Bold','Color',textColors{n});
             end
         end
     else
@@ -248,8 +246,6 @@ function freehandROI(hObject,eventdata,handles,typeString)
        
     end
     roisDisplayToggle(hObject,eventdata,handles,1)
-    % eval([typeString 'RoisDisplayToggle_Callback(handles.' typeString 'RoisDisplayToggle,eventdata,handles,1)'])
-    % eval([typeString 'RoisDisplayToggle_Callback(handles.' typeString 'RoisDisplayToggle,eventdata,handles,1)'])
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
