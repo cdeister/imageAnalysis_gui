@@ -44,6 +44,7 @@ end
 
 function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
 
+    
     handles.output = hObject;
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
@@ -53,45 +54,55 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     else
         set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
     end
-    if strcmp(computer,'MACI64')
+
+
+    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;
-        uiElements={'somaButton','redSomaButton','dendriteButton','axonButton',...
-        'boutonButton','vesselButton','loadMeanProjectionButton','deleteROIButton',...
-        'roiSelector','somaticRoisDisplayToggle','redSomaticRoisDisplayToggle',...
-        'dendriticRoisDisplayToggle','axonalRoisDisplayToggle','boutonRoisDisplayToggle',...
-        'neuropilRoisDisplayToggle','vesselRoisDisplayToggle','lowCutSlider',...
-        'highCutSlider','lowCutEntry','highCutEntry','makeNeuropilMasks',...
-        'neuropilPixelSpreadEntry','workspaceVarBox','refreshVarListButton',...
-        'meanProjectButton','stdevProjectionButton','maxProjectionButton',...
-        'getGXcorButton','gXCorImageCountEntry','gXCorSmoothToggle','playStackMovButton',...
-        'pasueMovieButton','localXCorButton','roiThresholdEntry','pcaButton',...
-        'colormapTextEntry','frameSlider','frameTextEntry','addToSomasButton',...
-        'addToDendritesButton','addToBoutonsButton','nnmfButton','featureCountEntry',...
-        'medianFilterToggle','wienerFilterToggle','importerButton','extractorButton',...
-        'cMaskToggle','curImageToMaskButton','segmentMaskBtn','autoMaskBtn','binarySensEntry',...
-        'minRoiEntry','manROIBtn','roiTypeMenu','deleteWSVar','binaryThrValEntry','cutByBtn',...
-        'imageCutEntry','deDupeRoisBtn','clusterMaskBtn','maxClusterEntry','manROIBtn_Generic',...
-        'overlayIndRoiToggle','feedbackString','neuropilAlertString'};
 
-        for n=1:numel(uiElements)
-            eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
-        end
-        
-        decUIElements={'text14','text12','text13','text16','text17','text19',...
-        'text10','text6','text7','text8','imageWindow'};
-        for n=1:numel(decUIElements)
-            eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
-        end
-        
-        titleUIElements={'uipanel3','uipanel2','uipanel6','uipanel8','uipanel4',...
-        'uipanel9','uipanel10','uipanel3'};
-        for n=1:numel(titleUIElements)
-            eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
-        end
+    elseif strcmp(computer,'PCWIN64') 
+        macHeaderSize=8;
+        macFontSize=7;
+        macUIDecSize=6;
     else
     end
+
+    uiElements={'somaButton','redSomaButton','dendriteButton','axonButton',...
+    'boutonButton','vesselButton','loadMeanProjectionButton','deleteROIButton',...
+    'roiSelector','somaticRoisDisplayToggle','redSomaticRoisDisplayToggle',...
+    'dendriticRoisDisplayToggle','axonalRoisDisplayToggle','boutonRoisDisplayToggle',...
+    'neuropilRoisDisplayToggle','vesselRoisDisplayToggle','lowCutSlider',...
+    'highCutSlider','lowCutEntry','highCutEntry','makeNeuropilMasks',...
+    'neuropilPixelSpreadEntry','workspaceVarBox','refreshVarListButton',...
+    'meanProjectButton','stdevProjectionButton','maxProjectionButton',...
+    'getGXcorButton','gXCorImageCountEntry','gXCorSmoothToggle','playStackMovButton',...
+    'pasueMovieButton','localXCorButton','roiThresholdEntry','pcaButton',...
+    'colormapTextEntry','frameSlider','frameTextEntry','addToSomasButton',...
+    'addToDendritesButton','addToBoutonsButton','nnmfButton','featureCountEntry',...
+    'medianFilterToggle','wienerFilterToggle','importerButton','extractorButton',...
+    'cMaskToggle','curImageToMaskButton','segmentMaskBtn','autoMaskBtn','binarySensEntry',...
+    'minRoiEntry','manROIBtn','roiTypeMenu','deleteWSVar','binaryThrValEntry','cutByBtn',...
+    'imageCutEntry','deDupeRoisBtn','clusterMaskBtn','maxClusterEntry','manROIBtn_Generic',...
+    'overlayIndRoiToggle','feedbackString','neuropilAlertString','saveImageBtn'};
+
+    for n=1:numel(uiElements)
+        eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
+    end
+    
+    decUIElements={'text14','text12','text13','text16','text17','text19',...
+    'text10','text6','text7','text8','imageWindow'};
+    for n=1:numel(decUIElements)
+        eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
+    end
+    
+    titleUIElements={'uipanel3','uipanel2','uipanel6','uipanel8','uipanel4',...
+    'uipanel9','uipanel10','uipanel3'};
+    for n=1:numel(titleUIElements)
+        eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
+    end
+
+
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 function varargout = roiMaker_OutputFcn(hObject, eventdata, handles) 
@@ -563,6 +574,7 @@ function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
     sV=get(handles.colormapTextEntry,'Value');
     cMap=sL{sV};
 
+
     axes(handles.imageWindow);
 
     imshow(imageP,'DisplayRange',[a b]);
@@ -1008,6 +1020,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     cMap=sL{sV};
 
 
+
     mfactor=0.4;
 
     a = get(handles.lowCutEntry,'String');
@@ -1400,7 +1413,8 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
     selectedItem=selections{selectionsIndex};
     curFrame=get(handles.frameTextEntry,'String');
     
-    try currentFrame=evalin('base','metaData.currentFrame');
+    try 
+        currentFrame=evalin('base','metaData.currentFrame');
     catch
         currentFrame=trackFrame(hObject, eventdata, handles);
     end
@@ -1597,7 +1611,8 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
 function clusterMaskBtn_Callback(hObject, eventdata, handles)
     cimg=evalin('base','cimg');
     stImg=cimg-mean2(cimg);
-    stImgThr=0.19;
+    stImgThr=0.3;
+    %str2num(get(handles.binaryThrValEntry,'String'));
 
     imLn=size(stImg,1);
     imPx=size(stImg,2);
@@ -1820,3 +1835,45 @@ function lowCutEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+
+
+% --- Executes on button press in saveImageBtn.
+function saveImageBtn_Callback(hObject, eventdata, handles)
+    axes(handles.imageWindow);
+    g=getframe;
+    saveData=frame2im(g);
+    
+
+    try
+        sC=evalin('base','metaData.saveCounter');
+        sC=sC+1;
+    catch
+        sC=1;
+    end
+    
+    assignin('base',['savedImage_' num2str(sC)],saveData)
+    evalin('base',['metaData.savedImage_' num2str(sC) '=savedImage_' num2str(sC) ';, clear savedImage_' num2str(sC)]);
+    assignin('base','saveCounter',sC);
+    evalin('base','metaData.saveCounter=saveCounter;,clear saveCounter')
+    try
+        savePath=evalin('base','metaData.importPath');
+    catch
+        savePath=[pwd filesep];
+    end
+    saveStrTIF=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.tif'];
+    saveStrPNG=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.png'];
+
+    warning('off','all');
+    try
+        mkdir([savePath 'savedImages'])
+        imwrite(saveData,saveStrTIF,'tif')
+        imwrite(saveData,saveStrPNG,'png')
+    catch
+        imwrite(saveData,saveStrTIF,'tif')
+        imwrite(saveData,saveStrPNG,'png')
+    end
+    warning('on','all');
+
+    
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);

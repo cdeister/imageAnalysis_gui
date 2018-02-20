@@ -46,7 +46,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     pause(0.00000001);
     guidata(hObject, handles);
 
-    imPath=evalin('base','importPath');
+    imPath=evalin('base','importPath;');
     fileList=evalin('base','filteredFiles');
 
     firstIm=str2num(get(handles.firstImageEntry,'string'));
@@ -212,7 +212,6 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
 
     set(handles.extractFeedbackString,'String','')
     guidata(hObject, handles);
-
 function extractButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -303,7 +302,6 @@ function extractButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
     else
     end
-
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
     % make sure the slider is caught up
     sliderValue = fix(get(handles.roiDisplaySlider,'Value'));
@@ -317,7 +315,6 @@ function roiDisplaySlider_Callback(hObject, eventdata, handles)
     set(handles.roiSelector,'Value',sliderValue);
     guidata(hObject, handles);
     plotROI(hObject, eventdata, handles)
-    
 function plotROI(hObject, eventdata, handles)
     
     % main roi load
@@ -338,6 +335,12 @@ function plotROI(hObject, eventdata, handles)
         mainTrace=evalin('base',[mainType 'F(' num2str(mainTypeID) ',:);']);
     end
     
+    try
+        timeVec=evalin('base','imTime');
+    catch
+        timeVec=1:numel(mainTrace);
+    end
+    
     yLow=str2num(get(handles.yLowTrace,'String'));
     yHigh=str2num(get(handles.yHighTrace,'String'));
     
@@ -356,7 +359,7 @@ function plotROI(hObject, eventdata, handles)
     end
     
     mainColor=[0,0,0];
-    plot(mainTrace(1,:)','Color',mainColor,'LineWidth',1.1);
+    plot(timeVec,mainTrace(1,:)','Color',mainColor,'LineWidth',1.1);
     lstAx=gca;
     h=lstAx.Children;
     if numel(h)>1
@@ -383,7 +386,7 @@ function plotROI(hObject, eventdata, handles)
         lastMask=lAx.Children.CData;
         g=[1,0,0]; % the current color is white, hold is red
         % last mask is already rgb
-        rgb=(lastMask+rgb)
+        rgb=(lastMask+rgb);
     end
     
     
@@ -533,7 +536,7 @@ function plotROI(hObject, eventdata, handles)
             % allColors{strcmp(allTypes,nonPrimaryTypeString{n})},
             g=aa(n,:);
             hold all
-            h(n+lastH)=plot(allTraces(nonPrimarySubgroupID(n),:)','Color',g,...
+            h(n+lastH)=plot(timeVec,allTraces(nonPrimarySubgroupID(n),:)','Color',g,...
                 'LineWidth',allWidths(strcmp(allTypes,nonPrimaryTypeString{n}))); 
         end
         hold off
@@ -597,11 +600,6 @@ function plotROI(hObject, eventdata, handles)
     
     clear  mainTrace allTraces allROIMasks allROICentroids
     guidata(hObject, handles);
-    
-
-
-   
-
 function displayedROICounter_Callback(hObject, eventdata, handles)
     input = str2num(get(hObject,'String'));
     minVal=get(handles.roiDisplaySlider, 'Min');
@@ -642,14 +640,12 @@ function [returnTypeStrings,typeAllColor,lWidths]=returnAllTypes(hObject,eventda
     returnTypeStrings={'somatic','redSomatic','dendritic','axonal','bouton','vessel','neuropil'};
     typeAllColor={[0,0.8,0.3],[1,0,0],[0,0,1],[1,0,1],[1,1,0],[0.7,0.3,0],[1 0.1 0]};
     lWidths=[1,1,1,1,1,1,1];
-
 function [typeList]=getKnownROITypes(hObject, eventdata, handles)
     typeList={'neuropilRois','vascularRois','boutonRois',...
     'axonRois','dendriteRois','somaRois','redSomaticRois'};
     typeList={'neuropil','vessel','bouton',...
     'axonal','dendritic','somatic','redSomatic'};
     % todo: fix names with 'knownTypes', the typeList is a temp hack.
-
 function genericDispalyTypeToggle(hObject, eventdata, handles)
     
     [allTypes,allColors]=returnAllTypes(hObject,eventdata,handles);
@@ -727,31 +723,24 @@ function genericDispalyTypeToggle(hObject, eventdata, handles)
     end
     
     guidata(hObject, handles);
-
 function somaticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function dendriticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function boutonROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function axonalROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function vesselROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function redSomaticROIs_DisplayToggle_Callback(hObject, eventdata, handles)
     genericDispalyTypeToggle(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function neuropilROIs_DisplayToggle_Callback(hObject, eventdata, handles)
 
     genericDispalyTypeToggle(hObject, eventdata, handles)
@@ -786,12 +775,10 @@ function flagROIButton_Callback(hObject, eventdata, handles)
     set(handles.roiDisplaySlider,'Value',rN)
     guidata(hObject, handles);
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function refreshWSVarsBtn_Callback(hObject, eventdata, handles)
 
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
-
 function dataAppendToggle_Callback(hObject, eventdata, handles)
 
 % *********************************************************************
@@ -808,7 +795,6 @@ function movingAvgBtn_Callback(hObject, eventdata, handles)
     bb=nPointMean(aa',mvWin);
     clear aa
     assignin('base',selectStack,bb');
-
 function smoothWindowEntry_Callback(hObject, eventdata, handles)
 
 % *******************************************************************
@@ -816,13 +802,10 @@ function smoothWindowEntry_Callback(hObject, eventdata, handles)
 % *******************************************************************
 
 function xLowTrace_Callback(hObject, eventdata, handles)
-
 function xHighTrace_Callback(hObject, eventdata, handles)
-
 function yLowTrace_Callback(hObject, eventdata, handles)
     
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function yHighTrace_Callback(hObject, eventdata, handles)
     
     roiDisplaySlider_Callback(hObject, eventdata, handles)
@@ -835,13 +818,10 @@ function yHighTrace_Callback(hObject, eventdata, handles)
 function showCorrelatedToggle_Callback(hObject, eventdata, handles)
 
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function corThresholdEntry_Callback(hObject, eventdata, handles)
    
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function relatedCellsReturn_Callback(hObject, eventdata, handles)
-
 function groupMarkerBtn_Callback(hObject, eventdata, handles)
 
     gNum=fix(str2num(get(handles.groupCounter,'String')))+1;
@@ -868,11 +848,8 @@ function groupMarkerBtn_Callback(hObject, eventdata, handles)
     set(handles.roiDisplaySlider,'Value',rN)
     guidata(hObject, handles);
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function groupCounter_Callback(hObject, eventdata, handles)
-
 function relatedValuesReturn_Callback(hObject, eventdata, handles)
-
 function rcBtn_generic_Callback(hObject, eventdata, handles)
 
     curROIType=evalin('base','dispROIString');
@@ -887,16 +864,13 @@ function rcBtn_generic_Callback(hObject, eventdata, handles)
 
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function rcBtn_dend_Callback(hObject, eventdata, handles)
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function rcBtn_axon_Callback(hObject, eventdata, handles)
     
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function deleteFlagged_Callback(hObject, eventdata, handles)
     %
     % curROIType=evalin('base','dispROIString'); 
@@ -906,9 +880,7 @@ function deleteFlagged_Callback(hObject, eventdata, handles)
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
     somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
-
 function relatedDistReturn_Callback(hObject, eventdata, handles)
-
 function keepFirstBtn_Callback(hObject, eventdata, handles)
 
     related=str2num(get(handles.relatedCellsReturn,'String'));
@@ -938,7 +910,6 @@ function keepFirstBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
     roiDisplaySlider_Callback(hObject, eventdata, handles)
     somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
-
 function killSelectedBtn_Callback(hObject, eventdata, handles)
     
     selections = get(handles.roiSelector,'String');
@@ -959,7 +930,6 @@ function killSelectedBtn_Callback(hObject, eventdata, handles)
     roiSelector_Callback(hObject, eventdata, handles)
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
 
     tnum=str2double(get(handles.displayedROICounter,'String'));
@@ -997,15 +967,12 @@ function saveTracesPDFBtn_Callback(hObject, eventdata, handles)
     mi.XData=miX;
     mi.YData=miY;
     % hh(1,end).Color=[1,1,1];
-
 function sortByMenu_Callback(hObject, eventdata, handles)
     
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function sortAscend_Callback(hObject, eventdata, handles)
     
     roiDisplaySlider_Callback(hObject, eventdata, handles)
-
 function [numSel]=LineSelected(hObject, eventdata, handels)
     set(hObject, 'LineWidth', 1.5);
     set(handels(handels ~= hObject), 'LineWidth', 0.4);
@@ -1013,9 +980,7 @@ function [numSel]=LineSelected(hObject, eventdata, handels)
     numSel=find(sI==1);
     
     assignin('base','selectedTraceNum',numSel)
-
 function killGroupBtn_Callback(hObject, eventdata, handles)
-
 function killFirstBtn_Callback(hObject, eventdata, handles)
     related=str2num(get(handles.relatedCellsReturn,'String'));
 
@@ -1195,33 +1160,64 @@ function medianExtractToggle_Callback(hObject, eventdata, handles)
 % ****************** Standard MATLAB GUI Opening Functions
 
 function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
-    % This function has no output args, see OutputFcn.
-    % hObject    handle to figure
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
-    % varargin   command line arguments to extractor (see VARARGIN)
-
-    % Choose default command line output for extractor
     handles.output = hObject;
-
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
+    refreshCSVarBtn_Callback(hObject, eventdata, handles)
 
-    % Update handles structure
+    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
+        macHeaderSize=12;
+        macFontSize=11;
+        macUIDecSize=10;
+
+    elseif strcmp(computer,'PCWIN64') 
+        macHeaderSize=8;
+        macFontSize=7;
+        macUIDecSize=6;
+    else
+    end
+
+    uiElements={'saveWSBtn','refreshWSVarsBtn','deleteSelection','workspaceVarBox',...
+    'firstImageEntry','endImageEntry','diskExtractButton','diskRegFlag','checkbox15',...
+    'dataAppendToggle','diskExtractSkipByToggle','diskExtractSkipByEntry',...
+    'diskExtractSkipByStartEntry','somaExtractCheck','dendriteExtractCheck',...
+    'axonExtractCheck','boutonExtractCheck','medianExtractToggle','extractButton',...
+    'vascularExtractCheck','neuropilExtractCheck','redSomaticExtractCheck',...
+    'somaticROIs_DisplayToggle','dendriticROIs_DisplayToggle','axonalROIs_DisplayToggle',...
+    'boutonROIs_DisplayToggle','redSomaticROIs_DisplayToggle','neuropilROIs_DisplayToggle',...
+    'vesselROIs_DisplayToggle','plotAsDFToggle','movingAvgBtn','smoothWindowEntry',...
+    'typeSelectorMenu','slidingBaselineBtn','useQuantForDFToggle','movBaselineWinEntry',...
+    'yHighTrace','yLowTrace','xLowTrace','xHighTrace','saveTracesPDFBtn','holdCurrentROILinesToggle',...
+    'roiSelector','displayedROICounter','showCorrelatedToggle','corThresholdEntry','sortByMenu',...
+    'sortAscend','relatedCellsReturn','relatedValuesReturn','relatedDistReturn',...
+    'relatedPixelCountReturn','groupCounter','killGroupBtn','killFirstBtn','keepFirstBtn',...
+    'groupMarkerBtn','killSelectedBtn','rcBtn_generic','deleteFlagged','flagROIButton','importerBtn',...
+    'roiMakerBtn','loadCSHDF','csListbox','plotCSVar','setImageTime','setCSTime','refreshCSVarBtn',...
+    'plotNormToggle','upSampleTrimImages','plotScaleEntry'};
+
+    for n=1:numel(uiElements)
+        eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
+    end
+    
+    decUIElements={'text29','text4','text14','text11','text15','text16',...
+    'corAxis','featureHist','featurePlot','text1','text9','text24','relatedValuesSt',...
+    'text18','text22','text27','text19'};
+    
+    for n=1:numel(decUIElements)
+        eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
+    end
+    
+    titleUIElements={'uipanel13','uipanel6','uipanel7','uipanel8','uipanel9',...
+    'uipanel5','uipanel1','uipanel15','uipanel10','uipanel6','uipanel16','csParserPanel'};
+    
+    for n=1:numel(titleUIElements)
+        eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
+    end
+
+    refreshWSVarsBtn_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
-    % UIWAIT makes extractor wait for user response (see UIRESUME)
-    % uiwait(handles.figure1);
-
-
-% --- Outputs from this function are returned to the command line.
 function varargout = extractor_OutputFcn(hObject, eventdata, handles) 
-    % varargout  cell array for returning output args (see VARARGOUT);
-    % hObject    handle to figure
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    structure with handles and user data (see GUIDATA)
 
-    % Get default command line output from handles structure
     varargout{1} = handles.output;    
 
 % ****************** end
@@ -1287,5 +1283,207 @@ function deleteSelection_Callback(hObject, eventdata, handles)
     refreshWSVarsBtn_Callback(hObject, eventdata, handles)
     
     guidata(hObject, handles);
-
 function typeSelectorMenu_Callback(hObject, eventdata, handles)
+function pushbutton38_Callback(hObject, eventdata, handles)
+function loadCSHDF_Callback(hObject, eventdata, handles)
+    [hdfName,hdfPath]=uigetfile('*','what what?');
+    try
+      behavHDFPath=[hdfPath hdfName];
+      behavHDFInfo=h5info(behavHDFPath);
+      curDatasetPath=['/' behavHDFInfo.Datasets.Name];
+      curBData=h5read(behavHDFPath,curDatasetPath);
+      % attributes have int32 encoding and need to be converted.
+      curOrientations=double(h5readatt(behavHDFPath,curDatasetPath,'orientations')).*10;
+      curContrasts=double(h5readatt(behavHDFPath,curDatasetPath,'contrasts'))/10;
+      % The way csVisual is set now, we end up with an extra trial's metadata.
+      % So, I trim here.
+      curOrientations=curOrientations(1:end-1);
+      curContrasts=curContrasts(1:end-1);
+      assignin('base','curOrientations',curOrientations');
+      evalin('base',['bData.curOrientations=curOrientations;,clear curOrientations ans'])
+      assignin('base','curContrasts',curContrasts');
+      evalin('base',['bData.curContrasts=curContrasts;,clear curContrasts ans'])
+      assignin('base','interrupts',curBData(1,:));
+      evalin('base',['bData.interrupts=interrupts;,clear interrupts ans'])
+      assignin('base','sessionTime',curBData(2,:)./1000);
+      evalin('base',['bData.sessionTime=sessionTime;,clear sessionTime ans'])
+      assignin('base','stateTime',curBData(3,:)./1000);
+      evalin('base',['bData.stateTime=stateTime;,clear stateTime ans'])
+      assignin('base','states',curBData(4,:));
+      evalin('base',['bData.states=states;,clear states ans'])
+      assignin('base','pyStates',curBData(5,:));
+      evalin('base',['bData.pyStates=pyStates;,clear pyStates ans'])
+      assignin('base','tLick0',curBData(6,:));
+      evalin('base',['bData.tLick0=tLick0;,clear tLick0 ans'])
+      assignin('base','tLick1',curBData(7,:));
+      evalin('base',['bData.tLick1=tLick1;,clear tLick1 ans'])
+      assignin('base','thrLicks',curBData(8,:));
+      evalin('base',['bData.thrLicks=thrLicks;,clear thrLicks ans'])
+      assignin('base','motion',curBData(9,:));
+      evalin('base',['bData.motion=motion;,clear motion ans'])
+      position=decodeShaftEncoder(curBData(9,:),4);
+      velocity=nPointDeriv(position,curBData(2,:),1000);
+      velocity(find(isnan(velocity)==1))=0;
+      assignin('base','position',position);
+      evalin('base',['bData.position=position;,clear position ans'])
+      assignin('base','velocity',velocity);
+      evalin('base',['bData.velocity=velocity;,clear velocity ans'])
+      evalin('base','[bData.stimSamps,bData.stimVector]=getStateSamps(bData.states,2,1);')
+
+
+
+      assignin('base','motion',curBData(9,:));
+      evalin('base',['bData.motion=motion;,clear motion ans'])
+      
+      bvars = evalin('base','fieldnames(bData)');
+      set(handles.csListbox,'String',bvars)
+      
+      guidata(hObject, handles);
+      
+    catch
+    end
+    guidata(hObject, handles);
+function csListbox_Callback(hObject, eventdata, handles)
+function csListbox_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function refreshCSVarBtn_Callback(hObject, eventdata, handles)
+
+    try
+        bvars = evalin('base','fieldnames(bData)');
+        set(handles.csListbox,'String',bvars)
+    catch
+    end
+    guidata(hObject, handles);
+function plotCSVar_Callback(hObject, eventdata, handles)
+
+    selections = get(handles.csListbox,'String');
+    selectionsIndex = get(handles.csListbox,'Value');
+    selectTrace=selections{selectionsIndex};
+    tTrace=evalin('base',['bData.' selectTrace]);
+    csTime=evalin('base','bData.sessionTime');
+    try
+        scaleEntry=str2num(get(handles.plotScaleEntry,'String'));
+    catch
+        scaleEntry=1;
+    end
+    
+    normTrace=get(handles.plotNormToggle,'Value');
+    if normTrace==1
+        tTrace=scaleEntry*((tTrace-min(tTrace))./max(tTrace-min(tTrace)));
+      
+    else
+    end
+    
+    axes(handles.traceDisplay)
+    holdLast=get(handles.holdCurrentROILinesToggle,'Value');
+    if holdLast
+        lstAx=gca;
+        lastLines=lstAx.Children;
+        for n=1:numel(lastLines)
+            lastLine(n).Color=[1,0,0];
+        end
+        hold all
+    else
+        hold off
+    end
+    
+    mainColor=[0,0,0];
+    plot(csTime,tTrace(1,:)','Color',mainColor,'LineWidth',1.1);
+    lstAx=gca;
+    h=lstAx.Children;
+    if numel(h)>1
+        for k=2:numel(h)
+            h(k).Color=[1,0,0];
+        end
+    else
+    end
+    hold off
+    guidata(hObject, handles);
+function setCSTime_Callback(hObject, eventdata, handles)
+function setImageTime_Callback(hObject, eventdata, handles)
+
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectTrace=selections{selectionsIndex};
+    imTime=evalin('base',selectTrace);
+    assignin('base','imTime',imTime);
+    refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+    guidata(hObject, handles);
+function plotNormToggle_Callback(hObject, eventdata, handles)
+function upSampleTrimImages_Callback(hObject, eventdata, handles)
+    try
+        absTime=evalin('base','imTime');
+        bTime=evalin('base','bData.sessionTime');
+    catch
+        return
+    end
+    
+    imEnd=absTime(end);
+    bhEnd=bTime(end);
+    
+    imOver=find(absTime>bhEnd);
+    try
+        imTrim=imOver(1)-1;
+    catch
+        imTrim=numel(absTime);
+    end
+
+    assignin('base','imTrim',imTrim);
+
+    % this should always be true. 
+    if imEnd>bhEnd
+        absTime=absTime(1:imTrim);
+        assignin('base','imTime',absTime); 
+        assignin('base','imTrim',imTrim);   
+    else
+    end
+
+    upsampleList={}
+    upCount=1;
+    try
+        evalin('base','somaticF=somaticF(:,1:imTrim);')
+        upsampleList{upCount}='somaticF'
+        upCount=upCount+1;
+    catch
+    end
+
+    try
+        evalin('base','somaticF_DF=somaticF_DF(:,1:imTrim);')
+        upsampleList{upCount}='somaticF_DF'
+        upCount=upCount+1;
+    catch
+    end
+
+    try
+        evalin('redSomaticF=redSomaticF(:,1:imTrim);')
+        upsampleList{upCount}='redSomaticF'
+        upCount=upCount+1;
+    catch
+    end
+
+    try
+        evalin('redSomaticF_DF=redSomaticF_DF(:,1:imTrim);')
+        upsampleList{upCount}='redSomaticF_DF'
+        upCount=upCount+1;
+    catch
+    end
+    
+    
+    for n=1:numel(upsampleList)
+        evalin('base',['rsDataDF=rsCaData(transpose(' upsampleList{n}  '),transpose(imTime),bData.sessionTime);'])
+        evalin('base','rsDataDF(find(isnan(rsDataDF)==1))=0;')
+        evalin('base',[upsampleList{n} '=transpose(rsDataDF);, clear rsDataDF'])
+    end
+    assignin('base','imTime',transpose(bTime));
+
+    
+
+function plotScaleEntry_Callback(hObject, eventdata, handles)
+function plotScaleEntry_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end

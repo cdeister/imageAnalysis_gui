@@ -16,7 +16,7 @@ figure
 nhist(propBelow,'box')
 
 %%
-n=242;
+n=10;
 %%
 figure(109)
 

@@ -1,7 +1,10 @@
 function [out timeV]=stimTrigger(dataMatrix,stimTimes,preWindow,postWindow,sampleInterval)
 
+% assumes lowest rank of dataMatrix is the itterable dimension (cell number).
+
 preSample=ceil(preWindow/sampleInterval);
 postSample=ceil(postWindow/sampleInterval);
+
 
 
 for i=1:size(dataMatrix,2)
