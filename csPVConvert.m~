@@ -270,6 +270,8 @@ if numel(convertablePaths)>0
                      for l=1:md.numChans
                          tF(:,l)=gg(l:md.numChans:end);
                      end
+                    
+                   
                     for x=1:md.numChans
                         tty=tF(:,x);  %:mSamp:end);
                         taa=reshape(tty,xDim*2*mSamp,yDim/2)';
