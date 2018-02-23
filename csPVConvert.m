@@ -35,7 +35,7 @@ goodDirs=0;
 convertablePaths={};
 for h=1:numel(subDirectories)
     tDir=dir([fPath filesep subDirectories{h} filesep 'CYCLE*RAWDATA*']);
-    if numel(tDir)>0
+    if numel(tDir)>0 && strcmp(subDirectories{h}(1:5),'Singl')==0
         goodDirs=goodDirs+1;
         convertablePaths{goodDirs}=subDirectories{h};
     else
@@ -137,8 +137,8 @@ if numel(convertablePaths)>0
         flipDim=1;
 
         % create hdf set
-        hdfDSet=[filesep convertablePaths{h}];
-        hdfDSetTime=[filesep convertablePaths{h} '_absTime'];
+        hdfDSet=['/' convertablePaths{h}];
+        hdfDSetTime=['/' convertablePaths{h} '_absTime'];
         
         h5create(hdfName,hdfDSet,[yDim xDim Inf],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
         h5create(hdfName,hdfDSetTime,[md.frameCount 1],'Datatype','double');
