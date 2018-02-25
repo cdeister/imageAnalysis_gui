@@ -1,8 +1,7 @@
-% csPVConvert (v0.2)
+% csPVConvert (v0.55)
 % Converts Bruker multiphoton scanning microscope raw data and stores data
 % in an hdf5 container.
 %
-% Current version: camera frames only.
 % 
 % Note: Image datasets are of dimension: [frameNum xDim yDim]
 % Leading with frameNum ensures maximal compatibility with existing 
@@ -96,7 +95,6 @@ if numel(convertablePaths)>0
             md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,1}.Attributes.value),...
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,2}.Attributes.value),...
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,3}.Attributes.value)];
-%             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,16}.IndexedValue.Attributes.value);
             md.pmtGain=[0,0,0,0];
             md.numChans=1;
             md.resMultiSamp=0;
@@ -113,7 +111,6 @@ if numel(convertablePaths)>0
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,3}.Attributes.value),...
             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,4}.Attributes.value)];
             md.numChans=numel(find(md.pmtGain>0));
-%             md.pockelsValue=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,12}.IndexedValue.Attributes.value);
             md.resMultiSamp=0;
         end
         
@@ -140,7 +137,7 @@ if numel(convertablePaths)>0
         hdfDSet=[filesep convertablePaths{h}];
         hdfDSetTime=[filesep convertablePaths{h} '_absTime'];
         
-        h5create(hdfName,hdfDSet,[yDim xDim Inf],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
+        h5create(hdfName,hdfDSet,[yDim xDim md.frameCount],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
         h5create(hdfName,hdfDSetTime,[md.frameCount 1],'Datatype','double');
         h5write(hdfName,hdfDSetTime,md.absTime,[1 1],[md.frameCount 1]);
 
@@ -149,7 +146,6 @@ if numel(convertablePaths)>0
         h5writeatt(hdfName,hdfDSet,'bitDepth',md.bitDepth);
         h5writeatt(hdfName,hdfDSet,'dwelltime',md.dwelltime);
         h5writeatt(hdfName,hdfDSet,'frameRate',md.frameDelta);
-%         h5writeatt(hdfName,hdfDSet,'pockelsValue',md.pockelsValue);
         h5writeatt(hdfName,hdfDSet,'scanLines',md.dimLines);
         h5writeatt(hdfName,hdfDSet,'scanPixels',md.dimPixels);
         h5writeatt(hdfName,hdfDSet,'pixelSizeXYZ',md.pixelSizeXYZ);
@@ -271,6 +267,7 @@ if numel(convertablePaths)>0
                          tF(:,l)=gg(l:md.numChans:end);
                      end
                     for x=1:md.numChans
+                        rOffset=abs(8192-min(tF(:,x)));
                         tty=tF(:,x);  %:mSamp:end);
                         taa=reshape(tty,xDim*2*mSamp,yDim/2)';
                         taa(:,1:xDim*mSamp)=fliplr(taa(:,1:xDim*mSamp));
@@ -278,7 +275,7 @@ if numel(convertablePaths)>0
                         tp2=taa(:,(xDim*3)+1:end);
                         tp3(1:2:yDim,1:xDim*3)=tp1;
                         tp3(2:2:yDim,1:xDim*3)=tp2;  
-                        tp3=uint16(squeeze(mean(reshape(tp3,yDim,mSamp,xDim),2)));                     
+                        tp3=uint16(squeeze(mean(reshape(tp3,yDim,mSamp,xDim),2))-rOffset);                     
                         frmWrt=frmWrt+1;
                         h5write(hdfName,hdfDSet,tp3,[1 1 frmWrt],[yDim xDim 1]);
                     end                        
@@ -300,14 +297,5 @@ if numel(convertablePaths)>0
         end
     end
 else
-    %md.resMultiSamp
     disp('no paths with CYCLE*RAW* files exist in any part of your path')
 end
-    
-
-% 
-% %% import a previously converted tif
-% frTLk=44048;
-% figure,imagesc(h5read('myfile5.h5', '/ccdMap-02142018-001',[1 1 frTLk],[yDim xDim 1]))
-% cTif=imread('/Users/cad/Desktop/curanimals/14Feb2018/ccdMap-02142018-001converted/ccdMap-02142018-001_Cycle00001_Ch3_044048.ome.tif');
-% figure,imagesc(h5read('myfile5.h5', '/ccdMap-02142018-001',[1 1 frTLk],[yDim xDim 1])-cTif)

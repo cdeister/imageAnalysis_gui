@@ -28,17 +28,15 @@ else
 end
 
 
-
-
-
 % main import procedure
 function importButton_Callback(hObject, eventdata, handles)
+    
     mPF=get(handles.multiPageFlag, 'Value');
     hdfF=get(handles.importFromHDF, 'Value');
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
     try
-        evalin('base','metaData.importPath');
+        evalin('base','metaData.importPath;');
         disp('importing images ...')
         pathExists=1;
     catch
@@ -65,7 +63,7 @@ function importButton_Callback(hObject, eventdata, handles)
          firstIm=str2num(get(handles.firstImageEntry,'string'));
          endIm=str2num(get(handles.endImageEntry,'string'));
     
-    % User has set not path, and does want multi-page tif.    
+    % User has set not path, and wants multi-page tif.    
     elseif pathExists==0 && mPF==1 && hdfF==0
         [tifFile,imPath]=uigetfile('*.*','Select your tif file');
         mpTifInfo=imfinfo([imPath tifFile]);
@@ -79,115 +77,97 @@ function importButton_Callback(hObject, eventdata, handles)
         evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
         evalin('base','metaData.tifFile=tifFile;,clear ans ''tifFile''')
     
-
+    % User has set not path, and wants an HDF. 
     elseif pathExists==0 && hdfF==1
         [hdfFile,imPath]=uigetfile('*.*','Select your hdf file');
-
         tI=h5info([imPath hdfFile]);
         dSetNames={tI.Datasets.Name};
         clear tI;
         set(handles.hdfPopSelector,'String',dSetNames);
-
         assignin('base','importPath',imPath);
         assignin('base','hdfFile',hdfFile);
-
         evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
         evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
-        
         handles.hdfPopSelector__Callback(hObject, eventdata, handles);
         
-        
-        
-        
-    
-    
+    % User has set a path, and wants an HDF.
     elseif pathExists==1 && hdfF==1
-        
         selectVal=get(handles.hdfPopSelector,'Value');
         tDS=get(handles.hdfPopSelector,'String');
         tDS_select=tDS{selectVal};
-        
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
-
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
-
     end
-        
-
-
+    
+    % always see if the user wants sequential (skipBy=1)        
     skipBy=fix(str2double(get(handles.skipFactorEntry,'String')));
 
+    % The code above sets up the kind of import you want.
+    % Below is the import routines for each. context.
     % This loads a file list that has characters that match the filter string.
     % It should detect the bit depth and dimensions.
     if mPF==0 && hdfF==0
         filterString={get(handles.fileFilterString,'String')};
         filteredFiles = dir([imPath filesep '*' filterString{1} '*']);
+        
+        % kill files that have no data in them.
+        filteredFiles(find([filteredFiles.bytes]==0))=[];
         filteredFiles=resortImageFileMap(filteredFiles);
         assignin('base','filteredFiles',filteredFiles)
+        assignin('base','imPath',imPath)
+        
         importCount=fix(((endIm-firstIm)+1)/skipBy);
+
+        % I try to preserve bitdepth.
         canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
-        imageSize=size(canaryImport);
-        canaryInfo=whos('canaryImport');
-        bitD=canaryInfo.class;
-        
-        
-        if strcmp(bitD,'uint16')==1 || strcmp(bitD,'uint8')==1 || ...
-            strcmp(bitD,'uint32')==1
-            eval(['imType=''uint' num2str(bitD) '''' ';'])
-        else
-            imType='Double';
-        end
+        [imType,imageSize]=checkStackBitDepth(canaryImport);
+
+        % tempFilt is just the files in firstIM:skip:end,
+        tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
+        assignin('base','tempFiltFiles',tempFiltFiles);
+        evalin('base',['importedImages=zeros(' num2str(imageSize(1)) ',' num2str(imageSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
+        evalin('base','metaData.lastImported=tempFiltFiles;')
         
         tic
         if pImport==1
-            set(handles.feedbackString,'String',['Parallel Import Ongoing ...'])
+            set(handles.feedbackString,'String','Parallel Import Ongoing ...')
             pause(0.00000000000000001)
             guidata(hObject, handles);
-            tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
-            importedImages=zeros(imageSize(1),imageSize(2),numel(tempFiltFiles),bitD);
-            parfor n=1:tempFiltFiles
-                importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);
-            end
+            evalin('base',['parfor n=1:numel(tempFiltFiles),importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);,end'])
+        
+        % the main difference (beyond the parfor loop) is we update the gui's feedback
+        % differently as we don't know the specific item we've imported.
         elseif pImport==0
-            tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
-            importedImages=zeros(imageSize(1),imageSize(2),numel(tempFiltFiles),bitD);
             set(handles.feedbackString,'String',['Importing ...'])
             pause(0.00000000000000001)
             guidata(hObject, handles);
-            numImages=numel(tempFiltFiles);
-            for n=1:numImages
+            for n=1:numel(tempFiltFiles)
+                evalin('base',['importedImages(:,:,' num2str(n) ')=imread([imPath filesep tempFiltFiles(' num2str(n) ',1).name]);'])
                 if mod(n,500)==0
-                    set(handles.importButton,'String',[num2str(n) '/' num2str(numImages)])
+                    set(handles.importButton,'String',[num2str(n) '/' num2str(numel(tempFiltFiles))])
                     pause(0.00000000000000001)
                     guidata(hObject, handles);
                 else
                 end
-                importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);
+        
             end
         end
         iT=toc;
 
         set(handles.importButton,'String','Import Images')
-        set(handles.feedbackString,'String',['Imported ' num2str(numImages) ' Images'])
-        
+        set(handles.feedbackString,'String',['Imported ' num2str(numel(tempFiltFiles)) ' Images'])
+        evalin('base','clear imPath ans filteredFiles tempFiltFiles')
         guidata(hObject, handles);
         
-        if (strcmp(bitD,'uint8') || strcmp(bitD,'uint16') || strcmp(bitD,'uint32'))
-            assignin('base',['importedStack_' filterString{1}],...
-                eval([bitD '(importedImages)']));
-        else
-            assignin('base',['importedStack_' filterString{1}],...
-                double(importedImages));
-        end
-        
     elseif mPF==1  % The user wants multi-page tif. This import is a bit different.
-        
+        % This gets metadata needed. 
         bitD=mpTifInfo(1).BitDepth;
         mImage=mpTifInfo(1).Width;
         nImage=mpTifInfo(1).Height;
         
+        % now figure out what images to import.
         maxImages=length(mpTifInfo);
         numImages=numel(firstIm:endIm);
         if numImages>maxImages
@@ -230,8 +210,7 @@ function importButton_Callback(hObject, eventdata, handles)
         end
         
         set(handles.importButton,'String','Import Images')
-        set(handles.feedbackString,'String',['Imported ' num2str(numel(imRange)) ...
-            ' Images'])
+        set(handles.feedbackString,'String',['Imported ' num2str(numel(imRange)) ' Images'])
         pause(0.00000000000000001)
         guidata(hObject, handles);
 
@@ -257,6 +236,7 @@ function importButton_Callback(hObject, eventdata, handles)
             
             firstIm=str2num(get(handles.firstImageEntry,'string'));
             endIm=str2num(get(handles.endImageEntry,'string'));
+            skipBy=fix(str2double(get(handles.skipFactorEntry,'String')));
             cStride=(endIm-firstIm)+1;
             tData=h5read([tP tH],['/' tDS_select],[firstIm 1 1],[cStride dsSize(2) dsSize(3)]);
             tData=permute(tData,[3,2,1]);
@@ -306,6 +286,7 @@ function importButton_Callback(hObject, eventdata, handles)
     disp(['*** done with import, which took ' num2str(iT) ' seconds'])
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
+
 function setDirectoryButton_Callback(hObject, eventdata, handles)
 
     mPF=get(handles.multiPageFlag, 'Value');
@@ -1171,20 +1152,24 @@ function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
 
 % --- Executes on button press in binPixels.
 function binPixels_Callback(hObject, eventdata, handles)
-% hObject    handle to binPixels (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
 binPix=str2num(get(handles.binPixelsEntry,'String'));
 
 selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
-s=evalin('base',selections{selectionsIndex});
-if numel(size(s))>=2
-    if numel(size(s))==3
-        testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,size(s,2)/binPix,size(s,3)))),2));
-        assignin('base',['binned_' selections{selectionsIndex}],testBin);
-    elseif numel(size(s))==2
+s=evalin('base',['size(' selections{selectionsIndex} ');']);
+if numel(s)>=2
+    if numel(s)==3
+        set(handles.feedbackString,'String',['Binning Stack ...'])
+        pause(0.00000000000000001);
+        guidata(hObject, handles);
+        evalin('base',[selections{selectionsIndex} '=uint16(squeeze(mean(squeeze(mean(reshape(' selections{selectionsIndex}...
+            ',' num2str(binPix) ',' num2str(fix(s(1)/binPix)) ',' num2str(binPix) ',' num2str(fix(s(2)/binPix)) ...
+            ',' num2str(s(3)) ,'))),2)));'])
+        set(handles.feedbackString,'String',['finished stack binning ...'])
+        pause(0.00000000000000001)
+        guidata(hObject, handles);
+    elseif numel(s)==2
         testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,size(s,2)/binPix))),2));
         assignin('base',['binned_' selections{selectionsIndex}],testBin);
     else
