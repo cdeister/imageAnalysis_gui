@@ -88,7 +88,7 @@ function importButton_Callback(hObject, eventdata, handles)
         assignin('base','hdfFile',hdfFile);
         evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
         evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
-        handles.hdfPopSelector__Callback(hObject, eventdata, handles);
+        handles.hdfPopSelector_Callback(hObject, eventdata, handles);
         
     % User has set a path, and wants an HDF.
     elseif pathExists==1 && hdfF==1
@@ -97,8 +97,12 @@ function importButton_Callback(hObject, eventdata, handles)
         tDS_select=tDS{selectVal};
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
+        
+
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
+        assignin('base','hdfSize',dsSize);
+        evalin('base','metaData.hdfSize=hdfSize;,clear hdfSize');
     end
     
     % always see if the user wants sequential (skipBy=1)        
@@ -127,7 +131,8 @@ function importButton_Callback(hObject, eventdata, handles)
         % tempFilt is just the files in firstIM:skip:end,
         tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
         assignin('base','tempFiltFiles',tempFiltFiles);
-        evalin('base',['importedImages=zeros(' num2str(imageSize(1)) ',' num2str(imageSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
+        evalin('base',['importedImages=zeros(' num2str(imageSize(1)) ',' ...
+            num2str(imageSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
         evalin('base','metaData.lastImported=tempFiltFiles;')
         
         tic
@@ -230,6 +235,8 @@ function importButton_Callback(hObject, eventdata, handles)
         tSInfo=h5info([tP tH],['/' tDS_select]);
         dsSize=tSInfo.Dataspace.Size;
         zOne=get(handles.zDimFlip,'Value');
+        assignin('base','hdfZDim',zOne);
+        evalin('base','metaData.hdfZDim=hdfZDim;,clear hdfZDim');
         
         tic
         if zOne==1 && numel(dsSize)==3
@@ -259,6 +266,9 @@ function importButton_Callback(hObject, eventdata, handles)
             dispSize=numel(tData);
         end
         
+        assignin('base','tDS_select',tDS_select);
+        evalin('base','metaData.tDS_select=tDS_select;,clear tDS_select');
+
         tdSplit=strsplit(tDS_select, '-');
         tdUse='';
         if numel(tdSplit)>1
