@@ -1,6 +1,7 @@
 function varargout = extractor(varargin)
 
-% extractor: provides tools for extracting and processing intensity values from ROIs made in roiMaker
+% extractor: provides tools for extracting and processing intensity 
+% values from ROIs made in roiMaker
 %
 % Will extract from disk, or a selected matrix in your workspace.
 % This will be improved soon to give options to control parallelization,
@@ -45,8 +46,8 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     set(handles.extractFeedbackString,'String','Extracting ...')
     pause(0.00000001);
     guidata(hObject, handles);
-    
     imPath=evalin('base','metaData.importPath');
+    
     try
         fileList=evalin('base','metaData.filteredFiles');
     catch
@@ -72,9 +73,8 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     if skipImagesToggle==1
         skipF=str2num(get(handles.diskExtractSkipByEntry,'String'));
     else
-        skipF=2;
+        skipF=1;
     end
-
 
     if useHDF
         hdfImportIndex=firstIm:skipF:endIm;
@@ -90,7 +90,6 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
         get(handles.axonExtractCheck,'Value'),get(handles.boutonExtractCheck,'Value'),...
         get(handles.neuropilExtractCheck,'Value'),get(handles.vascularExtractCheck,'Value'),...
         get(handles.redSomaticExtractCheck,'Value')];
-
     rois=[];   % we will map in the selected rois into this
     warnBit=1;
     for n=1:numel(roiToggleTruth)
@@ -114,11 +113,9 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     regFlag=get(handles.diskRegFlag,'Value');
 
     % ************  end handle image list prep
-
-
-    % ************  extract without registration 
     
-    disp(['about to extract, this should take ~ ' num2str((numel(rois)*.0004*numImages)./60) ' minutes'])
+    disp(['about to extract, this should take ~ ' ...
+    	num2str((numel(rois)*.0004*numImages)./60) ' minutes'])
     cc=clock;
     disp(['started at ' num2str(cc(4)) ':'  num2str(cc(5))])
     tic
@@ -140,9 +137,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     end
 
     curIm=1;
-
-    disp(numImages)
-    
+    totImages=numel(firstIm:skipF:endIm)
     for n=firstIm:skipF:endIm
         if useHDF
             impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
@@ -150,7 +145,6 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
             impImage=imread([imPath filesep fileList(n).name]);
         end
         diskLuminance(:,curIm)=mean2(impImage);
-
         if regFlag==1
             [out1,out2]=dftregistration(fft2(template),fft2(impImage),100);
             registeredTransformations(:,curIm)=out1;
@@ -166,15 +160,16 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
             end
         end
 
-        if (rem((curIm-firstIm)+1,100)==0)
-            fprintf('%d/%d (%d%%)\n',(curIm-firstIm)+1,numImages,round(100*((curIm-firstIm)+1)./numImages));
-        end
+        if mod(n,500)==0
+    		set(handles.diskExtractButton,'String',[num2str(curIm) '/' num2str(totImages)])
+    		pause(0.00000000000000001)
+    		guidata(hObject, handles);
+		else
+		end 
         curIm=curIm+1;
     end
     eT=toc;
-
-
-    
+    set(handles.diskExtractButton,'String','Disk Extract')
     assignin('base','diskLuminance',diskLuminance);
     disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
@@ -184,10 +179,6 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     else
     end
 
-
-
-
-    % ************  now we need to map the extracted values to the original roi types
     for n=1:numel(roiToggleTruth)
         if roiToggleTruth(n)==1
             roisToMapCount=evalin('base', ['numel(' roiStringMap{n} ')']);
@@ -228,7 +219,7 @@ function extractButton_Callback(hObject, eventdata, handles)
         end
     end
 
-    if warnBit==1;
+    if warnBit==1
         disp('no rois')
     end
     % ************ end handle concatination of roi types
@@ -241,24 +232,29 @@ function extractButton_Callback(hObject, eventdata, handles)
     sED=zeros(numel(rois),dStackSize(3));
     medianFlag=get(handles.medianExtractToggle,'Value');
 
+    
 
     tic
-    if medianFlag~=1
-        for n=1:dStackSize(3)
-            for q=1:numel(rois)
-                aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
-                sED(q,n)=mean(aIm(rois{q}(:,:)==1));    
+
+    for n=1:dStackSize(3)
+        for q=1:numel(rois)
+            aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
+            if medianFlag==0
+            	sED(q,n)=mean(aIm(rois{q}(:,:)==1));
+        	elseif medianFlag==1
+            	sED(q,n)=median(aIm(rois{q}(:,:)==1)); 
             end
         end
-    else
-        for n=1:dStackSize(3)
-            for q=1:numel(rois)
-                aIm=double(evalin('base',[selectStack '(:,:,' num2str(n) ')']));
-                sED(q,n)=median(aIm(rois{q}(:,:)==1));    
-            end
-        end
+        if mod(n,500)==0
+            set(handles.extractButton,'String',[num2str(n) '/' num2str(dStackSize(3))])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+        else
+        end 
     end
+    
     aa=toc;
+    set(handles.extractButton,'String','Extract')
     
     %--- end extract
 
@@ -284,6 +280,7 @@ function extractButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
     else
     end
+
 
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
     % make sure the slider is caught up

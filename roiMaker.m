@@ -626,6 +626,7 @@ function deleteROIButton_Callback(hObject, eventdata, handles)
     roisDisplayToggle(hObject,eventdata,handles)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+    
 function roiSelector_Callback(hObject,eventdata,handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -795,6 +796,7 @@ function refreshVarListButton_Callback(hObject, eventdata, handles)
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars);
     guidata(hObject, handles);
+
 function meanProjectButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -1053,6 +1055,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
                 daspect([1 1 1])
                 axes(handles.imageWindow);
                 assignin('base','currentImage',ii)
+                evalin('base','metaData.currentImage=currentImage;');
                 break
             end  
         end    
@@ -1079,6 +1082,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
                 daspect([1 1 1])
                 axes(handles.imageWindow);
                 assignin('base','currentImage',ii)
+                evalin('base','metaData.currentImage=currentImage;');
                 break
             end  
         end   
@@ -1124,6 +1128,7 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     colormap jet
     currentImage=localCorMaskPlot;
     assignin('base','currentImage',double(localCorMaskPlot))
+    evalin('base','metaData.currentImage=currentImage;');
     daspect([1 1 1]);
 
     axes(handles.cdfWindow);
@@ -1545,6 +1550,7 @@ function binaryThrValEntry_Callback(hObject, eventdata, handles)
 function cutByBtn_Callback(hObject, eventdata, handles)
 
     cImage=double(evalin('base','currentImage'));
+    evalin('base','metaData.currentImage=currentImage;');
     eString=get(handles.imageCutEntry,'String');
     preMin=min(min(nonzeros(cImage)));
     preMax=max(max(nonzeros(cImage)));
