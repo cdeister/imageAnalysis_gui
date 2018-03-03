@@ -56,6 +56,9 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
         set(handles.neuropilAlertString,'ForegroundColor',[0 0 0]);
     end
 
+    assignin('base','lastMax',-1);
+    evalin('base','metaData.lastMax=lastMax;,clear lastMax');
+
 
     if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
         macHeaderSize=12;
