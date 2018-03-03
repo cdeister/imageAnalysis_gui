@@ -296,7 +296,6 @@ function importButton_Callback(hObject, eventdata, handles)
     disp(['*** done with import, which took ' num2str(iT) ' seconds'])
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-
 function setDirectoryButton_Callback(hObject, eventdata, handles)
 
     mPF=get(handles.multiPageFlag, 'Value');
@@ -835,7 +834,7 @@ function inspectStackButton_Callback(hObject, eventdata, handles)
     sP=evalin('base',stackToPlot);
     handles.imageAxis;
 
-    rate=30;
+    rate=50;
     mPlt=tM+(tM*0.9);
     mfactor=.4;
     ii=1;
@@ -1163,139 +1162,107 @@ function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
 % --- Executes on button press in binPixels.
 function binPixels_Callback(hObject, eventdata, handles)
 
-binPix=str2num(get(handles.binPixelsEntry,'String'));
+    binPix=str2num(get(handles.binPixelsEntry,'String'));
 
-selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-s=evalin('base',['size(' selections{selectionsIndex} ');']);
-if numel(s)>=2
-    if numel(s)==3
-        set(handles.feedbackString,'String',['Binning Stack ...'])
-        pause(0.00000000000000001);
-        guidata(hObject, handles);
-        evalin('base',[selections{selectionsIndex} '=uint16(squeeze(mean(squeeze(mean(reshape(' selections{selectionsIndex}...
-            ',' num2str(binPix) ',' num2str(fix(s(1)/binPix)) ',' num2str(binPix) ',' num2str(fix(s(2)/binPix)) ...
-            ',' num2str(s(3)) ,'))),2)));'])
-        set(handles.feedbackString,'String',['finished stack binning ...'])
-        pause(0.00000000000000001)
-        guidata(hObject, handles);
-    elseif numel(s)==2
-        testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,size(s,2)/binPix))),2));
-        assignin('base',['binned_' selections{selectionsIndex}],testBin);
+    selections = get(handles.workspaceVarBox,'String');
+        selectionsIndex = get(handles.workspaceVarBox,'Value');
+    s=evalin('base',['size(' selections{selectionsIndex} ');']);
+    if numel(s)>=2
+        if numel(s)==3
+            set(handles.feedbackString,'String',['Binning Stack ...'])
+            pause(0.00000000000000001);
+            guidata(hObject, handles);
+            evalin('base',[selections{selectionsIndex} '=uint16(squeeze(mean(squeeze(mean(reshape(' selections{selectionsIndex}...
+                ',' num2str(binPix) ',' num2str(fix(s(1)/binPix)) ',' num2str(binPix) ',' num2str(fix(s(2)/binPix)) ...
+                ',' num2str(s(3)) ,'))),2)));'])
+            set(handles.feedbackString,'String',['finished stack binning ...'])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+        elseif numel(s)==2
+            testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,size(s,2)/binPix))),2));
+            assignin('base',['binned_' selections{selectionsIndex}],testBin);
+        else
+        end
     else
     end
-else
-end
 
-clear s testBin
+    clear s testBin
 
-refreshVarListButton_Callback(hObject, eventdata, handles)
-guidata(hObject, handles);
+    refreshVarListButton_Callback(hObject, eventdata, handles)
+    guidata(hObject, handles);
 function binPixelsEntry_Callback(hObject, eventdata, handles)
 function binPixelsEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to binPixelsEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 function averageStackBy_Callback(hObject, eventdata, handles)
-% hObject    handle to averageStackBy (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
+    muBy=str2num(get(handles.averageStackByEntry,'String'));
 
-muBy=str2num(get(handles.averageStackByEntry,'String'));
+    selections = get(handles.workspaceVarBox,'String');
+        selectionsIndex = get(handles.workspaceVarBox,'Value');
+    s=evalin('base',selections{selectionsIndex});
+    if numel(size(s))==3
+        
+        testBin=squeeze(mean(reshape(s,size(s,1),size(s,2),muBy,size(s,3)/muBy),3));
+        assignin('base',['frameAvg_' selections{selectionsIndex}],testBin);
+    else
+    end
 
-selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-s=evalin('base',selections{selectionsIndex});
-if numel(size(s))==3
-    
-    testBin=squeeze(mean(reshape(s,size(s,1),size(s,2),muBy,size(s,3)/muBy),3));
-    assignin('base',['frameAvg_' selections{selectionsIndex}],testBin);
-else
-end
+    clear s testBin
 
-clear s testBin
-
-refreshVarListButton_Callback(hObject, eventdata, handles)
-guidata(hObject, handles);
+    refreshVarListButton_Callback(hObject, eventdata, handles)
+    guidata(hObject, handles);
 function averageStackByEntry_Callback(hObject, eventdata, handles)
 function averageStackByEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to averageStackByEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 function importFromHDF_Callback(hObject, eventdata, handles)
-% hObject    handle to importFromHDF (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of importFromHDF
-set(handles.multiPageFlag, 'Value',0);
-function memoryMapToggle_Callback(hObject, eventdata, handles)
-% hObject    handle to memoryMapToggle (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of memoryMapToggle
-if get(handles.memoryMapToggle, 'Value')==1
     set(handles.multiPageFlag, 'Value',0);
-    set(handles.importFromHDF, 'Value',1);
-else
-end
+function memoryMapToggle_Callback(hObject, eventdata, handles)
+
+    if get(handles.memoryMapToggle, 'Value')==1
+        set(handles.multiPageFlag, 'Value',0);
+        set(handles.importFromHDF, 'Value',1);
+    else
+    end
 function hdfPopSelector_Callback(hObject, eventdata, handles)
-% hObject    handle to hdfPopSelector (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns hdfPopSelector contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from hdfPopSelector
-try
-    selectVal=get(handles.hdfPopSelector,'Value');
-    tDS=get(handles.hdfPopSelector,'String');
-    tDS_select=tDS{selectVal};
-    tP=evalin('base','metaData.importPath');
-    tH=evalin('base','metaData.hdfFile');
+    try
+        selectVal=get(handles.hdfPopSelector,'Value');
+        tDS=get(handles.hdfPopSelector,'String');
+        tDS_select=tDS{selectVal};
+        tP=evalin('base','metaData.importPath');
+        tH=evalin('base','metaData.hdfFile');
 
-    tSInfo=h5info([tP tH],['/' tDS_select]);
-    dsSize=tSInfo.Dataspace.Size;
+        tSInfo=h5info([tP tH],['/' tDS_select]);
+        dsSize=tSInfo.Dataspace.Size;
 
-    zOne=get(handles.zDimFlip,'Value');
-        if numel(dsSize)==3
-            if zOne
-                imDim=dsSize(1);
-            else
-                imDim=dsSize(3);
+        zOne=get(handles.zDimFlip,'Value');
+            if numel(dsSize)==3
+                if zOne
+                    imDim=dsSize(1);
+                else
+                    imDim=dsSize(3);
+                end
+            elseif numel(dsSize)~=3
+                [~,imDim]=dsSize(max(dsSize));
             end
-        elseif numel(dsSize)~=3
-            [~,imDim]=dsSize(max(dsSize));
-        end
-        
-        set(handles.firstImageEntry,'String',num2str(1));
-        set(handles.endImageEntry,'String',num2str(imDim));
-catch
-    a=1;
-end
+            
+            set(handles.firstImageEntry,'String',num2str(1));
+            set(handles.endImageEntry,'String',num2str(imDim));
+    catch
+        a=1;
+    end
 function hdfPopSelector_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to hdfPopSelector (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 
 % ****** Generic Startup Functions
 function importer_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -1357,126 +1324,43 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
     end
     guidata(hObject, handles);
-
-        
-  
-        
 function varargout = importer_OutputFcn(hObject, eventdata, handles) 
     
     varargout{1} = handles.output;
-
-
-
 function resizeStackXEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to resizeStackXEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of resizeStackXEntry as text
-%        str2double(get(hObject,'String')) returns contents of resizeStackXEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function resizeStackXEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to resizeStackXEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 function resizeStackYEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to resizeStackYEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of resizeStackYEntry as text
-%        str2double(get(hObject,'String')) returns contents of resizeStackYEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function resizeStackYEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to resizeStackYEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 function resizeStackZEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to resizeStackZEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of resizeStackZEntry as text
-%        str2double(get(hObject,'String')) returns contents of resizeStackZEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function resizeStackZEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to resizeStackZEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-% --- Executes on button press in stackResizeButton.
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
 function stackResizeButton_Callback(hObject, eventdata, handles)
 
-zDim=get(handles.resizeStackZEntry,'String');
-yDim=get(handles.resizeStackYEntry,'String');
-xDim=get(handles.resizeStackXEntry,'String');
+    zDim=get(handles.resizeStackZEntry,'String');
+    yDim=get(handles.resizeStackYEntry,'String');
+    xDim=get(handles.resizeStackXEntry,'String');
 
 
-selections = get(handles.workspaceVarBox,'String');
-selectionsIndex = get(handles.workspaceVarBox,'Value');
-selectStack=selections{selectionsIndex};
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectStack=selections{selectionsIndex};
 
-evalin('base',[selectStack '=' selectStack '(' yDim ',' xDim ',' zDim ');']);
-
-
-% --- Executes on button press in zDimFlip.
+    evalin('base',[selectStack '=' selectStack '(' yDim ',' xDim ',' zDim ');']);
 function zDimFlip_Callback(hObject, eventdata, handles)
-% hObject    handle to zDimFlip (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of zDimFlip
-
-
-
 function renameStringEntry_Callback(hObject, eventdata, handles)
-% hObject    handle to renameStringEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of renameStringEntry as text
-%        str2double(get(hObject,'String')) returns contents of renameStringEntry as a double
-
-
-% --- Executes during object creation, after setting all properties.
 function renameStringEntry_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to renameStringEntry (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
 
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end

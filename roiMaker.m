@@ -6,9 +6,10 @@
 % No Documentation (yet)
 %
 %
-% V1.1
-% still a few selection bugs.
-% 02/01/2018
+% V1.2
+% improved playback of videos, better slider predictions, start of alpha masks for rois
+% 
+% 03/01/2018
 % Questions: cdeister@brown.edu
 % Code: Chris Deister & Jakob Voigts (mfactor smoothing code! & speedy XCorr)
 % Global XCorr Segmentation Idea: Stephan Junek et al., 2009 & Spencer Smith
@@ -284,6 +285,12 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
         set(handles.roiSelector,'String','');
         guidata(hObject, handles);
 
+        axes(handles.imageWindow);
+        g1=getframe;
+        % ogImage=frame2im(g1);
+        assignin('base','g1',g1)
+        % assignin('base','ogImage',ogImage)
+
         % see who is (still) on
         for n=1:numel(allTypes)
             whoIsOn(n)=eval(['get(handles.' allTypes{n} 'RoisDisplayToggle, ''Value'');']);
@@ -324,7 +331,7 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
                         outColor=allColors{whoIsOn(rI)};
                         txtColor=allColors{whoIsOn(rI)};
                     end
-
+                    txtColor=[1 1 1];
                     hold all
                     for n=1:numel(plotRange)            
                         for k=1:numel(c{1,n})
@@ -332,7 +339,7 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
                                 outColor,'LineWidth',2)
                             if useTxtLabels
                                 text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
-                                    num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
+                                    num2str(plotRange(n)),'FontSize',14,'FontWeight','Bold','Color',txtColor);
                             else
                             end
                         end
@@ -343,6 +350,11 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
             else
             end
         end
+        g2=getframe;
+        ovImage=frame2im(g2);
+        assignin('base','g2',g2)
+        assignin('base','ovImage',ovImage)
+        
         refreshVarListButton_Callback(hObject, eventdata, handles);
         guidata(hObject, handles);
 function roiSelection(hObject,eventdata,handles)
@@ -405,21 +417,7 @@ function roiSelection(hObject,eventdata,handles)
                 txtColor=allColors{whoIsOn(rI)};
             end
 
-            hold all
-            for n=1:numel(plotRange)
-                
-                for k=1:numel(c{1,n})
-                    plot(b{1,n}{k,1}(:,2),b{1,n}{k,1}(:,1),'Color',...
-                        outColor,'LineWidth',2)
-                    if useTxtLabels
-                        text(c{1,n}(k).Centroid(1)-1, c{1,n}(k).Centroid(2),...
-                            num2str(plotRange(n)),'FontSize',10,'FontWeight','Bold','Color',txtColor);
-                    else
-                    end
-                end
-            end
-
-            hold off
+            
         else
         end
     end
@@ -451,71 +449,71 @@ function boutonButton_Callback(hObject, eventdata, handles)
 function vesselButton_Callback(hObject, eventdata, handles)
 
     freehandROI(hObject,eventdata,handles,'vessel')
-function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
+
+function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
 
     a = str2double(get(handles.lowCutEntry,'String'));
     b = str2double(get(handles.highCutEntry,'String'));
     updateHist=1;
+    imChange=1;
 
     if nargin==3
-    [imageP imClass]=getWSVar(hObject, eventdata, handles);
+        [imageP imClass]=getWSVar(hObject, eventdata, handles);
     else
         imageP=defImage;
         imClass=class(defImage);
         updateHist=0;
     end
 
-    if strcmp(imClass,'logical')
-        tMxVl=1;
-        updateHist=0;
+    tMxVl=fix(max(max(imageP(:,:,1))));
+    tMxVlSc=fix(0.2*tMxVl);
+    maxVal=tMxVl+tMxVlSc;
+    if maxVal<=0
+        maxVal=1;
     else
-        tMxVl=max(max(imageP(:,:,1)));
     end
+    maxVal=double(maxVal);
 
-    hSM = get(handles.highCutSlider,'Max');
-
-    if tMxVl<=2
-        rangeOne=1;
-    else
-        rangeOne=0;
-    end
-
-    if hSM==1
-        lastLogical=1;
-    else
-        lastLogical=0;
-    end
-
-    if (rangeOne==0 && lastLogical==1) || (rangeOne==1 && lastLogical==0)
-        typeChange=1;
-    else
-        typeChange=0;
-    end
-
-    if typeChange==1
-        if rangeOne
-          set(handles.highCutSlider,'Max',1.0);
-          set(handles.highCutSlider,'Min',0.0);
-          set(handles.lowCutSlider,'Max',1.0);
-          set(handles.lowCutSlider,'Min',0.0);
-          set(handles.highCutSlider,'Value',1.0);
-          set(handles.lowCutSlider,'Value',0.0);
-          set(handles.highCutEntry,'String','1.0');
-          set(handles.lowCutEntry,'String','0.0');
-          guidata(hObject, handles);
+    try 
+        lastMax=evalin('base','metaData.lastMax;');
+        if lastMax==maxVal
+            imChange=0;
         else
-          set(handles.highCutSlider,'Max',65535);
-          set(handles.highCutSlider,'Min',0);
-          set(handles.lowCutSlider,'Max',65535);
-          set(handles.lowCutSlider,'Min',0);
-          set(handles.highCutSlider,'Value',65535);
-          set(handles.lowCutSlider,'Value',0);
-          set(handles.highCutEntry,'String','65535');
-          set(handles.lowCutEntry,'String','0');
-          guidata(hObject, handles);
         end
+    catch
+        assignin('base','lastMax',maxVal);
+        evalin('base','metaData.lastMax=lastMax;,clear lastMax');
+        imChange=1;
+    end
+
+    assignin('base','lastMax',maxVal);
+    evalin('base','metaData.lastMax=lastMax;,clear lastMax');
+
+
+    if imChange==1
+        set(handles.highCutSlider,'Max',maxVal);
+        set(handles.highCutSlider,'Min',0);
+        set(handles.lowCutSlider,'Max',maxVal);
+        set(handles.lowCutSlider,'Min',0);
+        set(handles.highCutSlider,'Value',maxVal);
+        set(handles.lowCutSlider,'Value',0);
+        set(handles.highCutEntry,'String',num2str(maxVal));
+        set(handles.lowCutEntry,'String','0');
+        
+        sliderStep=[1, 1] / (maxVal- 0)
+        if sliderStep(1)==1
+            sliderStep(1)=0.05;
+            sliderStep(2)=0.05;
+        else
+        end
+        set(handles.lowCutSlider, 'SliderStep', sliderStep);
+        set(handles.highCutSlider, 'SliderStep', sliderStep);
     else
     end
+
+
+    guidata(hObject, handles);
+
 
     if numel(size(imageP))==3
         
@@ -577,8 +575,14 @@ function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
 
     axes(handles.imageWindow);
 
-    imshow(imageP,'DisplayRange',[a b]);
+    pImg=imshow(imageP,'DisplayRange',[a b]);
     colormap(gca,cMap)
+    assignin('base','pImg',pImg)
+
+    % g3=getframe;
+    % fsImage=frame2im(g3);
+    % assignin('base','g3',g3)
+    % assignin('base','fsImage',fsImage)
 
     if updateHist
         axes(handles.imageHistogram);
@@ -593,6 +597,7 @@ function loadMeanProjectionButton_Callback(hObject, eventdata,handles,defImage)
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
 function deleteROIButton_Callback(hObject, eventdata, handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -955,144 +960,137 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
 function gXCorImageCountEntry_Callback(hObject, eventdata, handles)
 function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
 function playStackMovButton_Callback(hObject, eventdata, handles)
-    % main play
-    playState=1;
-    assignin('base','playState',playState)
+    % first see what the play state is.
+    % if we have not played before we create that.
+    try 
+        pS=evalin('base','metaData.iPS;');
+        pS=1-pS;
+        assignin('base','iPS',pS);
+        evalin('base','metaData.iPS=iPS;,clear ''iPS''');
+    catch
+        pS=1;
+        assignin('base','iPS',pS);
+        evalin('base','metaData.iPS=iPS;,clear ''iPS''');
+    end
 
+    % now check what stack is selected.
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
-    playStack=double(evalin('base',[selections{selectionsIndex}]));
-    if size(playStack,3)>1 & size(playStack,4)<=1
-        playRGB=0;
-    elseif size(playStack,3)>1 & size(playStack,4)>1
-        playRGB=1;
-    else
-    end
-
-
-    if size(playStack,3)>1 && playRGB==0
-        % This helps you start from where you left off.
-        startFrame=str2num(get(handles.frameTextEntry,'String'));
-        if startFrame==size(playStack,3)
-            startFrame=1;
+    stackName=[selections{selectionsIndex}];
+    stackSize=evalin('base',['size(' stackName ');']);
+    
+    try 
+        if stackSize(3)>1
+            % This helps you start from where you left off.
+            startFrame=str2num(get(handles.frameTextEntry,'String'));
+            if startFrame==stackSize(3)
+                startFrame=1;
+            else
+            end
         else
         end
 
-    elseif size(playStack,4)>1 && playRGB==1
-        startFrame=str2num(get(handles.frameTextEntry,'String')); 
-        if startFrame==size(playStack,4)
-            startFrame=1;
+        sliderMin = 1;
+        sliderMax = fix(stackSize(3)); % this is variable
+        sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
+
+        set(handles.frameSlider, 'Min', sliderMin);
+        set(handles.frameSlider, 'Max', sliderMax);
+        set(handles.frameSlider, 'SliderStep', sliderStep);
+        set(handles.frameSlider, 'Value', startFrame); % set to beginning of sequence
+
+        % check if they want to overlay a mask
+        pMO=get(handles.overlayIndRoiToggle,'Value');
+        % override if there is no mask
+        mE=evalin('base','exist(''cMask'')');
+        if mE==0
+            pMO=0;
         else
         end
-    end
+
+        if pMO
+            cMask=evalin('base','cMask;');
+        else
+            cMask=1;
+        end
+
+        axes(handles.imageWindow);
+
+        % colormap
+        sL=get(handles.colormapTextEntry,'String');
+        sV=get(handles.colormapTextEntry,'Value');
+        cMap=sL{sV};
+
+        % slider states
+        a = get(handles.lowCutEntry,'String');
+        b = get(handles.highCutEntry,'String');
+        lowCut=str2double(a);
+        highCut=str2double(b);
 
 
-    sliderMin = 1;
-    if playRGB==0
-        sliderMax = fix(size(playStack,3)); % this is variable
-    elseif playRGB==1
-        sliderMax = fix(size(playStack,4)); % this is variable
-    end
-    sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
-
-    set(handles.frameSlider, 'Min', sliderMin);
-    set(handles.frameSlider, 'Max', sliderMax);
-    set(handles.frameSlider, 'SliderStep', sliderStep);
-    set(handles.frameSlider, 'Value', startFrame); % set to beginning of sequence
-
-    % check if they want to overlay a mask
-    pMO=get(handles.overlayIndRoiToggle,'Value');
-    % override if there is no mask
-    mE=evalin('base','exist(''cMask'')');
-    if mE==0
-        pMO=0;
-    else
-    end
-
-    if pMO
-        cMask=evalin('base','cMask');
-    else
-        cMask=1;
-    end
-
-    axes(handles.imageWindow);
-
-    sL=get(handles.colormapTextEntry,'String');
-    sV=get(handles.colormapTextEntry,'Value');
-    cMap=sL{sV};
-
-
-
-    mfactor=0.4;
-
-    a = get(handles.lowCutEntry,'String');
-    b = get(handles.highCutEntry,'String');
-    lowCut=str2double(a);
-    highCut=str2double(b);
-
-    if playRGB==0
-    ii=1;
-        for i=startFrame:size(playStack,3)
-            pS=evalin('base','playState');
-            if pS==1
-                ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
-                ii=ii.*cMask;
-                set(handles.frameTextEntry,'String',num2str(fix(i)));
-                set(handles.frameSlider, 'Value', i);
-                h=imshow(ii,'DisplayRange',[lowCut highCut]);
-                colormap(gca,cMap);
-                daspect([1 1 1])
-                drawnow;
-                delete(h);
-            elseif pS==0
-                set(handles.frameTextEntry,'String',num2str(fix(i)));
-                set(handles.frameSlider, 'Value', fix(i));
-                guidata(hObject, handles);
-                ii=(ii.*(1-mfactor))+playStack(:,:,i).*mfactor;
-                ii=ii.*cMask;
-                imshow(ii,'DisplayRange',[lowCut highCut]);
-                colormap(gca,cMap);
-                daspect([1 1 1])
-                axes(handles.imageWindow);
-                assignin('base','currentImage',ii)
-                evalin('base','metaData.currentImage=currentImage;');
-                break
-            end  
-        end    
-
-    mfactor=1;
-    elseif playRGB==1
+        % mfactor=.4;
+        mfactor=1;
         ii=1;
-        for i=startFrame:size(playStack,4)
-            pS=evalin('base','playState');
-            if pS==1
-                ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
-                ii=ii.*cMask;
-                h=imshow(ii);
-                daspect([1 1 1])
-                drawnow;
-                delete(h);
-            elseif pS==0
-                set(handles.frameTextEntry,'String',num2str(fix(i)));
-                set(handles.frameSlider, 'Value', fix(i));
-                guidata(hObject, handles);
-                ii=(ii.*(1-mfactor))+playStack(:,:,:,i).*mfactor;
-                ii=ii.*cMask;
-                imshow(ii);
-                daspect([1 1 1])
-                axes(handles.imageWindow);
-                assignin('base','currentImage',ii)
-                evalin('base','metaData.currentImage=currentImage;');
-                break
-            end  
-        end   
 
+        % change the play btn to pause
+        set(handles.playStackMovButton,'String','Pause')
+        pause(0.0000000000001)
+        guidata(hObject, handles);
+
+        % play loop
+        i=startFrame;
+        while pS==1
+            if i>stackSize
+                pS=0;
+                break
+            else
+            end
+
+            % get current image
+            curImage=evalin('base',[stackName '(:,:,' num2str(i) ');']);
+            % weight if need be.
+            ii=(ii.*(1-mfactor))+curImage.*mfactor;
+            ii=ii.*cMask;
+            set(handles.frameTextEntry,'String',num2str(fix(i)));
+            set(handles.frameSlider, 'Value', i);
+            h=imshow(ii,'DisplayRange',[lowCut highCut]);
+            colormap(gca,cMap);
+            daspect([1 1 1])
+            % set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
+            % set(h, 'AlphaData', 1)
+            drawnow;
+            pS=evalin('base','metaData.iPS;');
+            guidata(hObject, handles);
+            delete(h);
+            i=i+1;
+        end
+
+        set(handles.frameTextEntry,'String',num2str(fix(i)));
+        set(handles.frameSlider, 'Value', fix(i));
+        guidata(hObject, handles);
+        curImage=evalin('base',[stackName '(:,:,' num2str(i) ');']);
+        ii=(ii.*(1-mfactor))+curImage.*mfactor;
+        ii=ii.*cMask;
+        h=imshow(ii,'DisplayRange',[lowCut highCut]);
+        colormap(gca,cMap);
+        daspect([1 1 1])
+        set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
+        % set(h, 'AlphaData', 1)
+        axes(handles.imageWindow);
+        assignin('base','currentImage',ii)
+        evalin('base','metaData.currentImage=currentImage;,clear currentImage');
+
+        assignin('base','iPS',0)
+        evalin('base','metaData.iPS=iPS;,clear ''iPS''')
+
+        set(handles.playStackMovButton,'String','Play')
+        pause(0.0000000000000001)
+        guidata(hObject, handles);
+    catch
+        pause(0.0000000000000001)
+        guidata(hObject, handles);
     end
-    % Update handles structure
-    guidata(hObject, handles);
-function pasueMovieButton_Callback(hObject, eventdata, handles)
-    playState=0;
-    assignin('base','playState',playState)
+
 function localXCorButton_Callback(hObject, eventdata, handles)
 
     cimg=evalin('base','cimg');
@@ -1842,6 +1840,7 @@ function lowCutEntry_CreateFcn(hObject, eventdata, handles)
         set(hObject,'BackgroundColor','white');
     end
 
+function overlayIndRoiToggle_Callback(hObject,eventdata,handles)
 
 % --- Executes on button press in saveImageBtn.
 function saveImageBtn_Callback(hObject, eventdata, handles)

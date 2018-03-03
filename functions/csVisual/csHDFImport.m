@@ -1,8 +1,9 @@
-function dSet=csHDFImport(hdfPath,hdfDSet,zDim)
+function dSet=csHDFImport(hdfPath,hdfDSet,importRange,zDim)
 	
 
 	if nargin==2
 		zDim=3;
+		importRange=
 	else
 	end
 

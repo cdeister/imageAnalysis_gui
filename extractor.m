@@ -137,7 +137,8 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     end
 
     curIm=1;
-    totImages=numel(firstIm:skipF:endIm)
+    totImages=numel(firstIm:skipF:endIm);
+    fTemplate=fft2(template);
     for n=firstIm:skipF:endIm
         if useHDF
             impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
@@ -146,7 +147,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
         end
         diskLuminance(:,curIm)=mean2(impImage);
         if regFlag==1
-            [out1,out2]=dftregistration(fft2(template),fft2(impImage),100);
+            [out1,out2]=dftregistration(fTemplate,fft2(impImage),100);
             registeredTransformations(:,curIm)=out1;
             impImage=abs(ifft2(out2));
         else
