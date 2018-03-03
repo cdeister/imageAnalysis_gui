@@ -1074,7 +1074,7 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         h=imshow(ii,'DisplayRange',[lowCut highCut]);
         colormap(gca,cMap);
         daspect([1 1 1])
-        set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
+        % set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
         % set(h, 'AlphaData', 1)
         axes(handles.imageWindow);
         assignin('base','currentImage',ii)
