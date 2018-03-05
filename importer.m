@@ -28,6 +28,11 @@ else
 end
 
 
+function sendFeedback(hObject,eventdata,handles,uString)
+    set(handles.feedbackString,'String',uString)
+    pause(0.000000001)
+    guidata(hObject, handles);
+
 % main import procedure
 function importButton_Callback(hObject, eventdata, handles)
     
@@ -414,30 +419,33 @@ function setRegStackButton_Callback(hObject, eventdata, handles)
 function registerButton_Callback(hObject, eventdata, handles)
 
     regStackString=evalin('base','stackToRegister');
-
     regTemp=evalin('base','regTemplate');
-    rStack=evalin('base',regStackString);
+    tCl=whos('regTemp');
+    % todo use imType to deal with non uint16
+    imType=tCl.class;
+    stackSize=evalin('base',['size(' regStackString ');']);
     subpixelFactor=100;
-    totalImagesPossible=size(rStack,3);
+    try
+        totalImagesPossible=stackSize(3);
+    catch
+        totalImagesPossible=1;
+    end
 
-    % pre-allocate, because ... matlab ...
-
-    registeredImages=zeros(size(rStack,1),size(rStack,2),totalImagesPossible,'uint16');
-    registeredTransformations=zeros(4,totalImagesPossible);
+    evalin('base',['registeredTransformations=zeros(4,' num2str(totalImagesPossible) ');']);
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
     tic
-
     if pImport
         regTempC=regTemp;
         set(handles.feedbackString,'String',' par registration started ...')
         pause(0.0000000000001);
         guidata(hObject, handles);
         parfor n=1:totalImagesPossible
-            imReg=rStack(:,:,n);
+            imReg=evalin('base',[regStackString '(:,:,' num2str(n) ');']);
             [out1,out2]=dftregistration(fft2(regTempC),fft2(imReg),subpixelFactor);
-            registeredTransformations(:,n)=out1;
-            registeredImages(:,:,n)=abs(ifft2(out2));
+            assignin('base',['registeredTransformations(:,' num2str(n) ')'],out1);
+            assignin('base',[regStackString '(:,:,' num2str(n) ')'],uint16(abs(ifft2(out2))));
+
         end
         clear regTempC
     else
@@ -445,10 +453,15 @@ function registerButton_Callback(hObject, eventdata, handles)
         pause(0.0000000000001);
         guidata(hObject, handles);
         for n=1:totalImagesPossible
-            imReg=rStack(:,:,n);
+            imReg=evalin('base',[regStackString '(:,:,' num2str(n) ');']);
             [out1,out2]=dftregistration(fft2(regTemp),fft2(imReg),subpixelFactor);
-            registeredTransformations(:,n)=out1;
-            registeredImages(:,:,n)=abs(ifft2(out2));
+            
+            assignin('base','out1',out1);
+            evalin('base',['registeredTransformations(:,' num2str(n) ')=out1;,clear out1'])
+
+            assignin('base','out2',uint16(abs(ifft2(out2))));
+            evalin('base',[regStackString '(:,:,' num2str(n) ')=out2;,clear out2'])
+
             if mod(n,200)==0
                 set(handles.feedbackString,'String',['reg: ' num2str(n) ...
                  ' of ' num2str(totalImagesPossible)])
@@ -464,11 +477,7 @@ function registerButton_Callback(hObject, eventdata, handles)
     pause(0.0000000000001);
     guidata(hObject, handles);
     disp(['done with registration. it took ' num2str(t) ' seconds'])
-    assignin('base',[regStackString '_registered'],uint16(registeredImages))
-    assignin('base','registeredTransforms',registeredTransformations)
-
     refreshVarListButton_Callback(hObject, eventdata, handles)
-    % Update handles structure
     guidata(hObject, handles);
 function refreshVarListButton_Callback(hObject, eventdata, handles)
 
@@ -1199,22 +1208,26 @@ function binPixelsEntry_CreateFcn(hObject, eventdata, handles)
 function averageStackBy_Callback(hObject, eventdata, handles)
 
     muBy=str2num(get(handles.averageStackByEntry,'String'));
-
     selections = get(handles.workspaceVarBox,'String');
-        selectionsIndex = get(handles.workspaceVarBox,'Value');
-    s=evalin('base',selections{selectionsIndex});
-    if numel(size(s))==3
-        
-        testBin=squeeze(mean(reshape(s,size(s,1),size(s,2),muBy,size(s,3)/muBy),3));
-        assignin('base',['frameAvg_' selections{selectionsIndex}],testBin);
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    ogSize=evalin('base',['size(' selections{selectionsIndex} ');']);
+    if numel(ogSize)==3
+        newSize=fix(ogSize(3)/muBy)
+        clipSize=newSize*muBy;
+        sendFeedback(hObject,eventdata,handles,'working on averaging ...')
+        evalin('base',[selections{selectionsIndex} '=' selections{selectionsIndex} '(:,:,1:' num2str(clipSize) ');']);
+        evalin('base',[selections{selectionsIndex} '=uint16(squeeze(mean(reshape(' selections{selectionsIndex} ',size(' selections{selectionsIndex} ',1),size(' selections{selectionsIndex} ',2),' num2str(muBy) ',size(' selections{selectionsIndex} ',3)/' num2str(muBy) '),3)));']);
+        sendFeedback(hObject,eventdata,handles,'done averaging')
     else
+        sendFeedback(hObject,eventdata,handles,'something wrong with stack dimensions')
     end
-
-    clear s testBin
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function averageStackByEntry_Callback(hObject, eventdata, handles)
+
+    averageStackBy_Callback(hObject, eventdata, handles)
+
 function averageStackByEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))

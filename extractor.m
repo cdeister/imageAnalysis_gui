@@ -863,33 +863,94 @@ function deleteFlagged_Callback(hObject, eventdata, handles)
 function relatedDistReturn_Callback(hObject, eventdata, handles)
 function keepFirstBtn_Callback(hObject, eventdata, handles)
 
-    related=str2num(get(handles.relatedCellsReturn,'String'));
-    kill=related(2:end);
-    killNum=numel(kill);
-    if killNum>=1
-    tKS=strjoin(arrayfun(@(x) num2str(x),kill,'UniformOutput',false),',');
-    killString=['[' tKS ']'];
 
-
-    evalin('base',['somaticF(' killString ',:)=[];']);
-    evalin('base','somaticRoiCounter=size(somaticF,1);');
-    evalin('base',['somaticROI_PixelLists(' killString ')=[];']);
-    evalin('base',['somaticROIBoundaries(' killString ')=[];']);
-    evalin('base',['somaticROICenters(' killString ')=[];']);
-    evalin('base',['somaticROIs(' killString ')=[];']);
-
-    refreshWSVarsBtn_Callback(hObject, eventdata, handles)
-    guidata(hObject, handles);
-    % somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
-    advance=0;
-    else
-        advance=1;
+    related=get(handles.relatedCellsReturn,'String');
+    rCell=strsplit(related,',');
+    rCell=rCell(2:end);
+    tString=[];
+    for n=1:numel(rCell)
+        selectedSplit=strsplit(rCell{n},'_');
+        tString{n}=selectedSplit{1};
+        tID{n}=str2double(selectedSplit{2});
     end
-    rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
-    set(handles.roiDisplaySlider,'Value',rN)
+
+
+    roiNumList=cell2mat(tID);
+    % assignin('base','troiNumList',roiNumList)
+    assignin('base','tString',tString)
+
+
+    try
+        unStr=cellfun(@unique,{dtString},'UniformOutput',0);
+        for p=1:numel(unStr{1})
+            for n=1:numel(rCell)
+                kIDs=cell2mat(tID(tString{n}==unStr{1}{n}));
+            end
+            evalin('base',[tString{n} 'ROI_PixelLists([' num2str(kIDs) '])=[]'])
+            evalin('base',[tString{n} 'ROIBoundaries([' num2str(kIDs) '])=[]'])
+            evalin('base',[tString{n} 'ROICenters([' num2str(kIDs) '])=[];'])
+            evalin('base',[tString{n} 'ROIs([' num2str(kIDs) '])=[];'])
+            evalin('base',[tString{n} 'RoiCounter=numel(' uniqueTypes{n} 'ROIs);'])
+        end
+    catch
+    end
     guidata(hObject, handles);
-    roiDisplaySlider_Callback(hObject, eventdata, handles)
-    somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+    % evalin(scopeString,[uniqueTypes{n} 'ROI_PixelLists([' num2str(roisToDelete) '])=[];'])
+    % evalin(scopeString,[uniqueTypes{n} 'ROIBoundaries([' num2str(roisToDelete) '])=[];'])
+    % evalin(scopeString,[uniqueTypes{n} 'ROICenters([' num2str(roisToDelete) '])=[];'])
+    % evalin(scopeString,[uniqueTypes{n} 'ROIs([' num2str(roisToDelete) '])=[];'])
+    % evalin(scopeString,[uniqueTypes{n} 'RoiCounter=numel(' uniqueTypes{n} 'ROIs);'])
+
+    %     advance=1;
+
+    % rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
+    % set(handles.roiDisplaySlider,'Value',rN)
+    % guidata(hObject, handles);
+    % roiDisplaySlider_Callback(hObject, eventdata, handles)
+    % somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
+
+    % try
+    %     unStr=cellfun(@unique,{dtString},'UniformOutput',0);
+    %     for p=1:numel(unStr{1})
+    %         for n=1:numel(rCell)
+    %             kIDs=cell2mat(dtID(dtString{n}==unStr{1}{n}));
+    %             deleteROI(tID,tString);
+    %         end
+    % catch
+    % end
+    
+
+
+
+    % deleteROI(tID,tString);
+
+    
+    % kill=related(2:end);
+    % killNum=numel(kill);
+    % if killNum>=1
+    % tKS=strjoin(arrayfun(@(x) num2str(x),kill,'UniformOutput',false),',');
+    % killString=['[' tKS ']'];
+
+
+    % evalin('base',['somaticF(' killString ',:)=[];']);
+    % evalin('base','somaticRoiCounter=size(somaticF,1);');
+    % evalin('base',['somaticROI_PixelLists(' killString ')=[];']);
+    % evalin('base',['somaticROIBoundaries(' killString ')=[];']);
+    % evalin('base',['somaticROICenters(' killString ')=[];']);
+    % evalin('base',['somaticROIs(' killString ')=[];']);
+
+    % refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+    % guidata(hObject, handles);
+    % advance=0;
+    % else
+    %     advance=1;
+    % end
+    % rN=fix(str2double(get(handles.displayedROICounter,'String')))+advance;
+    % set(handles.roiDisplaySlider,'Value',rN)
+    % guidata(hObject, handles);
+    % roiDisplaySlider_Callback(hObject, eventdata, handles)
+    % somaRoisDisplayToggle_Callback(hObject, eventdata, handles)
 function killSelectedBtn_Callback(hObject, eventdata, handles)
     
     selections = get(handles.roiSelector,'String');

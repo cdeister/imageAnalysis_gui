@@ -16,39 +16,39 @@
 
 
 
-function varargout = roiMaker(varargin)
-
-
-%***************************************************************
-%
-% Generic Matlab GUI Init Code
-gui_Singleton = 1;
-gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @roiMaker_OpeningFcn, ...
-                   'gui_OutputFcn',  @roiMaker_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
-if nargin && ischar(varargin{1})
-    gui_State.gui_Callback = str2func(varargin{1});
-end
-
-if nargout
-    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
-else
-    gui_mainfcn(gui_State, varargin{:});
-end
-
 % ************************************************
 % ***************** Creator Functions ************
 % ************************************************
 
+function varargout = roiMaker(varargin)
+
+    % Generic Matlab GUI Init Code
+    gui_Singleton = 1;
+    gui_State = struct('gui_Name',       mfilename, ...
+                       'gui_Singleton',  gui_Singleton, ...
+                       'gui_OpeningFcn', @roiMaker_OpeningFcn, ...
+                       'gui_OutputFcn',  @roiMaker_OutputFcn, ...
+                       'gui_LayoutFcn',  [] , ...
+                       'gui_Callback',   []);
+    if nargin && ischar(varargin{1})
+        gui_State.gui_Callback = str2func(varargin{1});
+    end
+
+    if nargout
+        [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+    else
+        gui_mainfcn(gui_State, varargin{:});
+    end
 function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
 
     
     handles.output = hObject;
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
+    try 
+        set(handles.workspaceVarBox,'Value',1)
+    catch
+    end
     g=evalin('base','exist(''neuropilRoiCounter'')');
     if g
         set(handles.neuropilAlertString,'String','');
@@ -107,7 +107,7 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     end
 
 
-    refreshVarListButton_Callback(hObject, eventdata, handles);
+    logSelection(hObject,eventdata,handles)
     guidata(hObject, handles);
 function varargout = roiMaker_OutputFcn(hObject, eventdata, handles) 
 
@@ -288,10 +288,11 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
         set(handles.roiSelector,'String','');
         guidata(hObject, handles);
 
+        % for 'fancy' mask stuff
         axes(handles.imageWindow);
         g1=getframe;
         % ogImage=frame2im(g1);
-        assignin('base','g1',g1)
+        % assignin('base','g1',g1)
         % assignin('base','ogImage',ogImage)
 
         % see who is (still) on
@@ -353,10 +354,10 @@ function roisDisplayToggle(hObject,eventdata,handles,justUpdate,useTxtLabels)
             else
             end
         end
-        g2=getframe;
-        ovImage=frame2im(g2);
-        assignin('base','g2',g2)
-        assignin('base','ovImage',ovImage)
+        % g2=getframe;
+        % ovImage=frame2im(g2);
+        % assignin('base','g2',g2)
+        % assignin('base','ovImage',ovImage)
         
         refreshVarListButton_Callback(hObject, eventdata, handles);
         guidata(hObject, handles);
@@ -452,7 +453,6 @@ function boutonButton_Callback(hObject, eventdata, handles)
 function vesselButton_Callback(hObject, eventdata, handles)
 
     freehandROI(hObject,eventdata,handles,'vessel')
-
 function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
 
     a = str2double(get(handles.lowCutEntry,'String'));
@@ -503,7 +503,7 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
         set(handles.highCutEntry,'String',num2str(maxVal));
         set(handles.lowCutEntry,'String','0');
         
-        sliderStep=[1, 1] / (maxVal- 0)
+        sliderStep=[1, 1] / (maxVal- 0);
         if sliderStep(1)==1
             sliderStep(1)=0.05;
             sliderStep(2)=0.05;
@@ -511,6 +511,7 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
         end
         set(handles.lowCutSlider, 'SliderStep', sliderStep);
         set(handles.highCutSlider, 'SliderStep', sliderStep);
+        set(handles.frameSlider, 'Value', 1); % set to beginning of sequence
     else
     end
 
@@ -580,7 +581,7 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
 
     pImg=imshow(imageP,'DisplayRange',[a b]);
     colormap(gca,cMap)
-    assignin('base','pImg',pImg)
+    % assignin('base','pImg',pImg)
 
     % g3=getframe;
     % fsImage=frame2im(g3);
@@ -588,19 +589,29 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
     % assignin('base','fsImage',fsImage)
 
     if updateHist
-        axes(handles.imageHistogram);
-        nhist(nonzeros(imageP),'box','maxbins',40);
-        xlim([0 b])
-        hold all
-        plot([a a],[0 20000],'r-')
-        plot([b b],[0 20000],'b-')
-        hold off
+        
+        if numel(find(double(imageP)>0))>2
+            axes(handles.imageHistogram);
+            nhist(nonzeros(double(imageP)),'box','maxbins',40);
+            xlim([0 b])
+            hold all
+            plot([a a],[0 20000],'r-')
+            plot([b b],[0 20000],'b-')
+            hold off
+        else
+            axes(handles.imageHistogram);
+            nhist(zeros(80,1),'box','maxbins',40);
+            xlim([0 b])
+            hold all
+            plot([a a],[0 20000],'r-')
+            plot([b b],[0 20000],'b-')
+            hold off
+        end
     else
     end
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-
 function deleteROIButton_Callback(hObject, eventdata, handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -634,7 +645,6 @@ function deleteROIButton_Callback(hObject, eventdata, handles)
     roisDisplayToggle(hObject,eventdata,handles)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-    
 function roiSelector_Callback(hObject,eventdata,handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -754,6 +764,9 @@ function makeNeuropilMasks_Callback(hObject, eventdata, handles)
     smoothNeuropilsMask=zeros(size(tempImage)); 
 
     neuropilRoiCounter=0;
+    set(handles.feedbackString,'String','making neuropil masks ...')
+    pause(0.000000001);
+    guidata(hObject, handles);
     % First make an array of individual smoothed somatic rois and build on the all inclusive image.
     for n=1:numel(sR)
         neuropilROIs{1,n}=imdilate(imclose(sR{1,n},strel('disk',somaClosePx)),strel('disk',somaBoundaryPx));
@@ -790,19 +803,85 @@ function makeNeuropilMasks_Callback(hObject, eventdata, handles)
     assignin('base','neuropilROICenters',neuropilROICenters)
 
     set(handles.neuropilAlertString,'String','finished making neuropil masks','ForegroundColor',[0 0 0]);
-    disp('neuropil masks made')
-
-
-    % Update handles structure
+    set(handles.feedbackString,'String','finished neuropil masks')
+    pause(0.000000001);
     guidata(hObject, handles);
+
+
 function neuropilPixelSpreadEntry_Callback(hObject, eventdata, handles)
 
     guidata(hObject, handles);
 function workspaceVarBox_Callback(hObject, eventdata, handles)
-function refreshVarListButton_Callback(hObject, eventdata, handles)
+    
+    logSelection(hObject,eventdata,handles)
+    guidata(hObject, handles);
+function logSelection(hObject,eventdata,handles)
+    try
+        pVal=get(handles.workspaceVarBox,'Value');
+        pSel=get(handles.workspaceVarBox,'String');
+        pVar=pSel{pVal};
+        assignin('base','pVal',pVal)
+        assignin('base','pSel',pSel)
+        assignin('base','pVar',pVar)
+        evalin('base','metaData.pVal=pVal;,clear pVal')
+        evalin('base','metaData.pSel=pSel;,clear pSel')
+        evalin('base','metaData.pVar=pVar;,clear pVar')
+        guidata(hObject, handles);
+    catch
+    end
 
+function refreshVarListButton_Callback(hObject, eventdata, handles)
+    % this is kind of weird looking, but I want it to be foolproof.
+    % i need to make sure if the user adds or deletes something
+    % that what they selected in the browser is still selected
+
+    % a) assume nothing is different, but get current selection
+    % varChange=0;
+    % % b) get the current selection
+    % try
+    %     cVal=get(handles.workspaceVarBox,'Value');
+    %     cSel=get(handles.workspaceVarBox,'String');
+    %     cVar=pSel{pVal};
+    % catch
+    %     cVar='';
+    % end
+
+    % c) get last known selection
+    try
+        pVal=evalin('base','metaData.pVal;');
+        pSel=evalin('base','metaData.pSel;');
+        pVar=evalin('base','metaData.pVar;');
+    catch
+        pVar='';
+    end
+
+    % % d) if cVar is different then user changed
+    % if strcmp(pVar,cVar)==0
+    %     varChange=1
+    %     % i filter on pVar later, 
+    %     % so let's make previous var 'state' the current var.
+    %     % this simplifies cases later.
+    %     pVar=cVar;
+    % else
+    % end
+
+    % e) get what's in the workspace now
+    %
+    % the strings to populate the box are a cell
+    % we want to see if our last selection is still there
+    % if so, recenter on it. 
+    % this helps search:
+    ss=@(x) strcmp(x,pVar);
+    %
+    % f) get workspace vars
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars);
+    try
+        set(handles.workspaceVarBox,'Value',find(ss(vars)==1));
+    catch
+    end
+   
+    logSelection(hObject,eventdata,handles)
     guidata(hObject, handles);
 
 function meanProjectButton_Callback(hObject, eventdata, handles)
@@ -813,17 +892,13 @@ function meanProjectButton_Callback(hObject, eventdata, handles)
         s=evalin('base',selections{selectionsIndex(n)});
         mP=mean(s,3);
         if class(s)=='uint16'
-            assignin('base',['meanProj_' selections{selectionsIndex(n)}],im2uint16(mP,'Indexed'));
+            evalin('base',['mP=mean(' selections{selectionsIndex(n)} ',3);'])
+            evalin('base',['meanProj_' selections{selectionsIndex(n)} '=im2uint16(mP,"Indexed");,clear mP']);
         else
-            assignin('base',['meanProj_' selections{selectionsIndex(n)}],mP);
+            evalin('base',['meanProj_' selections{selectionsIndex(n)} '=mean(' selections{selectionsIndex(n)} ',3);']);
         end
     end
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
-    
-
-
-    % Update handles structure
+    refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 function stdevProjectionButton_Callback(hObject, eventdata, handles)
 
@@ -831,13 +906,9 @@ function stdevProjectionButton_Callback(hObject, eventdata, handles)
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     for n=1:numel(selectionsIndex)
-        s=evalin('base',selections{selectionsIndex(n)});
-        mP=std(double(s),1,3);
-        assignin('base',['stdevProj_' selections{selectionsIndex(n)}],mP);
+        evalin('base',['stdevProj_' selections{selectionsIndex(n)} '=std(double(' selections{selectionsIndex(n)} '),1,3);']);
     end
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
-        
+    refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 function maxProjectionButton_Callback(hObject, eventdata, handles)
 
@@ -848,9 +919,7 @@ function maxProjectionButton_Callback(hObject, eventdata, handles)
         mP=max(s,[],3);
         assignin('base',['maxProj_' selections{selectionsIndex(n)}],mP);
     end
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
-        
+    refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 function getGXcorButton_Callback(hObject, eventdata, handles)
 
@@ -861,6 +930,8 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     selectStack=selections{selectionsIndex};
+    assignin('base','lastCorStack',selectStack);
+    evalin('base','metaData.lastCorStack=lastCorStack;,clear lastCorStack');
 
     numImages=evalin('base',['size(' selectStack ',3)']);
 
@@ -868,10 +939,11 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
         corStack=[];
         c=0;
         ff=fspecial('gaussian',11,0.5);
+
         nstack=min(imsToCor,numImages);
         for n=1:nstack
             c=c+1;
-            if (rem(n,100)==0)
+            if (rem(n,50)==0)
                 set(handles.feedbackString,'String',['finished ' num2str(n)...
                     ' of ' num2str(nstack) ' | ' num2str(round(100*(n./nstack))) '% done'])
                 pause(0.0000001);
@@ -883,12 +955,11 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
             I=evalin('base',evalStr);
             I=conv2(double(I),ff,'same');
             corStack(:,:,n)=I;
-            assignin('base','corStack',corStack);
+            % assignin('base','corStack',corStack);
         end
     elseif filterState==0
         nstack=min(imsToCor,numImages);
-        evalin('base',['corStack=double(' selectStack '(:,:,1:' num2str(nstack) '));'])
-        corStack=evalin('base','corStack');
+        corStack=evalin('base',['double(' selectStack '(:,:,1:' num2str(nstack) '));']);
     else
     end
 
@@ -913,11 +984,10 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
     for y=1+w:ymax-w
         
         if (rem(y,20)==0)
-            set(handles.feedbackString,'String',['finished ' num2str(y)...
+            set(handles.feedbackString,'String',['finished line' num2str(y)...
                 ' of ' num2str(ymax) ' | ' num2str(round(100*(y./ymax))) '% done'])
             pause(0.0000001);
             guidata(hObject, handles);
-    %         fprintf('%d/%d (%d%%)\n',y,ymax,round(100*(y./ymax)));
         end
         
         for x=1+w:xmax-w
@@ -951,9 +1021,8 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
     assignin('base','cimg',cimg);
     set(handles.feedbackString,'String','! done with xcor')
     pause(0.00001);
+    refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
 
     % ---- end xcor image code
 
@@ -1050,10 +1119,23 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
             end
 
             % get current image
-            curImage=evalin('base',[stackName '(:,:,' num2str(i) ');']);
+            curImage=double(evalin('base',[stackName '(:,:,' num2str(i) ');']));
             % weight if need be.
             ii=(ii.*(1-mfactor))+curImage.*mfactor;
             ii=ii.*cMask;
+            
+            medFilter=get(handles.medianFilterToggle,'Value');
+            if medFilter==1
+                ii=medfilt2(ii);
+            else
+            end
+
+            wienerFilter=get(handles.wienerFilterToggle,'Value');
+            if wienerFilter==1
+                ii=wiener2(ii);
+            else
+            end
+            
             set(handles.frameTextEntry,'String',num2str(fix(i)));
             set(handles.frameSlider, 'Value', i);
             h=imshow(ii,'DisplayRange',[lowCut highCut]);
@@ -1071,14 +1153,13 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         set(handles.frameTextEntry,'String',num2str(fix(i)));
         set(handles.frameSlider, 'Value', fix(i));
         guidata(hObject, handles);
-        curImage=evalin('base',[stackName '(:,:,' num2str(i) ');']);
+        curImage=double(evalin('base',[stackName '(:,:,' num2str(i) ');']));
         ii=(ii.*(1-mfactor))+curImage.*mfactor;
         ii=ii.*cMask;
         h=imshow(ii,'DisplayRange',[lowCut highCut]);
         colormap(gca,cMap);
         daspect([1 1 1])
-        % set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
-        % set(h, 'AlphaData', 1)
+
         axes(handles.imageWindow);
         assignin('base','currentImage',ii)
         evalin('base','metaData.currentImage=currentImage;,clear currentImage');
@@ -1090,15 +1171,18 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         pause(0.0000000000000001)
         guidata(hObject, handles);
     catch
-        pause(0.0000000000000001)
-        guidata(hObject, handles);
     end
-
 function localXCorButton_Callback(hObject, eventdata, handles)
+    
+    imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
+    corStackName=evalin('base','metaData.lastCorStack;');
+    numImages=evalin('base',['size(' corStackName ',3)']);
+    nstack=min(imsToCor,numImages);
 
-    cimg=evalin('base','cimg');
+    cimg=double(evalin('base','cimg'));
     roiTh=str2num(get(handles.roiThresholdEntry,'String'));
-    corStack=evalin('base','corStack');
+    nstack=min(imsToCor,numImages);
+    corStack=evalin('base',['double(' corStackName '(:,:,1:' num2str(nstack) '));']);
 
     [x,y]=ginput(1);
     %iterative region growing
@@ -1140,8 +1224,8 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     imagesc(im2bw(currentImage,roiTh),[0 2]),colormap jet
     assignin('base','candidateRoi',im2bw(currentImage,roiTh))
     assignin('base','candidateRoi_rawVals',currentImage)
-    evalin('base','scratch.candidateRoi=candidateRoi;')
-    evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;')
+    evalin('base','metaData.candidateRoi=candidateRoi;')
+    evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
 
 
     % % Update handles structure
@@ -1151,19 +1235,16 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
-
-    % Hints: get(hObject,'String') returns contents of roiThresholdEntry as text
-    %        str2double(get(hObject,'String')) returns contents of roiThresholdEntry as a double
-    prevAt=evalin('base','exist(''scratch'',''var'')');
+    prevAt=evalin('base','exist(''metaData'',''var'')');
     if prevAt
-        currentROI=evalin('base','scratch.candidateRoi_rawVals');
+        currentROI=evalin('base','metaData.candidateRoi_rawVals');
         roiTh=str2num(get(handles.roiThresholdEntry,'String'));
         axes(handles.roiPreviewWindow);
         imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
         assignin('base','candidateRoi',im2bw(currentROI,roiTh))
         assignin('base','candidateRoi_rawVals',currentROI)
-        evalin('base','scratch.candidateRoi=candidateRoi;')
-        evalin('base','scratch.candidateRoi_rawVals=candidateRoi_rawVals;')
+        evalin('base','metaData.candidateRoi=candidateRoi;')
+        evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
     end
 
 
@@ -1226,7 +1307,7 @@ function addToSomasButton_Callback(hObject, eventdata, handles)
         pl=evalin('base','somaticROI_PixelLists');
         
         h=h+1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
        
         
         
@@ -1244,7 +1325,7 @@ function addToSomasButton_Callback(hObject, eventdata, handles)
         
     else
         h=1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
         assignin('base','somaticROIs',{mask})
         assignin('base','somaticROICenters',{regionprops(mask,'Centroid')})
         assignin('base','somaticROI_PixelLists',{regionprops(mask,'PixelList')})
@@ -1266,7 +1347,7 @@ function addToDendritesButton_Callback(hObject, eventdata, handles)
         pl=evalin('base','dendriticROI_PixelLists');
         
         h=h+1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
        
         
         
@@ -1284,7 +1365,7 @@ function addToDendritesButton_Callback(hObject, eventdata, handles)
         
     else
         h=1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
         assignin('base','dendriticROIs',{mask})
         assignin('base','dendriticROICenters',{regionprops(mask,'Centroid')})
         assignin('base','dendriticROI_PixelLists',{regionprops(mask,'PixelList')})
@@ -1307,7 +1388,7 @@ function addToBoutonsButton_Callback(hObject, eventdata, handles)
         pl=evalin('base','boutonROI_PixelLists');
         
         h=h+1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
        
         
         
@@ -1325,7 +1406,7 @@ function addToBoutonsButton_Callback(hObject, eventdata, handles)
         
     else
         h=1;
-        mask=evalin('base','scratch.candidateRoi');
+        mask=evalin('base','metaData.candidateRoi');
         assignin('base','boutonROIs',{mask})
         assignin('base','boutonROICenters',{regionprops(mask,'Centroid')})
         assignin('base','boutonROI_PixelLists',{regionprops(mask,'PixelList')})
@@ -1385,9 +1466,11 @@ function nnmfButton_Callback(hObject, eventdata, handles)
     nm1=nm1./max(max(max(nm1)));
 
     nm1=reshape(nm1,s1,s2,fNum);
+    nm1Nrm=nm1./max(max(medfilt3(nm1)));
     clear tStack
 
     assignin('base','nm1',nm1);
+    assignin('base','nm1Nrm',nm1Nrm);
     assignin('base','nm2',nm2);
     assignin('base','nm3',nm3);
 
@@ -1433,7 +1516,7 @@ function cMaskToggle_Callback(hObject, eventdata, handles)
     axes(handles.imageWindow);
     a=gcf;
     cImage=a.CurrentAxes.Children(end).CData;
-    cMask=imbinarize(cImage,binaryThreshold);
+    cMask=imbinarize(double(cImage),binaryThreshold);
     assignin('base','cMask',cMask);
     evalin('base','metaData.currentMask=cMask;')
     
@@ -1584,7 +1667,7 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
     numIt=0;
     posNums=nchoosek(numel(r),2);
     pCount=cellfun(@numel,cellfun(@(x) find(x==1),r,'UniformOutput',0));
-
+    set(handles.feedbackString,'String','deduping ...')
     for n=1:(numel(r)-1)
         for j=n+1:numel(r)
             numIt=numIt+1;
@@ -1595,7 +1678,7 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
             pixSizePairs(:,numIt)=[pCount(n),pCount(j)];
         end
     end
-
+    
 
     propOverlap=numOvPixels./totalPixelsInPair;
     thrOverlap=find(propOverlap>0.01);
@@ -1613,12 +1696,13 @@ function deDupeRoisBtn_Callback(hObject, eventdata, handles)
     end
 
     deleteROI(toKill,repmat({roiTypeSelected},1,numel(toKill)));
-    disp(['deleted ' num2str(numel(toKill)) ' potential dupes'])
     roisDisplayToggle(hObject,eventdata,handles)
+    set(handles.feedbackString,'String',['deleted ' num2str(numel(toKill)) ' potential dupes'])
+    guidata(hObject, handles);
 function clusterMaskBtn_Callback(hObject, eventdata, handles)
     cimg=evalin('base','cimg');
     stImg=cimg-mean2(cimg);
-    stImgThr=0.3;
+    stImgThr=0.1;
     %str2num(get(handles.binaryThrValEntry,'String'));
 
     imLn=size(stImg,1);
@@ -1633,7 +1717,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
         thrMask(cpixel,cline)=1;
     end
     
-    minROISize=4;
+    minROISize=5;
     pROIs=bwboundaries(thrMask,'holes');
     pROIsizes=fix(cellfun(@numel,pROIs)/2);
     
@@ -1672,7 +1756,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
 
 
             mClust=ceil(ws/15);
-            minROISize=3;
+            minROISize=5;
 
             clusData=clusterdata(fMaskData(fMask==1),'maxclust',mClust);
             clusPXs=find(fMask==1);
@@ -1709,7 +1793,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
             end
 
 
-            minROISize2=2;
+            minROISize2=5;
             pROIs=bwboundaries(clusMask,'holes','conn',8);
             pROIsizes=fix(cellfun(@numel,pROIs)/2);
             stROIs=find(pROIsizes>=minROISize2);
@@ -1734,7 +1818,46 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
         end
     end
 function maxClusterEntry_Callback(hObject, eventdata, handles)
+function overlayIndRoiToggle_Callback(hObject,eventdata,handles)
+function saveImageBtn_Callback(hObject, eventdata, handles)
+    axes(handles.imageWindow);
+    g=getframe;
+    saveData=frame2im(g);
+    
 
+    try
+        sC=evalin('base','metaData.saveCounter');
+        sC=sC+1;
+    catch
+        sC=1;
+    end
+    
+    assignin('base',['savedImage_' num2str(sC)],saveData)
+    evalin('base',['metaData.savedImage_' num2str(sC) '=savedImage_' num2str(sC) ';, clear savedImage_' num2str(sC)]);
+    assignin('base','saveCounter',sC);
+    evalin('base','metaData.saveCounter=saveCounter;,clear saveCounter')
+    try
+        savePath=evalin('base','metaData.importPath');
+    catch
+        savePath=[pwd filesep];
+    end
+    saveStrTIF=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.tif'];
+    saveStrPNG=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.png'];
+
+    warning('off','all');
+    try
+        mkdir([savePath 'savedImages'])
+        imwrite(saveData,saveStrTIF,'tif')
+        imwrite(saveData,saveStrPNG,'png')
+    catch
+        imwrite(saveData,saveStrTIF,'tif')
+        imwrite(saveData,saveStrPNG,'png')
+    end
+    warning('on','all');
+
+    
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
     
 % **************************************************************
 % **************** Junkyard ************************************
@@ -1842,46 +1965,3 @@ function lowCutEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-
-function overlayIndRoiToggle_Callback(hObject,eventdata,handles)
-
-% --- Executes on button press in saveImageBtn.
-function saveImageBtn_Callback(hObject, eventdata, handles)
-    axes(handles.imageWindow);
-    g=getframe;
-    saveData=frame2im(g);
-    
-
-    try
-        sC=evalin('base','metaData.saveCounter');
-        sC=sC+1;
-    catch
-        sC=1;
-    end
-    
-    assignin('base',['savedImage_' num2str(sC)],saveData)
-    evalin('base',['metaData.savedImage_' num2str(sC) '=savedImage_' num2str(sC) ';, clear savedImage_' num2str(sC)]);
-    assignin('base','saveCounter',sC);
-    evalin('base','metaData.saveCounter=saveCounter;,clear saveCounter')
-    try
-        savePath=evalin('base','metaData.importPath');
-    catch
-        savePath=[pwd filesep];
-    end
-    saveStrTIF=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.tif'];
-    saveStrPNG=[savePath  'savedImages' filesep 'expImg_' num2str(sC) '.png'];
-
-    warning('off','all');
-    try
-        mkdir([savePath 'savedImages'])
-        imwrite(saveData,saveStrTIF,'tif')
-        imwrite(saveData,saveStrPNG,'png')
-    catch
-        imwrite(saveData,saveStrTIF,'tif')
-        imwrite(saveData,saveStrPNG,'png')
-    end
-    warning('on','all');
-
-    
-    refreshVarListButton_Callback(hObject, eventdata, handles);
-    guidata(hObject, handles);

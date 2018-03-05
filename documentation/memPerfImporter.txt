@@ -1,0 +1,26 @@
+real,compressed
+pre
+726.5,0
+launch importer
+791,0.004
+
+filter files (load; nothing imported yet)
+1011,547.9 (WTF!)
+
+load 5000 uint16 tif
+3470,2580
+
+take mean of those
+3470,1012
+
+play stack
+3480,840.3
+
+get luminance
+3480,1080
+
+close importer
+3470,3050
+
+after reg
+3520,3470
