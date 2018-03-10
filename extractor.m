@@ -133,41 +133,48 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     if regFlag==1
         template=evalin('base','regTemplate');
         registeredTransformations=zeros(4,numImages);
+        fTemplate=fft2(template);
     else
     end
 
     curIm=1;
     totImages=numel(firstIm:skipF:endIm);
-    fTemplate=fft2(template);
-    for n=firstIm:skipF:endIm
-        if useHDF
-            impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
-        else 
-            impImage=imread([imPath filesep fileList(n).name]);
-        end
-        diskLuminance(:,curIm)=mean2(impImage);
-        if regFlag==1
-            [out1,out2]=dftregistration(fTemplate,fft2(impImage),100);
-            registeredTransformations(:,curIm)=out1;
-            impImage=abs(ifft2(out2));
-        else
-        end
 
-        for q=1:numel(rois)
-            if medianFlag~=1
-                sED(q,curIm)=mean(impImage(rois{q}(:,:)==1));  
-            else
-                sED(q,curIm)=median(impImage(rois{q}(:,:)==1));  
+    for q=1:numel(rois)
+        curIm=1;
+        [yV,xV]=ind2sub(size(rois{q}),find(rois{q}==1));
+        cInds={min(yV):(min(yV)+(numel(unique(yV)))-1),(min(xV):min(xV)+(numel(unique(xV)))-1)};
+        cutMask=rois{q}(cInds{1},cInds{2});
+        % cInds{2} is x and hdfSize(1) is y
+        for n=firstIm:skipF:endIm
+            if useHDF
+                impImage=h5read([tP tH],['/' tDS_select],[cInds{1}(1) cInds{2}(1) n],[numel(cInds{1}) numel(cInds{2}) 1]);
+            else 
+                impImage=imread([imPath filesep fileList(n).name]);
             end
-        end
+            if regFlag==1
+                [out1,out2]=dftregistration(fTemplate,fft2(impImage),100);
+                registeredTransformations(:,curIm)=out1;
+                impImage=abs(ifft2(out2));
+            else
+            end
+
+
+            if medianFlag~=1
+                sED(q,curIm)=mean(impImage(cutMask(:,:)==1));  
+            else
+                sED(q,curIm)=median(impImage(cutMask(:,:)==1));  
+            end
+        
 
         if mod(n,500)==0
-    		set(handles.diskExtractButton,'String',[num2str(curIm) '/' num2str(totImages)])
+    		set(handles.diskExtractButton,'String',[num2str(q) '/' num2str(numel(rois))])
     		pause(0.00000000000000001)
     		guidata(hObject, handles);
 		else
 		end 
         curIm=curIm+1;
+        end
     end
     eT=toc;
     set(handles.diskExtractButton,'String','Disk Extract')
@@ -1342,27 +1349,40 @@ function loadCSHDF_Callback(hObject, eventdata, handles)
       curContrasts=curContrasts(1:end-1);
       assignin('base','curOrientations',curOrientations');
       evalin('base',['bData.curOrientations=curOrientations;,clear curOrientations ans'])
+      
       assignin('base','curContrasts',curContrasts');
       evalin('base',['bData.curContrasts=curContrasts;,clear curContrasts ans'])
+      
       assignin('base','interrupts',curBData(1,:));
       evalin('base',['bData.interrupts=interrupts;,clear interrupts ans'])
+      
       assignin('base','sessionTime',curBData(2,:)./1000);
       evalin('base',['bData.sessionTime=sessionTime;,clear sessionTime ans'])
+      
       assignin('base','stateTime',curBData(3,:)./1000);
       evalin('base',['bData.stateTime=stateTime;,clear stateTime ans'])
+      
       assignin('base','states',curBData(4,:));
       evalin('base',['bData.states=states;,clear states ans'])
-      assignin('base','pyStates',curBData(5,:));
+      
+      assignin('base','loadCell',curBData(5,:));
+      evalin('base',['bData.loadCell=loadCell;,clear states ans'])
+      
+      assignin('base','pyStates',curBData(9,:));
       evalin('base',['bData.pyStates=pyStates;,clear pyStates ans'])
-      assignin('base','tLick0',curBData(6,:));
-      evalin('base',['bData.tLick0=tLick0;,clear tLick0 ans'])
-      assignin('base','tLick1',curBData(7,:));
-      evalin('base',['bData.tLick1=tLick1;,clear tLick1 ans'])
-      assignin('base','thrLicks',curBData(8,:));
-      evalin('base',['bData.thrLicks=thrLicks;,clear thrLicks ans'])
-      assignin('base','motion',curBData(9,:));
+      
+      assignin('base','motion',curBData(7,:));
       evalin('base',['bData.motion=motion;,clear motion ans'])
-      position=decodeShaftEncoder(curBData(9,:),4);
+      
+      assignin('base','scopePF',curBData(8,:));
+      evalin('base',['bData.scopePFI=scopePF;,clear tLick1 ans'])
+      
+      assignin('base','thrLicks',curBData(10,:));
+      evalin('base',['bData.thrLicks=thrLicks;,clear thrLicks ans'])
+      
+      
+
+      position=decodeShaftEncoder(curBData(7,:),4);
       velocity=nPointDeriv(position,curBData(2,:),1000);
       velocity(find(isnan(velocity)==1))=0;
       assignin('base','position',position);
@@ -1373,8 +1393,7 @@ function loadCSHDF_Callback(hObject, eventdata, handles)
 
 
 
-      assignin('base','motion',curBData(9,:));
-      evalin('base',['bData.motion=motion;,clear motion ans'])
+      
       
       bvars = evalin('base','fieldnames(bData)');
       set(handles.csListbox,'String',bvars)

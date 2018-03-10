@@ -131,7 +131,13 @@ function importButton_Callback(hObject, eventdata, handles)
 
         % I try to preserve bitdepth.
         canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
-        [imType,imageSize]=checkStackBitDepth(canaryImport);
+        [imType,imSize]=checkStackBitDepth(canaryImport);
+
+        assignin('base','bitDepth',imType);
+        evalin('base','metaData.bitDepth=bitDepth;clear bitDepth');
+        assignin('base','imSize',imSize);
+        evalin('base','metaData.imSize=imSize;clear imSize');
+        
 
         % tempFilt is just the files in firstIM:skip:end,
         tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
@@ -302,58 +308,88 @@ function importButton_Callback(hObject, eventdata, handles)
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function setDirectoryButton_Callback(hObject, eventdata, handles)
+    try
+        mPF=get(handles.multiPageFlag, 'Value');
+        hdfF=get(handles.importFromHDF, 'Value');
 
-    mPF=get(handles.multiPageFlag, 'Value');
-    hdfF=get(handles.importFromHDF, 'Value');
+        try
+            lastPath=evalin('base','metaData.importPath');
+        catch
+            lastPath=[filesep];
+        end
 
-    if mPF==0 && hdfF==0
-        imPath=uigetdir();
-        if imPath~=0
-            assignin('base','importPath',imPath);
-            filterString={get(handles.fileFilterString,'String')};
-            filteredFiles = dir([imPath filesep '*' filterString{1} '*']); 
-            assignin('base','filteredFiles',filteredFiles);
-            eNum=numel(filteredFiles);
-            set(handles.endImageEntry,'string',num2str(eNum))
-            evalin('base','metaData.filteredFiles=filteredFiles;')
-            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+        if mPF==0 && hdfF==0
+           
+            imPath=uigetdir(lastPath);
             
-        else
-        end
-        
-    elseif mPF==1
-        [tifFile,imPath]=uigetfile('*.*','Select your tif file');
-        if imPath~=0
-            mpTifInfo=imfinfo([imPath tifFile]);
-            imageCount=length(mpTifInfo);
-            set(handles.endImageEntry,'string',num2str(imageCount));
-            assignin('base','mpTifInfo',mpTifInfo);
-            assignin('base','importPath',imPath);
-            assignin('base','tifFile',tifFile);
-            evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ans ''mpTifInfo''')
-            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
-            evalin('base','metaData.tifFile=tifFile;,clear ans ''tifFile''')
-        else
-        end
-        
-    elseif hdfF==1
-        [hdfFile,imPath]=uigetfile('*.*','Select your hdf file');
-        if imPath~=0
-            disp(imPath)
-            tI=h5info([imPath hdfFile]);
-            dSetNames={tI.Datasets.Name};
-            clear tI;
-            set(handles.hdfPopSelector,'String',dSetNames);
-            
-            assignin('base','importPath',imPath);
-            assignin('base','hdfFile',hdfFile);
-            
-            evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
-            evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
+            if imPath~=0
+                assignin('base','importPath',imPath);
+                filterString={get(handles.fileFilterString,'String')};
+                filteredFiles = dir([imPath filesep '*' filterString{1} '*']); 
+                assignin('base','filteredFiles',filteredFiles);
+                eNum=numel(filteredFiles);
+                set(handles.endImageEntry,'string',num2str(eNum))
+                evalin('base','metaData.filteredFiles=filteredFiles;')
+                evalin('base','metaData.importPath=importPath;,clear ans importPath filteredFiles')
+                canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
+                [imType,imSize]=checkStackBitDepth(canaryImport);
+                assignin('base','bitDepth',imType);
+                evalin('base','metaData.bitDepth=bitDepth;clear bitDepth');
+                assignin('base','imSize',imSize);
+                evalin('base','metaData.imSize=imSize;clear imSize');
+                
 
-        else
+                fileNameGuess=strsplit(filteredFiles(1).folder,filesep);
+                set(handles.saveEntryText,'string',[fileNameGuess{end-1} ',' fileNameGuess{end}])
+                evalin('base','importType=0;');
+                evalin('base','metaData.importType=importType;,clear importType');
+            else
+            end
+            
+            
+        elseif mPF==1
+            [tifFile,imPath]=uigetfile('*.*','Select your tif file');
+            if imPath~=0
+                mpTifInfo=imfinfo([imPath tifFile]);
+                imageCount=length(mpTifInfo);
+                set(handles.endImageEntry,'string',num2str(imageCount));
+                assignin('base','mpTifInfo',mpTifInfo);
+                assignin('base','importPath',imPath);
+                assignin('base','tifFile',tifFile);
+                evalin('base','metaData.mpTifInfo=mpTifInfo;,clear ans mpTifInfo')
+                evalin('base','metaData.importPath=importPath;,clear ans importPath')
+                evalin('base','metaData.tifFile=tifFile;,clear ans tifFile')
+                fileNameGuess=strsplit(imPath,filesep);
+                set(handles.saveEntryText,'string',[filesep fileNameGuess{end-1} filesep tifFile])
+                evalin('base','importType=1;');
+                evalin('base','metaData.importType=importType;,clear importType');
+            else
+            end
+            
+            
+        elseif hdfF==1
+            [hdfFile,imPath]=uigetfile('*.*','Select your hdf file');
+            if imPath~=0
+                
+                tI=h5info([imPath hdfFile]);
+                dSetNames={tI.Datasets.Name};
+                clear tI;
+                set(handles.hdfPopSelector,'String',dSetNames);
+                
+                assignin('base','importPath',imPath);
+                assignin('base','hdfFile',hdfFile);
+                
+                evalin('base','metaData.importPath=importPath;,clear ans ''importPath''')
+                evalin('base','metaData.hdfFile=hdfFile;,clear ans ''hdfFile''')
+                evalin('base','importType=2;');
+                evalin('base','metaData.importType=importType;,clear importType');
+
+            else
+            end
         end
+    catch
     end
+
 
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
@@ -628,7 +664,7 @@ function diskRegisterButton_Callback(hObject, eventdata, handles)
     filteredFiles = dir([imPath filesep '*' filterString{1} '*' imageType{1}]);
     filteredFiles=resortImageFileMap(filteredFiles);
     assignin('base','importedFileList',filteredFiles)
-    evalin('base','metaData.filteredFiles=filteredFiles;,clear ''filteredFiles''')
+    evalin('base','metaData.filteredFiles=filteredFiles;,clear filteredFiles')
 
 
     % we need to pad from 1 to the image you care about, because par loops
@@ -1377,3 +1413,106 @@ function renameStringEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+function exportHDF_Callback(hObject, eventdata, handles)
+    mPF=evalin('base','metaData.importType;');
+    fPath=evalin('base','metaData.importPath;');
+    tsPath=strsplit(fPath,filesep);
+    sPath=[];
+    for n=2:numel(tsPath)-1
+        sPath=[sPath filesep tsPath{n}];
+    end
+    sPath=[sPath filesep];
+
+    if strcmp(fPath(end),filesep)==0
+        fPath=[fPath filesep];
+    else
+    end 
+    
+    if mPF==0
+        filteredFiles=evalin('base','metaData.filteredFiles;');
+        dTypeStr=evalin('base','metaData.bitDepth;');
+        yDim=evalin('base','metaData.imSize(1);');
+        xDim=evalin('base','metaData.imSize(2);');
+    else
+    end
+
+    if mPF==1
+        tifFile=evalin('base','metaData.tifFile;');
+        bDepth=evalin('base','metaData.mpTifInfo(1).BitDepth;');
+        if bDepth==8
+            dTypeStr='uint8';
+        elseif bDepth==32
+            dTypeStr='uint32';
+        else
+            dTypeStr='uint16';
+        end
+        yDim=evalin('base','metaData.mpTifInfo(1).Height;');
+        xDim=evalin('base','metaData.mpTifInfo(1).Width;');
+    else
+    end
+
+    % create hdf set
+
+        
+    imF=str2num(get(handles.firstImageEntry,'String'));
+    imS=str2num(get(handles.skipFactorEntry,'String'));
+    imL=str2num(get(handles.endImageEntry,'String'));
+
+    imRange=imF:imS:imL;
+    imageCount=numel(imRange);
+
+    
+    
+    
+    hdfSaveInfo=get(handles.saveEntryText,'string');
+    tStr=strsplit(hdfSaveInfo,',');
+
+
+    hdfDSet=['/' tStr{2}];
+    hdfName=[sPath tStr{1} '.hdf'];
+
+
+    disp(hdfName)
+    disp(tStr)
+    h5create(hdfName,hdfDSet,[yDim xDim imageCount],'Datatype',dTypeStr,'ChunkSize',[yDim xDim 1]);
+    set(handles.feedbackString,'String',['exporting to hdf ...'])
+    pause(0.00000000000000001)
+    guidata(hObject, handles);
+    tic     
+    for g=1:imageCount
+        if mod(g,250)==0
+            set(handles.exportHDF,'String',[num2str(g) '/' num2str(imageCount)])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+        else
+        end
+        if mPF==1
+            tempImported=imread([fPath tifFile],'Index',imRange(g));
+        else
+            tempImported=imread([filteredFiles(imRange(g)).folder filesep filteredFiles(imRange(g)).name]);
+        end
+        h5write(hdfName,hdfDSet,tempImported,[1 1 g],[yDim xDim 1]);
+    end
+    hdfExpTime=toc;
+    disp(['it took ' num2str(hdfExpTime) ' seconds to export'])
+
+        
+    clear tIm
+    set(handles.exportHDF,'String','To HDF')
+    set(handles.feedbackString,'String',['Exported ' num2str(numel(imRange)) ' Images'])
+    pause(0.00000000000000001)
+    guidata(hObject, handles);
+
+function saveEntryText_Callback(hObject, eventdata, handles)
+function saveEntryText_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function edit25_Callback(hObject, eventdata, handles)
+function edit25_CreateFcn(hObject, eventdata, handles)
+
+    if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor','white');
+    end
+function pushbutton41_Callback(hObject, eventdata, handles)
