@@ -13,10 +13,6 @@ function varargout = extractor(varargin)
 % Code by: Chris Deister
 % Questions: cdeister@brown.edu
 %
-% Known Issues:
-% A) For disk extraction: you have to specify the frame range.
-% B) All df/f options default to somaticF for now. I am overhauling this. 
-
 
 
 %todo: I want to kill dispROIString
@@ -47,42 +43,43 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     pause(0.00000001);
     guidata(hObject, handles);
     imPath=evalin('base','metaData.importPath');
+    importType=evalin('base','metaData.importType;');
     
-    try
-        fileList=evalin('base','metaData.filteredFiles');
-    catch
-        fileList=[];
-    end
-    
-    try
-        hdfSize=evalin('base','metaData.hdfSize');
-    catch
-        hdfSize=[0 0 0];
-    end
-
-    if hdfSize(3)>0
-        useHDF=1;
-    else
-        useHDF=0;
-    end
-
+    % get images
     firstIm=str2num(get(handles.firstImageEntry,'string'));
     endIm=str2num(get(handles.endImageEntry,'string'));
     skipImagesToggle=get(handles.diskExtractSkipByToggle,'Value');
+    binImagesToggle=get(handles.binByToggle,'Value');
+    if binImagesToggle 
+        binFac=str2num(get(handles.binByEntry,'String'));
+    else
+        binFac=1;
+    end
     
     if skipImagesToggle==1
         skipF=str2num(get(handles.diskExtractSkipByEntry,'String'));
     else
         skipF=1;
     end
-
-    if useHDF
-        hdfImportIndex=firstIm:skipF:endIm;
-    else
-        disp(['after skiping you will extract from ' num2str(numel(fileList)) ' images'])
-    end
+    imRange=firstIm:skipF:endIm;
+    imCount=numel(imRange);
     
+ 
+  
+    % we set it up differently depending on if folder, mptiff or hdf.
+    if importType==0 %folder of files
+        fileList=evalin('base','metaData.filteredFiles');
+        imageSize=evalin('base','metaData.imSize;');
+    elseif importType==2 % hdf
+        hdfSize=evalin('base','metaData.hdfSize');
+        imageSize=[hdfSize(1),hdfSize(2)];
+        tP=evalin('base','metaData.importPath');
+        tH=evalin('base','metaData.hdfFile');
+        tDS_select=evalin('base','metaData.tDS_select');
+    else
+    end
 
+    disp(['after skiping you will extract from ' num2str(imCount) ' images'])
 
     % ************ handle concatination of roi types
     roiStringMap={'somaticROIs','dendriticROIs','axonalROIs','boutonROIs','neuropilROIs','vesselROIs','redSomaticROIs'};
@@ -90,8 +87,11 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
         get(handles.axonExtractCheck,'Value'),get(handles.boutonExtractCheck,'Value'),...
         get(handles.neuropilExtractCheck,'Value'),get(handles.vascularExtractCheck,'Value'),...
         get(handles.redSomaticExtractCheck,'Value')];
-    rois=[];   % we will map in the selected rois into this
+    
     warnBit=1;
+    rois=[];
+    
+    disp(numel(roiToggleTruth))
     for n=1:numel(roiToggleTruth)
         if roiToggleTruth(n)==1
             warnBit=0;      % if anything is selected flip the warning to 0.
@@ -100,30 +100,30 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
         else
         end
     end
+    roiStack=zeros(fix(imageSize(1)/binFac),fix(imageSize(2)/binFac),numel(rois));
+    
 
+    for n=1:numel(rois)
+        roiStack(:,:,n)=rois{1,n};
+    end
+    assignin('base','roiStack',roiStack);
+    
     if warnBit==1
         disp('no rois')
     end
     % ************ end handle concatination of roi types
 
-    % ************  handle image list prep
-    numImages=fix(((endIm-firstIm)+1)/skipF);
-    disp(numImages)
-    sED=zeros(numel(rois),numImages);
-    regFlag=get(handles.diskRegFlag,'Value');
 
-    % ************  end handle image list prep
-    
+    tempF=zeros(numel(rois),imCount);
+    regFlag=get(handles.diskRegFlag,'Value');
     disp(['about to extract, this should take ~ ' ...
-    	num2str((numel(rois)*.0004*numImages)./60) ' minutes'])
+    	num2str((numel(rois)*.0004*imCount)./60) ' minutes'])
     cc=clock;
     disp(['started at ' num2str(cc(4)) ':'  num2str(cc(5))])
     tic
     disp('extracting')
-    diskLuminance=zeros(1,numImages);
-    medianFlag=get(handles.medianExtractToggle,'Value');
-
-    if useHDF
+    
+    if importType==2
         tP=evalin('base','metaData.importPath');
         tH=evalin('base','metaData.hdfFile');
         tDS_select=evalin('base','metaData.tDS_select');
@@ -131,73 +131,78 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     end
 
     if regFlag==1
-        template=evalin('base','regTemplate');
-        registeredTransformations=zeros(4,numImages);
+        template=double(evalin('base','regTemplate'));
+        regTransforms=zeros(4,imCount);
         fTemplate=fft2(template);
     else
     end
-
-    curIm=1;
-    totImages=numel(firstIm:skipF:endIm);
-
-    for q=1:numel(rois)
-        curIm=1;
-        [yV,xV]=ind2sub(size(rois{q}),find(rois{q}==1));
-        cInds={min(yV):(min(yV)+(numel(unique(yV)))-1),(min(xV):min(xV)+(numel(unique(xV)))-1)};
-        cutMask=rois{q}(cInds{1},cInds{2});
-        % cInds{2} is x and hdfSize(1) is y
-        for n=firstIm:skipF:endIm
-            if useHDF
-                impImage=h5read([tP tH],['/' tDS_select],[cInds{1}(1) cInds{2}(1) n],[numel(cInds{1}) numel(cInds{2}) 1]);
-            else 
-                impImage=imread([imPath filesep fileList(n).name]);
-            end
-            if regFlag==1
-                [out1,out2]=dftregistration(fTemplate,fft2(impImage),100);
-                registeredTransformations(:,curIm)=out1;
-                impImage=abs(ifft2(out2));
-            else
-            end
-
-
-            if medianFlag~=1
-                sED(q,curIm)=mean(impImage(cutMask(:,:)==1));  
-            else
-                sED(q,curIm)=median(impImage(cutMask(:,:)==1));  
-            end
-        
-
-        if mod(n,500)==0
-    		set(handles.diskExtractButton,'String',[num2str(q) '/' num2str(numel(rois))])
-    		pause(0.00000000000000001)
-    		guidata(hObject, handles);
-		else
-		end 
-        curIm=curIm+1;
+    
+    for n=1:numel(imRange)
+        tic
+        % import the image
+        if importType==2
+            impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
+        else 
+            impImage=imread([imPath filesep fileList(n).name]);
         end
-    end
-    eT=toc;
-    set(handles.diskExtractButton,'String','Disk Extract')
-    assignin('base','diskLuminance',diskLuminance);
-    disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
+        
+        if binImagesToggle
+            impImage=binImages(impImage,binFac);
+        % assignin('base','dImpImage',impImage);
+        % debug
+        else
+        end
+        
+        
+        % register it (if we want).
+        if regFlag==1
+            [out1,out2]=dftregistration(fTemplate,fft2(impImage),1);
+            regTransforms(:,n)=out1;
+            impImage=abs(ifft2(out2));
+        else
+        end
+%         
+%         disp(['debug time = ' num2str(dTm(n))])
+        
+        %***** vectorized a tad slower
+        ff=double(impImage).*roiStack;
+        ffMu=squeeze(sum(sum(ff))./sum(sum(ff ~= 0)));
+        tempF(:,n)=ffMu;
+        %****
+        
+%         for q=1:size(roiStack,3)
+%             tempF(q,n)=mean(impImage(roiStack(:,:,q)==1));
+%         end
+        
+        
+        if mod(n,100)==0
+            set(handles.diskExtractButton,'String',[num2str(n) '/' num2str(numel(imRange))])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+        else
+        end 
 
-    if regFlag==1
-        assignin('base','registeredTransformations',registeredTransformations);
-        assignin('base','diskLuminance',diskLuminance);
-    else
+        dTm(n)=toc;
     end
+
+
+    eT=toc;    
+    disp(['done extracting, this took ' num2str(eT./60) ' minutes'])
 
     for n=1:numel(roiToggleTruth)
         if roiToggleTruth(n)==1
             roisToMapCount=evalin('base', ['numel(' roiStringMap{n} ')']);
-            assignin('base',[roiStringMap{n}(1:end-4) 'F'],sED(1:roisToMapCount,:));
-            sED(1:roisToMapCount,:)=[];
+            assignin('base',[roiStringMap{n}(1:end-4) 'F'],tempF(1:roisToMapCount,:));
+            tempF(1:roisToMapCount,:)=[];
         else
         end
     end
-
+    assignin('base','dTm',dTm);
+    
+    set(handles.diskExtractButton,'String','Disk Extract')
     set(handles.extractFeedbackString,'String','')
     guidata(hObject, handles);
+    
 function extractButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -1241,7 +1246,7 @@ function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
     'relatedPixelCountReturn','groupCounter','killGroupBtn','killFirstBtn','keepFirstBtn',...
     'groupMarkerBtn','killSelectedBtn','rcBtn_generic','deleteFlagged','flagROIButton','importerBtn',...
     'roiMakerBtn','loadCSHDF','csListbox','plotCSVar','setImageTime','setCSTime','refreshCSVarBtn',...
-    'plotNormToggle','upSampleTrimImages','plotScaleEntry'};
+    'plotNormToggle','upSampleTrimImages','plotScaleEntry','binByToggle','binByEntry'};
 
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
@@ -1249,7 +1254,7 @@ function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
     
     decUIElements={'text29','text4','text14','text11','text15','text16',...
     'corAxis','featureHist','featurePlot','text1','text9','text24','relatedValuesSt',...
-    'text18','text22','text27','text19'};
+    'text18','text22','text27','text19','text37','text36'};
     
     for n=1:numel(decUIElements)
         eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
@@ -1547,3 +1552,18 @@ function plotScaleEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+
+
+function binByToggle_Callback(hObject, eventdata, handles)
+
+
+function binByEntry_Callback(hObject, eventdata, handles)
+
+
+function binByEntry_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

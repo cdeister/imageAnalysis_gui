@@ -142,8 +142,8 @@ function importButton_Callback(hObject, eventdata, handles)
         % tempFilt is just the files in firstIM:skip:end,
         tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
         assignin('base','tempFiltFiles',tempFiltFiles);
-        evalin('base',['importedImages=zeros(' num2str(imageSize(1)) ',' ...
-            num2str(imageSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
+        evalin('base',['importedImages=zeros(' num2str(imSize(1)) ',' ...
+            num2str(imSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
         evalin('base','metaData.lastImported=tempFiltFiles;')
         
         tic
@@ -1217,9 +1217,7 @@ function binPixels_Callback(hObject, eventdata, handles)
             set(handles.feedbackString,'String',['Binning Stack ...'])
             pause(0.00000000000000001);
             guidata(hObject, handles);
-            evalin('base',[selections{selectionsIndex} '=uint16(squeeze(mean(squeeze(mean(reshape(' selections{selectionsIndex}...
-                ',' num2str(binPix) ',' num2str(fix(s(1)/binPix)) ',' num2str(binPix) ',' num2str(fix(s(2)/binPix)) ...
-                ',' num2str(s(3)) ,'))),2)));'])
+            evalin('base',[selections{selectionsIndex} '=uint16(binImages(' selections{selectionsIndex} ',' num2str(binPix) '));'])
             set(handles.feedbackString,'String',['finished stack binning ...'])
             pause(0.00000000000000001)
             guidata(hObject, handles);
