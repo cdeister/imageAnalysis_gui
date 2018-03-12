@@ -1351,7 +1351,8 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         'saveDirectoryButton','saveStackButton','refreshVarListButton',...
         'registerButton','setRegStackButton','templateButton','meanProjectButton',...
         'workspaceVarBox','setDirectoryButton','importButton','stackResizeButton',...
-        'resizeStackXEntry','resizeStackYEntry','resizeStackZEntry','renameStringEntry'};
+        'resizeStackXEntry','resizeStackYEntry','resizeStackZEntry','renameStringEntry',...
+        'saveEntryText','exportHDF'};
     
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
@@ -1409,15 +1410,17 @@ function renameStringEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+    
 function exportHDF_Callback(hObject, eventdata, handles)
     mPF=evalin('base','metaData.importType;');
     fPath=evalin('base','metaData.importPath;');
     tsPath=strsplit(fPath,filesep);
-    sPath=[];
+    sPath=tsPath{1};
     for n=2:numel(tsPath)-1
         sPath=[sPath filesep tsPath{n}];
     end
     sPath=[sPath filesep];
+    assignin('base','sPath',sPath);
 
     if strcmp(fPath(end),filesep)==0
         fPath=[fPath filesep];
