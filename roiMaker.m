@@ -1577,8 +1577,11 @@ function segmentMaskBtn_Callback(hObject, eventdata, handles)
         catch
             curIm=1;
         end
-
-        set(handles.frameTextEntry,'String',num2str(curIm+1))
+        try
+            set(handles.frameTextEntry,'String',num2str(curIm+1))
+        catch
+            set(handles.frameTextEntry,'String',num2str(curIm))
+        end
         loadMeanProjectionButton_Callback(hObject, eventdata,handles)
         trackFrame(hObject, eventdata, handles);
         guidata(hObject, handles);

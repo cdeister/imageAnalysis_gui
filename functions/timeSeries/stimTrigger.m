@@ -11,9 +11,9 @@ for i=1:numel(stimTimes)
     try
         stimTimeInSamples=fix(stimTimes(i)/sampleInterval);
         dRange=(stimTimeInSamples-preSample):(stimTimeInSamples+postSample);
-        disp(postSample)
-        disp(i)
-        disp(size(dataMatrix))
+%         disp(postSample)
+%         disp(i)
+%         disp(size(dataMatrix))
         out(:,:,i)=dataMatrix(dRange,:);
         clear dRange
     catch

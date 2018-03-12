@@ -4,7 +4,7 @@ function varargout = extractor(varargin)
 % values from ROIs made in roiMaker
 %
 % Will extract from disk, or a selected matrix in your workspace.
-% This will be improved soon to give options to control parallelization,
+% This will be improved soon to  give options to control parallelization,
 % image types etc.
 %
 %
@@ -161,8 +161,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
             impImage=abs(ifft2(out2));
         else
         end
-%         
-%         disp(['debug time = ' num2str(dTm(n))])
+
         
         %***** vectorized a tad slower
         ff=double(impImage).*roiStack;
@@ -170,9 +169,9 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
         tempF(:,n)=ffMu;
         %****
         
-%         for q=1:size(roiStack,3)
-%             tempF(q,n)=mean(impImage(roiStack(:,:,q)==1));
-%         end
+        %for q=1:size(roiStack,3)
+        %   tempF(q,n)=mean(impImage(roiStack(:,:,q)==1));
+        %end
         
         
         if mod(n,100)==0
@@ -202,7 +201,6 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     set(handles.diskExtractButton,'String','Disk Extract')
     set(handles.extractFeedbackString,'String','')
     guidata(hObject, handles);
-    
 function extractButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -293,8 +291,6 @@ function extractButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
     else
     end
-
-
 function roiDisplaySlider_Callback(hObject, eventdata, handles)
     % make sure the slider is caught up
     sliderValue = fix(get(handles.roiDisplaySlider,'Value'));

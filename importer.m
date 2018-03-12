@@ -32,8 +32,6 @@ function sendFeedback(hObject,eventdata,handles,uString)
     set(handles.feedbackString,'String',uString)
     pause(0.000000001)
     guidata(hObject, handles);
-
-% main import procedure
 function importButton_Callback(hObject, eventdata, handles)
     
     mPF=get(handles.multiPageFlag, 'Value');
@@ -172,7 +170,7 @@ function importButton_Callback(hObject, eventdata, handles)
         end
         iT=toc;
 
-        set(handles.importButton,'String','Import Images')
+        set(handles.importButton,'String','WS Import')
         set(handles.feedbackString,'String',['Imported ' num2str(numel(tempFiltFiles)) ' Images'])
         evalin('base','clear imPath ans filteredFiles tempFiltFiles')
         guidata(hObject, handles);
@@ -225,7 +223,7 @@ function importButton_Callback(hObject, eventdata, handles)
             end
         end
         
-        set(handles.importButton,'String','Import Images')
+        set(handles.importButton,'String','WS Import')
         set(handles.feedbackString,'String',['Imported ' num2str(numel(imRange)) ' Images'])
         pause(0.00000000000000001)
         guidata(hObject, handles);
@@ -296,7 +294,7 @@ function importButton_Callback(hObject, eventdata, handles)
                     
         assignin('base',tdUse,tData);
         clear tData
-        set(handles.importButton,'String','Import Images')
+        set(handles.importButton,'String','WS Import')
         set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ...
             ' Images'])
         pause(0.00000000000000001)
