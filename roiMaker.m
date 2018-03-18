@@ -87,14 +87,16 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     'cMaskToggle','curImageToMaskButton','segmentMaskBtn','autoMaskBtn','binarySensEntry',...
     'minRoiEntry','manROIBtn','roiTypeMenu','deleteWSVar','binaryThrValEntry','cutByBtn',...
     'imageCutEntry','deDupeRoisBtn','clusterMaskBtn','maxClusterEntry','manROIBtn_Generic',...
-    'overlayIndRoiToggle','feedbackString','neuropilAlertString','saveImageBtn','normSelection'};
+    'overlayIndRoiToggle','feedbackString','neuropilAlertString','saveImageBtn','normSelection',...
+    'yCropEntry','xCropEntry'};
 
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
     end
     
     decUIElements={'text14','text12','text13','text16','text17','text19',...
-    'text10','text6','text7','text8','imageWindow','text21','text22'};
+    'text10','text6','text7','text8','imageWindow','text21','text22',...
+    'text25','text26'};
     for n=1:numel(decUIElements)
         eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
     end
@@ -163,11 +165,17 @@ function addROIsFromMask(hObject,eventdata,handles,mask)
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
+function [wsObj wsClass wsSize]=getWSVar(hObject, eventdata, handles)
+    
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     wsObj=evalin('base',selections{selectionsIndex});
+    wsSize=evalin('base',['size(' selections{selectionsIndex} ');']);
     wsClass=class(wsObj);
+    assignin('base','lastVar',selections{selectionsIndex})
+    % assignin('base','lastVarSize',size(wsObj))
+    evalin('base','self.lastVar=lastVar;,clear lastVar')
+    % evalin('base','self.lastVarSize=lastVarSize;,clear lastVarSize')
 
 function [curFrame]=trackFrame(hObject, eventdata, handles)
     curFrame=fix(str2double(get(handles.frameTextEntry,'String')));        
@@ -457,20 +465,31 @@ function vesselButton_Callback(hObject, eventdata, handles)
     freehandROI(hObject,eventdata,handles,'vessel')
 
 function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
+    % a) update w/b sliders if image type changes substantially.
+    % b) update image count slider to 1 if not a stack.
+    % c) update image count slider for a stack only if stack changed.
 
-    a = str2double(get(handles.lowCutEntry,'String'));
-    b = str2double(get(handles.highCutEntry,'String'));
+
+    
+    % assume we will update the pixel histogram, and that the image is new.
+    % we test later
     updateHist=1;
-    imChange=1;
+    imTypeChange=1;
 
+
+    % this will optionally take an argument of a specific image to plot.
     if nargin==3
-        [imageP imClass]=getWSVar(hObject, eventdata, handles);
+        [imageP imClass imSize]=getWSVar(hObject, eventdata, handles);
+        % lastVar=evalin('base','metaData.lastVar;');
     else
         imageP=defImage;
         imClass=class(defImage);
-        updateHist=0;
+        imSize=size(imageP);
     end
 
+    
+
+    % (a) should we change the slider bounds?
     tMxVl=fix(max(max(imageP(:,:,1))));
     tMxVlSc=fix(0.2*tMxVl);
     maxVal=tMxVl+tMxVlSc;
@@ -483,26 +502,59 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
     try 
         lastMax=evalin('base','metaData.lastMax;');
         if lastMax==maxVal
-            imChange=0;
+            imTypeChange=0;
         else
         end
     catch
         assignin('base','lastMax',maxVal);
         evalin('base','metaData.lastMax=lastMax;,clear lastMax');
-        imChange=1;
+        imTypeChange=1;
     end
 
     assignin('base','lastMax',maxVal);
     evalin('base','metaData.lastMax=lastMax;,clear lastMax');
 
+    if numel(imSize)==2
+        stackInd=1;
+        stackNum=1;
+        frm_sliderMin = 0;
+        frm_sliderMax = 1;
+    elseif numel(imSize)==3
+        stackNum=imSize(3);
+        stackInd=fix(str2num(get(handles.frameTextEntry,'String')));
+        if stackInd>stackNum
+            stackInd=1;
+        else
+        end
+        frm_sliderMin = 1;
+        frm_sliderMax = fix(stackNum);
+    else
+    end
 
-    if imChange==1
+    set(handles.frameTextEntry,'String',num2str(stackInd));
+    frm_sliderStep = [1, 1] / (frm_sliderMax - frm_sliderMin); % major and minor steps of 1
+    set(handles.frameSlider, 'Min', frm_sliderMin);
+    set(handles.frameSlider, 'Max', frm_sliderMax);
+    set(handles.frameSlider, 'SliderStep', frm_sliderStep);
+    set(handles.frameSlider, 'Value', stackInd); % set to beginning of sequence
+    imageP=imageP(:,:,stackInd);
+
+    % change w/b sliders?
+    if imTypeChange==1
+
+        set(handles.yCropEntry,'String',['1' ':' num2str(imSize(1))]);
+        set(handles.xCropEntry,'String',['1' ':' num2str(imSize(2))]);
+        
+        stackInd=1;
+
         set(handles.highCutSlider,'Max',maxVal);
         set(handles.highCutSlider,'Min',0);
+        set(handles.highCutSlider,'Value',maxVal);
+        
         set(handles.lowCutSlider,'Max',maxVal);
         set(handles.lowCutSlider,'Min',0);
-        set(handles.highCutSlider,'Value',maxVal);
         set(handles.lowCutSlider,'Value',0);
+
         set(handles.highCutEntry,'String',num2str(maxVal));
         set(handles.lowCutEntry,'String','0');
         
@@ -512,57 +564,12 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
             sliderStep(2)=0.05;
         else
         end
-        set(handles.lowCutSlider, 'SliderStep', sliderStep);
-        set(handles.highCutSlider, 'SliderStep', sliderStep);
-        set(handles.frameSlider, 'Value', 1); % set to beginning of sequence
     else
     end
-
-
-    guidata(hObject, handles);
-
-
-    if numel(size(imageP))==3
-        
-        stackNum=size(imageP,3);
-        stackInd=fix(str2num(get(handles.frameTextEntry,'String')));
-        if stackInd>stackNum
-            set(handles.frameTextEntry,'String','stackNum');
-            guidata(hObject, handles);
-        else
-        end
-        try
-            imageP=imageP(:,:,stackInd);
-        catch
-        end
-
-        sliderMin = 1;
-        sliderMax = fix(stackNum); % this is variable
-        sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
-        
-        set(handles.frameSlider, 'Min', sliderMin);
-        set(handles.frameSlider, 'Max', sliderMax);
-        set(handles.frameSlider, 'SliderStep', sliderStep);
-        set(handles.frameSlider, 'Value', stackInd); % set to beginning of sequence
-        guidata(hObject, handles);
-        
-    else
-        set(handles.frameTextEntry,'String','1');
-        sliderMin = 0;
-        sliderMax = 1; % this is variable
-        sliderStep = [1, 1] / (sliderMax - sliderMin); % major and minor steps of 1
-        
-        set(handles.frameSlider, 'Min', sliderMin);
-        set(handles.frameSlider, 'Max', sliderMax);
-        set(handles.frameSlider, 'SliderStep', sliderStep);
-        set(handles.frameSlider, 'Value', 1); % set to beginning of sequence
-        set(handles.frameTextEntry,'Value',1);
-        guidata(hObject, handles);
-    end
-
+    
     a = str2double(get(handles.lowCutEntry,'String'));
     b = str2double(get(handles.highCutEntry,'String'));
-
+    
     medFilter=get(handles.medianFilterToggle,'Value');
     if medFilter==1
         imageP=medfilt2(imageP);
@@ -575,19 +582,35 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
     else
     end
 
+    pMO=get(handles.overlayIndRoiToggle,'Value');
+    % override if there is no mask
+    mE=evalin('base','exist(''cMask'')');
+    if mE==0
+        pMO=0;
+    else
+    end
+
+    if pMO
+        cMask=evalin('base','cMask;');
+        imageP=double(imageP).*cMask;
+    else
+    end
+
+
+
+
+
     sL=get(handles.colormapTextEntry,'String');
     sV=get(handles.colormapTextEntry,'Value');
     cMap=sL{sV};
 
 
     axes(handles.imageWindow);
-
     pImg=imshow(imageP,'DisplayRange',[a b]);
     colormap(gca,cMap)
 
 
     if updateHist
-        
         if numel(find(double(imageP)>0))>2
             axes(handles.imageHistogram);
             nhist(nonzeros(double(imageP)),'box','maxbins',40);
@@ -607,6 +630,7 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
         end
     else
     end
+    
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
@@ -1005,17 +1029,27 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         % play loop
         i=startFrame;
         while pS==1
-            if i>stackSize
-                pS=0;
-                break
-            else
-            end
+            xTmp=strsplit(get(handles.xCropEntry,'String'),':');
+            yTmp=strsplit(get(handles.yCropEntry,'String'),':');
+
+
+
+            cropX=str2num(xTmp{1}):str2num(xTmp{2});
+            cropY=str2num(yTmp{1}):str2num(yTmp{2});
 
             % get current image
             curImage=double(evalin('base',[stackName '(:,:,' num2str(i) ');']));
+            try
+                cropTest=curImage(cropY,cropX);
+            catch
+                cropX=1:size(curImage,2);
+                cropY=1:size(curImage,1);
+            end
+
+            
             % weight if need be.
             ii=(ii.*(1-mfactor))+curImage.*mfactor;
-            ii=ii.*cMask;
+            % ii=ii.*cMask;
             
             medFilter=get(handles.medianFilterToggle,'Value');
             if medFilter==1
@@ -1031,16 +1065,23 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
             
             set(handles.frameTextEntry,'String',num2str(fix(i)));
             set(handles.frameSlider, 'Value', i);
-            h=imshow(ii,'DisplayRange',[lowCut highCut]);
+            h=imshow(ii(cropY,cropX),'DisplayRange',[lowCut highCut]);
             colormap(gca,cMap);
             daspect([1 1 1])
-            % set(h, 'AlphaData', evalin('base','somaticROIs{72};'))
-            % set(h, 'AlphaData', 1)
+            if get(handles.overlayIndRoiToggle,'Value')==1
+                tA=evalin('base','cMask;');
+                set(h, 'AlphaData', tA(cropY,cropX))
+            else
+            end
             drawnow;
             pS=evalin('base','metaData.iPS;');
             guidata(hObject, handles);
             delete(h);
             i=i+1;
+            if i>sliderMax
+                i=1;
+            else
+            end
         end
 
         set(handles.frameTextEntry,'String',num2str(fix(i)));
@@ -1048,10 +1089,16 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         guidata(hObject, handles);
         curImage=double(evalin('base',[stackName '(:,:,' num2str(i) ');']));
         ii=(ii.*(1-mfactor))+curImage.*mfactor;
-        ii=ii.*cMask;
-        h=imshow(ii,'DisplayRange',[lowCut highCut]);
+        % ii=ii.*cMask;
+        h=imshow(ii(cropY,cropX),'DisplayRange',[lowCut highCut]);
+        if get(handles.overlayIndRoiToggle,'Value')==1
+            tA=evalin('base','cMask;');
+            set(h, 'AlphaData', tA(cropY,cropX))
+        else
+        end
         colormap(gca,cMap);
         daspect([1 1 1])
+
 
         axes(handles.imageWindow);
         assignin('base','currentImage',ii)
@@ -1087,7 +1134,7 @@ function gXCorImageCountEntry_Callback(hObject, eventdata, handles)
 function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
 
 function getGXcorButton_Callback(hObject, eventdata, handles)
-    set(handles.getGXcorButton,'Enabled','off');
+    set(handles.getGXcorButton,'Enable','off');
     try
     % Poll Params
     filterState=get(handles.gXCorSmoothToggle,'Value');
@@ -1186,14 +1233,14 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
     assignin('base',['cimg_' selectStack],cimg);
     assignin('base','cimg',cimg);
     set(handles.feedbackString,'String','! done with xcor')
-    set(handles.getGXcorButton,'Enabled','on');  
+    set(handles.getGXcorButton,'Enable','on');  
     pause(0.00001);
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
 
     % ---- end xcor image code
     catch
-    set(handles.getGXcorButton,'Enabled','on'); 
+    set(handles.getGXcorButton,'Enable','on'); 
     guidata(hObject, handles);
     end
 
@@ -1523,6 +1570,9 @@ function medianFilterToggle_Callback(hObject, eventdata, handles)
 function wienerFilterToggle_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+function overlayIndRoiToggle_Callback(hObject,eventdata,handles)
+
+    loadMeanProjectionButton_Callback(hObject, eventdata, handles)    
 
 % program nav
 function importerButton_Callback(hObject, eventdata, handles)
@@ -1861,7 +1911,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
         end
     end
 function maxClusterEntry_Callback(hObject, eventdata, handles)
-function overlayIndRoiToggle_Callback(hObject,eventdata,handles)
+
 function saveImageBtn_Callback(hObject, eventdata, handles)
     axes(handles.imageWindow);
     g=getframe;
@@ -2022,3 +2072,27 @@ function lowCutEntry_CreateFcn(hObject, eventdata, handles)
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
+
+
+function yCropEntry_Callback(hObject, eventdata, handles)
+
+
+function yCropEntry_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function xCropEntry_Callback(hObject, eventdata, handles)
+
+
+function xCropEntry_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
