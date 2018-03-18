@@ -7,13 +7,13 @@ stimFrames=floor(cSS/0.0510185550219089);
 colFrame=size(somaticF,2);
 
 stimFrames(find(stimFrames>size(somaticF,2)-postWindow))=[];
-cOrients=bData.curOrientations(1:numel(stimFrames))/10;
+cOrients=bData.orientations(1:numel(stimFrames));
 %%
  
 clear trigF
 clear tMu
 
-tR=11;
+tR=1;
 oList=unique(cOrients);
 for k=1:numel(oList)
 sFrames=find(cOrients==oList(k));

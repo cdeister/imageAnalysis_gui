@@ -31,10 +31,14 @@ chIndMap=[1,2,3,4,5,6,7,8,9,10];
 % use: chFind('interrupts') will return 1.
 chFind=@(b) chIndMap(find(strcmp(chStrMap,b)==1));
 
+
 % A) Parse the dataset.
 for n=1:numel(chStrMap)
 	eval(['parsedStruct.' chStrMap{n} '=csBData(chFind("' chStrMap{n} '"),:);'])
 end
+
+parsedStruct.sessionTime=parsedStruct.sessionTime/1000;
+parsedStruct.stateTime=parsedStruct.stateTime/1000;
 
 % B) Define a trial by the onset of the stimulus state (usually state2). 
 % Store the stim-onset samples, make a binary vector and count trials.
@@ -69,7 +73,8 @@ end
 parsedStruct.position=decodeShaftEncoder(parsedStruct.motionTracker,3);
 parsedStruct.velocity=nPointDeriv(parsedStruct.position,parsedStruct.sessionTime,1000);
 parsedStruct.velocity(find(isnan(parsedStruct.velocity)==1))=0;
-      
+parsedStruct.binaryVelocity=binarizeResponse(bData.velocity,0.005);
+parsedStruct.motionBoutStarts=find(diff(binaryVelocity)>0.8);
 
 
 
