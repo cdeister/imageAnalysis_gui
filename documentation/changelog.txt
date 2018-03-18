@@ -1,0 +1,18 @@
+changelog (3/17/2018)
+
+importer:
+a) applyTransforms should not create a duplicate stack. will write-over the selected stack.
+b) you can now rename workspace variables by entering text in the text entry box and selecting "rename" in the workspace browser.
+
+roiMaker:
+a) various ui tweaks.
+b) pca is faster.
+c) pca now writes out a component stack akin to nm1, which is a way of visualizing the features/filters found.
+
+extractor:
+a) csParser is improved:
+	> "loadHDF" now invokes a function called 'csParser.m' 
+	> csParser.m can be run outside of extractor.
+	> csParser parses all visual variables now.
+	> csParser will now always return just the number of variables for trials actually run. if you are curious as to why there were ever more than the number of trials, see the function's comments. 
+	> trial/attribute data (stim params) are now plottable.

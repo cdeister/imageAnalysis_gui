@@ -6,8 +6,7 @@
 % No Documentation (yet)
 %
 %
-% V1.2
-% improved playback of videos, better slider predictions, start of alpha masks for rois
+% V1.3
 % 
 % 03/01/2018
 % Questions: cdeister@brown.edu
@@ -88,20 +87,20 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     'cMaskToggle','curImageToMaskButton','segmentMaskBtn','autoMaskBtn','binarySensEntry',...
     'minRoiEntry','manROIBtn','roiTypeMenu','deleteWSVar','binaryThrValEntry','cutByBtn',...
     'imageCutEntry','deDupeRoisBtn','clusterMaskBtn','maxClusterEntry','manROIBtn_Generic',...
-    'overlayIndRoiToggle','feedbackString','neuropilAlertString','saveImageBtn'};
+    'overlayIndRoiToggle','feedbackString','neuropilAlertString','saveImageBtn','normSelection'};
 
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
     end
     
     decUIElements={'text14','text12','text13','text16','text17','text19',...
-    'text10','text6','text7','text8','imageWindow'};
+    'text10','text6','text7','text8','imageWindow','text21','text22'};
     for n=1:numel(decUIElements)
         eval(['handles.' decUIElements{n} '.FontSize=macUIDecSize;'])
     end
     
     titleUIElements={'uipanel3','uipanel2','uipanel6','uipanel8','uipanel4',...
-    'uipanel9','uipanel10','uipanel3'};
+    'uipanel9','uipanel10','uipanel3','NeuropilText','text23','uipanel11','uipanel5'};
     for n=1:numel(titleUIElements)
         eval(['handles.' titleUIElements{n} '.FontSize=macHeaderSize;'])
     end
@@ -169,10 +168,13 @@ function [wsObj wsClass]=getWSVar(hObject, eventdata, handles)
     selectionsIndex = get(handles.workspaceVarBox,'Value');
     wsObj=evalin('base',selections{selectionsIndex});
     wsClass=class(wsObj);
+
 function [curFrame]=trackFrame(hObject, eventdata, handles)
     curFrame=fix(str2double(get(handles.frameTextEntry,'String')));        
     assignin('base','currentFrame',curFrame)
-    evalin('base','metaData.currentFrame=currentFrame;,clear ''currentFrame''');
+    evalin('base','metaData.currentFrame=currentFrame;,clear currentFrame');
+
+
 function plotSomeROIs(hObject,eventdata,handles,plotRemainder,roisToPlot)
     
     if numel(roisToPlot)
@@ -453,6 +455,7 @@ function boutonButton_Callback(hObject, eventdata, handles)
 function vesselButton_Callback(hObject, eventdata, handles)
 
     freehandROI(hObject,eventdata,handles,'vessel')
+
 function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
 
     a = str2double(get(handles.lowCutEntry,'String'));
@@ -581,12 +584,7 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
 
     pImg=imshow(imageP,'DisplayRange',[a b]);
     colormap(gca,cMap)
-    % assignin('base','pImg',pImg)
 
-    % g3=getframe;
-    % fsImage=frame2im(g3);
-    % assignin('base','g3',g3)
-    % assignin('base','fsImage',fsImage)
 
     if updateHist
         
@@ -612,6 +610,8 @@ function loadMeanProjectionButton_Callback(hObject,eventdata,handles,defImage)
     roisDisplayToggle(hObject,eventdata,handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
+
 function deleteROIButton_Callback(hObject, eventdata, handles)
 
     boxNum=get(handles.roiSelector,'Value');
@@ -660,6 +660,8 @@ function roiSelector_Callback(hObject,eventdata,handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
+% *******> these all just call roiSelector
 function somaticRoisDisplayToggle_Callback(hObject, eventdata, handles)
 
     % cState=get(handles.somaticRoisDisplayToggle,'Value');
@@ -682,6 +684,7 @@ function neuropilRoisDisplayToggle_Callback(hObject, eventdata, handles)
 function vesselRoisDisplayToggle_Callback(hObject, eventdata, handles)
     
     roisDisplayToggle(hObject, eventdata, handles)
+
 function lowCutSlider_Callback(hObject, eventdata, handles)
 
     sliderValue = get(handles.lowCutSlider,'Value');
@@ -741,6 +744,7 @@ function highCutEntry_Callback(hObject, eventdata, handles)
     set(handles.highCutSlider,'Value',input);
     guidata(hObject, handles);
     highCutSlider_Callback(hObject, eventdata, handles)
+
 function makeNeuropilMasks_Callback(hObject, eventdata, handles)
 
 
@@ -806,11 +810,10 @@ function makeNeuropilMasks_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String','finished neuropil masks')
     pause(0.000000001);
     guidata(hObject, handles);
-
-
 function neuropilPixelSpreadEntry_Callback(hObject, eventdata, handles)
 
     guidata(hObject, handles);
+
 function workspaceVarBox_Callback(hObject, eventdata, handles)
     
     logSelection(hObject,eventdata,handles)
@@ -829,7 +832,6 @@ function logSelection(hObject,eventdata,handles)
         guidata(hObject, handles);
     catch
     end
-
 function refreshVarListButton_Callback(hObject, eventdata, handles)
     % this is kind of weird looking, but I want it to be foolproof.
     % i need to make sure if the user adds or deletes something
@@ -921,116 +923,7 @@ function maxProjectionButton_Callback(hObject, eventdata, handles)
     end
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-function getGXcorButton_Callback(hObject, eventdata, handles)
 
-    % Poll Params
-    filterState=get(handles.gXCorSmoothToggle,'Value');
-    imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
-
-    selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-    selectStack=selections{selectionsIndex};
-    assignin('base','lastCorStack',selectStack);
-    evalin('base','metaData.lastCorStack=lastCorStack;,clear lastCorStack');
-
-    numImages=evalin('base',['size(' selectStack ',3)']);
-
-    if filterState==1    
-        corStack=[];
-        c=0;
-        ff=fspecial('gaussian',11,0.5);
-
-        nstack=min(imsToCor,numImages);
-        for n=1:nstack
-            c=c+1;
-            if (rem(n,50)==0)
-                set(handles.feedbackString,'String',['finished ' num2str(n)...
-                    ' of ' num2str(nstack) ' | ' num2str(round(100*(n./nstack))) '% done'])
-                pause(0.0000001);
-                guidata(hObject, handles);
-            end
-
-            fnum=n;
-            evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
-            I=evalin('base',evalStr);
-            I=conv2(double(I),ff,'same');
-            corStack(:,:,n)=I;
-            % assignin('base','corStack',corStack);
-        end
-    elseif filterState==0
-        nstack=min(imsToCor,numImages);
-        corStack=evalin('base',['double(' selectStack '(:,:,1:' num2str(nstack) '));']);
-    else
-    end
-
-    
-
-    % make local Xcorr and/or PCA
-    % global xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
-    % local xcor region growing Jakob Voigts
-
-    set(handles.feedbackString,'String','computing local xcorr')
-    pause(0.000001);
-    guidata(hObject, handles);
-
-    w=1; % window size
-
-    % Initialize and set up parameters
-    ymax=size(corStack,1);
-    xmax=size(corStack,2);
-    numFrames=size(corStack,3);
-    cimg=zeros(ymax,xmax);
-
-    for y=1+w:ymax-w
-        
-        if (rem(y,20)==0)
-            set(handles.feedbackString,'String',['finished line' num2str(y)...
-                ' of ' num2str(ymax) ' | ' num2str(round(100*(y./ymax))) '% done'])
-            pause(0.0000001);
-            guidata(hObject, handles);
-        end
-        
-        for x=1+w:xmax-w
-            % Center pixel
-            thing1 = reshape(corStack(y,x,:)-mean(corStack(y,x,:),3),[1 1 numFrames]); 
-            % Extract center pixel's time course and subtract its mean
-            ad_a   = sum(thing1.*thing1,3);    % Auto corr, for normalization laterdf
-            
-            % Neighborhood
-            a = corStack(y-w:y+w,x-w:x+w,:);         % Extract the neighborhood
-            b = mean(corStack(y-w:y+w,x-w:x+w,:),3); % Get its mean
-            thing2 = bsxfun(@minus,a,b);       % Subtract its mean
-            ad_b = sum(thing2.*thing2,3);      % Auto corr, for normalization later
-            
-            % Cross corr
-            ccs = sum(bsxfun(@times,thing1,thing2),3)./sqrt(bsxfun(@times,ad_a,ad_b));
-            % Cross corr with normalization
-            ccs((numel(ccs)+1)/2) = [];        % Delete the middle point
-            cimg(y,x) = mean(ccs(:));       % Get the mean cross corr of the local neighborhood
-        end
-    end
-
-    m=mean(cimg(:));
-    cimg(1,:)=m;
-    cimg(end,:)=m;
-    cimg(:,1)=m;
-    cimg(:,end)=m;
-
-
-    assignin('base',['cimg_' selectStack],cimg);
-    assignin('base','cimg',cimg);
-    set(handles.feedbackString,'String','! done with xcor')
-    pause(0.00001);
-    refreshVarListButton_Callback(hObject, eventdata, handles);
-    guidata(hObject, handles);
-
-    % ---- end xcor image code
-
-
-    % Update handles structure
-    guidata(hObject, handles);
-function gXCorImageCountEntry_Callback(hObject, eventdata, handles)
-function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
 function playStackMovButton_Callback(hObject, eventdata, handles)
     % first see what the play state is.
     % if we have not played before we create that.
@@ -1172,6 +1065,253 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
         guidata(hObject, handles);
     catch
     end
+function roiThresholdEntry_Callback(hObject, eventdata, handles)
+
+    prevAt=evalin('base','exist(''metaData'',''var'')');
+    if prevAt
+        currentROI=evalin('base','metaData.candidateRoi_rawVals');
+        roiTh=str2num(get(handles.roiThresholdEntry,'String'));
+        axes(handles.roiPreviewWindow);
+        imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
+        assignin('base','candidateRoi',im2bw(currentROI,roiTh))
+        assignin('base','candidateRoi_rawVals',currentROI)
+        evalin('base','metaData.candidateRoi=candidateRoi;')
+        evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
+    end
+
+
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
+
+function gXCorImageCountEntry_Callback(hObject, eventdata, handles)
+function gXCorSmoothToggle_Callback(hObject, eventdata, handles)
+
+function getGXcorButton_Callback(hObject, eventdata, handles)
+    set(handles.getGXcorButton,'Enabled','off');
+    try
+    % Poll Params
+    filterState=get(handles.gXCorSmoothToggle,'Value');
+    imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
+
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectStack=selections{selectionsIndex};
+    assignin('base','lastCorStack',selectStack);
+    evalin('base','metaData.lastCorStack=lastCorStack;,clear lastCorStack');
+
+    numImages=evalin('base',['size(' selectStack ',3)']);
+
+    if filterState==1    
+        corStack=[];
+        c=0;
+        ff=fspecial('gaussian',11,0.5);
+
+        nstack=min(imsToCor,numImages);
+        for n=1:nstack
+            c=c+1;
+            if (rem(n,50)==0)
+                set(handles.feedbackString,'String',['finished ' num2str(n)...
+                    ' of ' num2str(nstack) ' | ' num2str(round(100*(n./nstack))) '% done'])
+                pause(0.0000001);
+                guidata(hObject, handles);
+            end
+
+            fnum=n;
+            evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
+            I=evalin('base',evalStr);
+            I=conv2(double(I),ff,'same');
+            corStack(:,:,n)=I;
+            % assignin('base','corStack',corStack);
+        end
+    elseif filterState==0
+        nstack=min(imsToCor,numImages);
+        corStack=evalin('base',['double(' selectStack '(:,:,1:' num2str(nstack) '));']);
+    else
+    end
+
+    
+
+    % make local Xcorr and/or PCA
+    % global xcor image code ----> adapted from http://labrigger.com/blog/2013/06/13/local-cross-corr-images/
+    % local xcor region growing Jakob Voigts
+
+    set(handles.feedbackString,'String','computing local xcorr')
+    pause(0.000001);
+    guidata(hObject, handles);
+
+    w=1; % window size
+
+    % Initialize and set up parameters
+    ymax=size(corStack,1);
+    xmax=size(corStack,2);
+    numFrames=size(corStack,3);
+    cimg=zeros(ymax,xmax);
+
+    for y=1+w:ymax-w
+        
+        if (rem(y,20)==0)
+            set(handles.feedbackString,'String',['finished line' num2str(y)...
+                ' of ' num2str(ymax) ' | ' num2str(round(100*(y./ymax))) '% done'])
+            pause(0.0000001);
+            guidata(hObject, handles);
+        end
+        
+        for x=1+w:xmax-w
+            % Center pixel
+            thing1 = reshape(corStack(y,x,:)-mean(corStack(y,x,:),3),[1 1 numFrames]); 
+            % Extract center pixel's time course and subtract its mean
+            ad_a   = sum(thing1.*thing1,3);    % Auto corr, for normalization laterdf
+            
+            % Neighborhood
+            a = corStack(y-w:y+w,x-w:x+w,:);         % Extract the neighborhood
+            b = mean(corStack(y-w:y+w,x-w:x+w,:),3); % Get its mean
+            thing2 = bsxfun(@minus,a,b);       % Subtract its mean
+            ad_b = sum(thing2.*thing2,3);      % Auto corr, for normalization later
+            
+            % Cross corr
+            ccs = sum(bsxfun(@times,thing1,thing2),3)./sqrt(bsxfun(@times,ad_a,ad_b));
+            % Cross corr with normalization
+            ccs((numel(ccs)+1)/2) = [];        % Delete the middle point
+            cimg(y,x) = mean(ccs(:));       % Get the mean cross corr of the local neighborhood
+        end
+    end
+
+    m=mean(cimg(:));
+    cimg(1,:)=m;
+    cimg(end,:)=m;
+    cimg(:,1)=m;
+    cimg(:,end)=m;
+
+
+    assignin('base',['cimg_' selectStack],cimg);
+    assignin('base','cimg',cimg);
+    set(handles.feedbackString,'String','! done with xcor')
+    set(handles.getGXcorButton,'Enabled','on');  
+    pause(0.00001);
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
+
+    % ---- end xcor image code
+    catch
+    set(handles.getGXcorButton,'Enabled','on'); 
+    guidata(hObject, handles);
+    end
+
+
+   
+function pcaButton_Callback(hObject, eventdata, handles)
+
+    tic
+    set(handles.feedbackString,'String','performing nnmf prediction')
+    pause(0.0000000001);
+    guidata(hObject, handles);
+
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+
+
+
+    imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
+    numImages=evalin('base',['size(' selections{selectionsIndex} ',3)']);
+    imsToCor=min(imsToCor,numImages);
+
+
+    set(handles.feedbackString,'String','computing PCA ROI estimate')
+    pause(0.00001);
+    guidata(hObject, handles);
+
+    fNum=fix(str2double(get(handles.featureCountEntry,'String')));
+
+    if fNum>=imsToCor
+        fNum=imsToCor-1;
+    else
+    end
+    stack=evalin('base',[selections{selectionsIndex} '(:,:,1:'  num2str(imsToCor) ')']);
+
+    stack_v=zeros(imsToCor,size(stack,1)*size(stack,2));
+    for i=1:imsToCor
+        x=stack(:,:,i);
+        stack_v(i,:)=x(:);
+    end
+    stack_v=stack_v-mean(stack_v(:));
+    [coeff,score,~,~,vExplained] = pca(stack_v,'Economy','on','NumComponents',fNum);
+    imcomponents=reshape(coeff',fNum,size(stack,1),size(stack,2));
+
+    pcaimage=(squeeze(mean(abs(imcomponents(:,:,:)))));
+
+    assignin('base','pcaImage',(pcaimage-min(min(pcaimage)))./max(max((pcaimage-min(min(pcaimage))))));
+    assignin('base','pcaScores',score);
+    assignin('base','pcaComponents',permute(imcomponents,[2 3 1]));
+    assignin('base','pcaExplained',vExplained);
+    clear stack
+    set(handles.feedbackString,'String','done with PCA')
+    pause(0.00001);
+    refreshVarListButton_Callback(hObject, eventdata, handles)
+    % Update handles structure
+    guidata(hObject, handles);
+function nnmfButton_Callback(hObject, eventdata, handles)
+    % performs non-negative matrix factorization with defaults
+    % this is a 'feature' based PCA that only allows non-negative values.
+    % assuming you have a matrix of features with magnitudes of 0->something
+    % this is then ideal for finding the most variance predicting features that
+    % correspond more to intuitive features than PCA.
+    % see Lee and Seung, 1999 Nature for the first and very lucid description
+    % of the method. NM1 are the image sized feature filters (masks) and NM2 is
+    % the frame varying weights. Think of NM2 as your PCA'd proportional
+    % variance, but varying in time. This tells you the realtive weight of your
+    % feature at any momment in time!
+
+    tic
+    set(handles.feedbackString,'String','performing nnmf prediction')
+    pause(0.0000000001);
+    guidata(hObject, handles);
+
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    tStack=double(evalin('base',selections{selectionsIndex}));
+    s1=size(tStack,1);
+    s2=size(tStack,2);
+
+    % sSize=size(tStack,3);
+    sSize=fix(str2double(get(handles.gXCorImageCountEntry,'String')));
+    if sSize<size(tStack,3)
+        tStack=tStack(:,:,1:sSize);
+    else
+        sSize=size(tStack,3);
+    end
+
+    fNum=fix(str2double(get(handles.featureCountEntry,'String')));
+
+    if fNum>=sSize
+        fNum=sSize-1;
+    else
+    end
+
+    tStack=reshape(tStack,size(tStack,1)*size(tStack,2),size(tStack,3));
+
+    size(tStack,1)
+    size(tStack,2)
+    size(tStack,3)
+
+    [nm1,nm2,nm3]=nmf(tStack,fNum,'MAX_ITER',100);
+    nm1=nm1./max(max(max(nm1)));
+
+    nm1=reshape(nm1,s1,s2,fNum);
+    nm1Nrm=nm1./max(max(medfilt3(nm1)));
+    clear tStack
+
+    assignin('base','nm1',nm1);
+    assignin('base','nm1Nrm',nm1Nrm);
+    assignin('base','nm2',nm2);
+    assignin('base','nm3',nm3);
+
+    clear nm1 nm2 nm3
+
+    nmTim=toc;
+    set(handles.feedbackString,'String',['finished nnmf in ' num2str(nmTim) 'seconds'])
+    pause(0.000000001);
+    guidata(hObject, handles);
+    refreshVarListButton_Callback(hObject, eventdata, handles)
 function localXCorButton_Callback(hObject, eventdata, handles)
     
     imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
@@ -1233,59 +1373,13 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     roisDisplayToggle(hObject, eventdata, handles,1)
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
-function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
-    prevAt=evalin('base','exist(''metaData'',''var'')');
-    if prevAt
-        currentROI=evalin('base','metaData.candidateRoi_rawVals');
-        roiTh=str2num(get(handles.roiThresholdEntry,'String'));
-        axes(handles.roiPreviewWindow);
-        imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
-        assignin('base','candidateRoi',im2bw(currentROI,roiTh))
-        assignin('base','candidateRoi_rawVals',currentROI)
-        evalin('base','metaData.candidateRoi=candidateRoi;')
-        evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
-    end
-
-
-    refreshVarListButton_Callback(hObject, eventdata, handles);
-    guidata(hObject, handles);
-function pcaButton_Callback(hObject, eventdata, handles)
-
-    selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-
-    imsToCor=str2num(get(handles.gXCorImageCountEntry,'String'));
-    stack=evalin('base',[selections{selectionsIndex}]);
-    pcaimage=evalin('base','cimg');
-
-    set(handles.feedbackString,'String','computing PCA ROI estimate')
-    pause(0.00001);
-    guidata(hObject, handles);
-
-    stack_v=zeros(imsToCor,size(stack,1)*size(stack,2));
-    for i=1:imsToCor
-        x=stack(:,:,i);
-        stack_v(i,:)=x(:);
-    end
-    stack_v=stack_v-mean(stack_v(:));
-    [coeff, score] = pca(stack_v,'Economy','on','NumComponents',100);
-    imcomponents=reshape(coeff',100,size(stack,1),size(stack,2));
-    pcaimage=(squeeze(mean(abs(imcomponents(:,:,:)))));
-
-    assignin('base','pcaimage',pcaimage./max(max(pcaimage)))
-
-    set(handles.feedbackString,'String','done with PCA')
-    pause(0.00001);
-    guidata(hObject, handles);
-    refreshVarListButton_Callback(hObject, eventdata, handles)
-    % Update handles structure
-    guidata(hObject, handles);
 function colormapTextEntry_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+
 function frameSlider_Callback(hObject, eventdata, handles)
-    % fix and ceil are unreliable here. 
+    
     sliderValue = ceil(get(handles.frameSlider,'Value'));
     set(handles.frameTextEntry,'String', num2str(sliderValue));
     trackFrame(hObject, eventdata, handles);
@@ -1296,6 +1390,7 @@ function frameTextEntry_Callback(hObject, eventdata, handles)
     trackFrame(hObject, eventdata, handles);
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
+
 function addToSomasButton_Callback(hObject, eventdata, handles)
 
     g=evalin('base','exist(''somaticRoiCounter'')');
@@ -1418,76 +1513,18 @@ function addToBoutonsButton_Callback(hObject, eventdata, handles)
 
     % Update handles structure
     guidata(hObject, handles);
-function nnmfButton_Callback(hObject, eventdata, handles)
-    % performs non-negative matrix factorization with defaults
-    % this is a 'feature' based PCA that only allows non-negative values.
-    % assuming you have a matrix of features with magnitudes of 0->something
-    % this is then ideal for finding the most variance predicting features that
-    % correspond more to intuitive features than PCA.
-    % see Lee and Seung, 1999 Nature for the first and very lucid description
-    % of the method. NM1 are the image sized feature filters (masks) and NM2 is
-    % the frame varying weights. Think of NM2 as your PCA'd proportional
-    % variance, but varying in time. This tells you the realtive weight of your
-    % feature at any momment in time!
 
-    tic
-    set(handles.feedbackString,'String','performing nnmf prediction')
-    pause(0.0000000001);
-    guidata(hObject, handles);
-
-    selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-    tStack=double(evalin('base',selections{selectionsIndex}));
-    s1=size(tStack,1);
-    s2=size(tStack,2);
-
-    % sSize=size(tStack,3);
-    sSize=fix(str2double(get(handles.gXCorImageCountEntry,'String')));
-    if sSize<size(tStack,3)
-        tStack=tStack(:,:,1:sSize);
-    else
-        sSize=size(tStack,3);
-    end
-
-    fNum=fix(str2double(get(handles.featureCountEntry,'String')));
-
-    if fNum>=sSize
-        fNum=sSize-1;
-    else
-    end
-
-    tStack=reshape(tStack,size(tStack,1)*size(tStack,2),size(tStack,3));
-
-    size(tStack,1)
-    size(tStack,2)
-    size(tStack,3)
-
-    [nm1,nm2,nm3]=nmf(tStack,fNum,'MAX_ITER',100);
-    nm1=nm1./max(max(max(nm1)));
-
-    nm1=reshape(nm1,s1,s2,fNum);
-    nm1Nrm=nm1./max(max(medfilt3(nm1)));
-    clear tStack
-
-    assignin('base','nm1',nm1);
-    assignin('base','nm1Nrm',nm1Nrm);
-    assignin('base','nm2',nm2);
-    assignin('base','nm3',nm3);
-
-    clear nm1 nm2 nm3
-
-    nmTim=toc;
-    set(handles.feedbackString,'String',['finished nnmf in ' num2str(nmTim) 'seconds'])
-    pause(0.000000001);
-    guidata(hObject, handles);
-    refreshVarListButton_Callback(hObject, eventdata, handles)
 function featureCountEntry_Callback(hObject, eventdata, handles)
+
+% filters
 function medianFilterToggle_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
 function wienerFilterToggle_Callback(hObject, eventdata, handles)
 
     loadMeanProjectionButton_Callback(hObject, eventdata, handles)
+
+% program nav
 function importerButton_Callback(hObject, eventdata, handles)
 
     evalin('base','importer')
@@ -1495,6 +1532,7 @@ function extractorButton_Callback(hObject, eventdata, handles)
 
 
     evalin('base','extractor')
+
 function cMaskToggle_Callback(hObject, eventdata, handles)
     
     selections = get(handles.workspaceVarBox,'String');
@@ -1617,9 +1655,14 @@ function autoMaskBtn_Callback(hObject, eventdata, handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
+function binaryThrValEntry_Callback(hObject, eventdata, handles)
+
+    cMaskToggle_Callback(hObject, eventdata, handles)
 function binarySensEntry_Callback(hObject, eventdata, handles)
 
     cMaskToggle_Callback(hObject, eventdata, handles)
+
 function minRoiEntry_Callback(hObject, eventdata, handles)
 function manROIBtn_Generic_Callback(hObject, eventdata, handles)
 function roiTypeMenu_Callback(hObject, eventdata, handles)
@@ -1631,9 +1674,6 @@ function deleteWSVar_Callback(hObject, eventdata, handles)
     evalin('base',['clear ' selectedItem]);
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
-function binaryThrValEntry_Callback(hObject, eventdata, handles)
-
-    cMaskToggle_Callback(hObject, eventdata, handles)
 function cutByBtn_Callback(hObject, eventdata, handles)
 
     cImage=double(evalin('base','currentImage'));
@@ -1861,6 +1901,20 @@ function saveImageBtn_Callback(hObject, eventdata, handles)
     
     refreshVarListButton_Callback(hObject, eventdata, handles);
     guidata(hObject, handles);
+
+function normSelection_Callback(hObject, eventdata, handles)
+    
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectedItem=selections{selectionsIndex};
+    curSelection=get(handles.frameTextEntry,'String');
+    
+    evalin('base',[selectedItem '_nrm=(' ...
+        selectedItem '-min(min(' selectedItem ...
+        ')))./max(max((' selectedItem '-min(min(' selectedItem ')))));']);
+    refreshVarListButton_Callback(hObject, eventdata, handles);
+    guidata(hObject, handles);
+
     
 % **************************************************************
 % **************** Junkyard ************************************

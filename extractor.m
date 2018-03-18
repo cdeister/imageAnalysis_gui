@@ -8,8 +8,8 @@ function varargout = extractor(varargin)
 % image types etc.
 %
 %
-% Version: 0.99
-% 10/8/2017
+% Version: 1.12
+% 03/11/2017
 % Code by: Chris Deister
 % Questions: cdeister@brown.edu
 %
@@ -42,7 +42,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     set(handles.extractFeedbackString,'String','Extracting ...')
     pause(0.00000001);
     guidata(hObject, handles);
-    imPath=evalin('base','metaData.importPath');
+    imPath=evalin('base','metaData.importPath;');
     importType=evalin('base','metaData.importType;');
     
     % get images
@@ -68,16 +68,17 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
   
     % we set it up differently depending on if folder, mptiff or hdf.
     if importType==0 %folder of files
-        fileList=evalin('base','metaData.filteredFiles');
+        fileList=evalin('base','metaData.filteredFiles;');
         imageSize=evalin('base','metaData.imSize;');
     elseif importType==2 % hdf
-        hdfSize=evalin('base','metaData.hdfSize');
+        hdfSize=evalin('base','metaData.hdfSize;');
         imageSize=[hdfSize(1),hdfSize(2)];
-        tP=evalin('base','metaData.importPath');
-        tH=evalin('base','metaData.hdfFile');
-        tDS_select=evalin('base','metaData.tDS_select');
+        tP=evalin('base','metaData.importPath;');
+        tH=evalin('base','metaData.hdfFile;');
+        tDS_select=evalin('base','metaData.tDS_select;');
     else
     end
+    
 
     disp(['after skiping you will extract from ' num2str(imCount) ' images'])
 
@@ -95,16 +96,15 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     for n=1:numel(roiToggleTruth)
         if roiToggleTruth(n)==1
             warnBit=0;      % if anything is selected flip the warning to 0.
-            roisToMap=evalin('base', roiStringMap{n});
+            roisToMap=evalin('base', [roiStringMap{n} ';']);
             rois=[rois roisToMap];
         else
         end
     end
-    roiStack=zeros(fix(imageSize(1)/binFac),fix(imageSize(2)/binFac),numel(rois));
     
 
     for n=1:numel(rois)
-        roiStack(:,:,n)=rois{1,n};
+        roiStack(:,:,n)=rois{n};
     end
     assignin('base','roiStack',roiStack);
     
@@ -138,51 +138,56 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     end
     
     for n=1:numel(imRange)
-        tic
-        % import the image
-        if importType==2
-            impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
-        else 
-            impImage=imread([imPath filesep fileList(n).name]);
-        end
-        
-        if binImagesToggle
-            impImage=binImages(impImage,binFac);
-        % assignin('base','dImpImage',impImage);
-        % debug
-        else
-        end
-        
-        
-        % register it (if we want).
-        if regFlag==1
-            [out1,out2]=dftregistration(fTemplate,fft2(impImage),1);
-            regTransforms(:,n)=out1;
-            impImage=abs(ifft2(out2));
-        else
-        end
+        try
+            tic
+            % import the image
+            if importType==2
+                impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
+            else 
+                impImage=imread([imPath filesep fileList(n).name]);
+            end
 
-        
-        %***** vectorized a tad slower
-        ff=double(impImage).*roiStack;
-        ffMu=squeeze(sum(sum(ff))./sum(sum(ff ~= 0)));
-        tempF(:,n)=ffMu;
-        %****
-        
-        %for q=1:size(roiStack,3)
-        %   tempF(q,n)=mean(impImage(roiStack(:,:,q)==1));
-        %end
-        
-        
-        if mod(n,100)==0
-            set(handles.diskExtractButton,'String',[num2str(n) '/' num2str(numel(imRange))])
-            pause(0.00000000000000001)
-            guidata(hObject, handles);
-        else
-        end 
+            if binImagesToggle
+                impImage=binImages(impImage,binFac);
+                assignin('base','dImpImage',impImage);
+                % debug
+            else
+            end
 
-        dTm(n)=toc;
+
+            % register it (if we want).
+            if regFlag==1
+                [out1,out2]=dftregistration(fTemplate,fft2(impImage),50);
+                regTransforms(:,n)=out1;
+                impImage=abs(ifft2(out2));
+            else
+            end
+
+
+            %***** vectorized slower
+            % ff=double(impImage).*roiStack;
+            % ffMu=squeeze(sum(sum(ff))./sum(sum(ff ~= 0)));
+            % tempF(:,n)=ffMu;
+            %****
+
+            for q=1:size(roiStack,3)
+              tempF(q,n)=mean(impImage(roiStack(:,:,q)==1));
+            end
+
+
+            if mod(n,250)==0
+                set(handles.diskExtractButton,'String',[num2str(n) '/' num2str(numel(imRange))])
+                pause(0.00000000000000001)
+                guidata(hObject, handles);
+            else
+            end 
+            dTm(n)=toc;
+        catch
+            disp('something went wrong; most likley cause is you were extracting from a jump drive that is unplugged.')
+            break
+        end
     end
+    
 
 
     eT=toc;    
@@ -348,7 +353,7 @@ function plotROI(hObject, eventdata, handles)
     end
     
     mainColor=[0,0,0];
-    plot(timeVec,mainTrace(1,:)','Color',mainColor,'LineWidth',1.1);
+    plot(timeVec(1:numel(mainTrace(1,:)')),mainTrace(1,:)','Color',mainColor,'LineWidth',1.1);
     lstAx=gca;
     h=lstAx.Children;
     if numel(h)>1
@@ -1214,6 +1219,18 @@ function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
     set(handles.workspaceVarBox,'String',vars)
     refreshCSVarBtn_Callback(hObject, eventdata, handles)
 
+    try
+        totalImages=evalin('base','numel(metaData.filteredFiles);');
+        set(handles.endImageEntry,'String',num2str(totalImages));
+    catch
+    end
+
+    try
+        totalImages=evalin('base','metaData.hdfSize;');
+        set(handles.endImageEntry,'String',num2str(totalImages(3)));
+    catch
+    end
+
     if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
         macHeaderSize=12;
         macFontSize=11;
@@ -1335,75 +1352,15 @@ function deleteSelection_Callback(hObject, eventdata, handles)
 function typeSelectorMenu_Callback(hObject, eventdata, handles)
 function pushbutton38_Callback(hObject, eventdata, handles)
 function loadCSHDF_Callback(hObject, eventdata, handles)
-    [hdfName,hdfPath]=uigetfile('*','what what?');
     try
-      behavHDFPath=[hdfPath hdfName];
-      behavHDFInfo=h5info(behavHDFPath);
-      curDatasetPath=['/' behavHDFInfo.Datasets.Name];
-      curBData=h5read(behavHDFPath,curDatasetPath);
-      % attributes have int32 encoding and need to be converted.
-      curOrientations=double(h5readatt(behavHDFPath,curDatasetPath,'orientations')).*10;
-      curContrasts=double(h5readatt(behavHDFPath,curDatasetPath,'contrasts'))/10;
-      % The way csVisual is set now, we end up with an extra trial's metadata.
-      % So, I trim here.
-      curOrientations=curOrientations(1:end-1);
-      curContrasts=curContrasts(1:end-1);
-      assignin('base','curOrientations',curOrientations');
-      evalin('base',['bData.curOrientations=curOrientations;,clear curOrientations ans'])
-      
-      assignin('base','curContrasts',curContrasts');
-      evalin('base',['bData.curContrasts=curContrasts;,clear curContrasts ans'])
-      
-      assignin('base','interrupts',curBData(1,:));
-      evalin('base',['bData.interrupts=interrupts;,clear interrupts ans'])
-      
-      assignin('base','sessionTime',curBData(2,:)./1000);
-      evalin('base',['bData.sessionTime=sessionTime;,clear sessionTime ans'])
-      
-      assignin('base','stateTime',curBData(3,:)./1000);
-      evalin('base',['bData.stateTime=stateTime;,clear stateTime ans'])
-      
-      assignin('base','states',curBData(4,:));
-      evalin('base',['bData.states=states;,clear states ans'])
-      
-      assignin('base','loadCell',curBData(5,:));
-      evalin('base',['bData.loadCell=loadCell;,clear states ans'])
-      
-      assignin('base','pyStates',curBData(9,:));
-      evalin('base',['bData.pyStates=pyStates;,clear pyStates ans'])
-      
-      assignin('base','motion',curBData(7,:));
-      evalin('base',['bData.motion=motion;,clear motion ans'])
-      
-      assignin('base','scopePF',curBData(8,:));
-      evalin('base',['bData.scopePFI=scopePF;,clear tLick1 ans'])
-      
-      assignin('base','thrLicks',curBData(10,:));
-      evalin('base',['bData.thrLicks=thrLicks;,clear thrLicks ans'])
-      
-      
-
-      position=decodeShaftEncoder(curBData(7,:),4);
-      velocity=nPointDeriv(position,curBData(2,:),1000);
-      velocity(find(isnan(velocity)==1))=0;
-      assignin('base','position',position);
-      evalin('base',['bData.position=position;,clear position ans'])
-      assignin('base','velocity',velocity);
-      evalin('base',['bData.velocity=velocity;,clear velocity ans'])
-      evalin('base','[bData.stimSamps,bData.stimVector]=getStateSamps(bData.states,2,1);')
-
-
-
-      
-      
-      bvars = evalin('base','fieldnames(bData)');
-      set(handles.csListbox,'String',bvars)
-      
-      guidata(hObject, handles);
-      
+        evalin('base','bData=csParser();')
+        bvars = evalin('base','fieldnames(bData)');
+        set(handles.csListbox,'String',bvars)
+        guidata(hObject, handles);
     catch
+        guidata(hObject, handles);
     end
-    guidata(hObject, handles);
+    
 function csListbox_Callback(hObject, eventdata, handles)
 function csListbox_CreateFcn(hObject, eventdata, handles)
 
@@ -1452,7 +1409,12 @@ function plotCSVar_Callback(hObject, eventdata, handles)
     end
     
     mainColor=[0,0,0];
-    plot(csTime,tTrace(1,:)','Color',mainColor,'LineWidth',1.1);
+    exceptColor=[0,0.6,0.2];
+    try
+        plot(csTime,tTrace(1,:)','Color',mainColor,'LineWidth',1.1);
+    catch
+        plot(tTrace(1,:)','Color',exceptColor,'LineWidth',1.1);
+    end
     lstAx=gca;
     h=lstAx.Children;
     if numel(h)>1

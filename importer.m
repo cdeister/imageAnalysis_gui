@@ -115,191 +115,237 @@ function importButton_Callback(hObject, eventdata, handles)
     % Below is the import routines for each. context.
     % This loads a file list that has characters that match the filter string.
     % It should detect the bit depth and dimensions.
+    importType=evalin('base','metaData.importType;');
     if mPF==0 && hdfF==0
-        filterString={get(handles.fileFilterString,'String')};
-        filteredFiles = dir([imPath filesep '*' filterString{1} '*']);
-        
-        % kill files that have no data in them.
-        filteredFiles(find([filteredFiles.bytes]==0))=[];
-        filteredFiles=resortImageFileMap(filteredFiles);
-        assignin('base','filteredFiles',filteredFiles)
-        assignin('base','imPath',imPath)
-        
-        importCount=fix(((endIm-firstIm)+1)/skipBy);
-
-        % I try to preserve bitdepth.
-        canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
-        [imType,imSize]=checkStackBitDepth(canaryImport);
-
-        assignin('base','bitDepth',imType);
-        evalin('base','metaData.bitDepth=bitDepth;clear bitDepth');
-        assignin('base','imSize',imSize);
-        evalin('base','metaData.imSize=imSize;clear imSize');
-        
-
-        % tempFilt is just the files in firstIM:skip:end,
-        tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
-        assignin('base','tempFiltFiles',tempFiltFiles);
-        evalin('base',['importedImages=zeros(' num2str(imSize(1)) ',' ...
-            num2str(imSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
-        evalin('base','metaData.lastImported=tempFiltFiles;')
-        
-        tic
-        if pImport==1
-            set(handles.feedbackString,'String','Parallel Import Ongoing ...')
-            pause(0.00000000000000001)
-            guidata(hObject, handles);
-            evalin('base',['parfor n=1:numel(tempFiltFiles),importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);,end'])
-        
-        % the main difference (beyond the parfor loop) is we update the gui's feedback
-        % differently as we don't know the specific item we've imported.
-        elseif pImport==0
-            set(handles.feedbackString,'String',['Importing ...'])
-            pause(0.00000000000000001)
-            guidata(hObject, handles);
-            for n=1:numel(tempFiltFiles)
-                evalin('base',['importedImages(:,:,' num2str(n) ')=imread([imPath filesep tempFiltFiles(' num2str(n) ',1).name]);'])
-                if mod(n,500)==0
-                    set(handles.importButton,'String',[num2str(n) '/' num2str(numel(tempFiltFiles))])
-                    pause(0.00000000000000001)
-                    guidata(hObject, handles);
-                else
-                end
-        
-            end
-        end
-        iT=toc;
-
-        set(handles.importButton,'String','WS Import')
-        set(handles.feedbackString,'String',['Imported ' num2str(numel(tempFiltFiles)) ' Images'])
-        evalin('base','clear imPath ans filteredFiles tempFiltFiles')
-        guidata(hObject, handles);
-        
-    elseif mPF==1  % The user wants multi-page tif. This import is a bit different.
-        % This gets metadata needed. 
-        bitD=mpTifInfo(1).BitDepth;
-        mImage=mpTifInfo(1).Width;
-        nImage=mpTifInfo(1).Height;
-        
-        % now figure out what images to import.
-        maxImages=length(mpTifInfo);
-        numImages=numel(firstIm:endIm);
-        if numImages>maxImages
-            disp('your image range is invalid will do 1:all')
-            firstIm=1;
-            endIm=maxImages-1;
-        else
-        end
-        imRange=firstIm:skipBy:endIm;
-        
-        if bitD==8 || bitD==16 || bitD==32
-            eval(['imType=''uint' num2str(bitD) '''' ';'])
-        else
-            imType='Double';
-        end
-     
-        importedStack=zeros(nImage,mImage,numel(imRange),imType);
-        tic
-        if pImport==1
-            set(handles.feedbackString,'String',['Parallel Import Ongoing ...'])
-            pause(0.00000000000000001)
-            guidata(hObject, handles);
-            parfor i=1:numel(imRange)
-                pImRange=imRange;
-                importedStack(:,:,i)=imread([imPath tifFile],'Index',pImRange(i));
-            end
-        elseif pImport==0
-            set(handles.feedbackString,'String',['Importing ...'])
-            guidata(hObject, handles);        
-            for i=1:numel(imRange)
-                if mod(i,500)==0
-                    set(handles.importButton,'String',[num2str(i) '/' ...
-                     num2str(numel(imRange))])
-                    pause(0.00000000000000001)
-                    guidata(hObject, handles);
-                else
-                end
-                importedStack(:,:,i)=imread([imPath tifFile],'Index',imRange(i));
-            end
-        end
-        
-        set(handles.importButton,'String','WS Import')
-        set(handles.feedbackString,'String',['Imported ' num2str(numel(imRange)) ' Images'])
+        set(handles.importButton,'Enable','off')
         pause(0.00000000000000001)
         guidata(hObject, handles);
 
+        try
+            filterString={get(handles.fileFilterString,'String')};
+            filteredFiles = dir([imPath filesep '*' filterString{1} '*']);
+            
+            % kill files that have no data in them.
+            filteredFiles(find([filteredFiles.bytes]==0))=[];
+            filteredFiles=resortImageFileMap(filteredFiles);
+            assignin('base','filteredFiles',filteredFiles)
+            assignin('base','imPath',imPath)
+            
+            importCount=fix(((endIm-firstIm)+1)/skipBy);
+
+            % I try to preserve bitdepth.
+            canaryImport=imread([imPath filesep filteredFiles(1,1).name]);
+            [imType,imSize]=checkStackBitDepth(canaryImport);
+
+            assignin('base','bitDepth',imType);
+            evalin('base','metaData.bitDepth=bitDepth;clear bitDepth');
+            assignin('base','imSize',imSize);
+            evalin('base','metaData.imSize=imSize;clear imSize');
+            
+
+            % tempFilt is just the files in firstIM:skip:end,
+            tempFiltFiles=filteredFiles(firstIm:skipBy:endIm,1);
+            assignin('base','tempFiltFiles',tempFiltFiles);
+            evalin('base',['importedImages=zeros(' num2str(imSize(1)) ',' ...
+                num2str(imSize(2)) ',numel(tempFiltFiles),''' imType ''');']);
+            evalin('base','metaData.lastImported=tempFiltFiles;')
+            
+            tic
+            if pImport==1
+                set(handles.feedbackString,'String','Parallel Import Ongoing ...')
+                pause(0.00000000000000001)
+                guidata(hObject, handles);
+                evalin('base',['parfor n=1:numel(tempFiltFiles),importedImages(:,:,n)=imread([imPath filesep tempFiltFiles(n,1).name]);,end'])
+            
+            % the main difference (beyond the parfor loop) is we update the gui's feedback
+            % differently as we don't know the specific item we've imported.
+            elseif pImport==0
+                set(handles.feedbackString,'String',['Importing ...'])
+                pause(0.00000000000000001)
+                guidata(hObject, handles);
+                for n=1:numel(tempFiltFiles)
+                    evalin('base',['importedImages(:,:,' num2str(n) ')=imread([imPath filesep tempFiltFiles(' num2str(n) ',1).name]);'])
+                    if mod(n,500)==0
+                        set(handles.importButton,'String',[num2str(n) '/' num2str(numel(tempFiltFiles))])
+                        pause(0.00000000000000001)
+                        guidata(hObject, handles);
+                    else
+                    end
+            
+                end
+            end
+            iT=toc;
+
+            set(handles.importButton,'String','WS Import')
+            set(handles.importButton,'Enable','on')
+            set(handles.feedbackString,'String',['Imported ' num2str(numel(tempFiltFiles)) ' Images'])
+            evalin('base','clear imPath ans filteredFiles tempFiltFiles')
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        catch
+            set(handles.importButton,'Enable','on')
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        end
         
-        assignin('base','importedStack',importedStack)
-        iT=toc;
+    elseif importType==1  % The user wants multi-page tif. This import is a bit different.
+        disp('yo')
+        set(handles.importButton,'Enable','off')
+        pause(0.00000000000000001)
+        guidata(hObject, handles);
+        try
+            
+            % This gets metadata needed. 
+            bitD=mpTifInfo(1).BitDepth;
+            mImage=mpTifInfo(1).Width;
+            nImage=mpTifInfo(1).Height;
+            
+            % now figure out what images to import.
+            maxImages=length(mpTifInfo);
+            numImages=numel(firstIm:endIm);
+            
+            if numImages>maxImages
+                disp('your image range is invalid will do 1:all')
+                firstIm=1;
+                endIm=maxImages-1;
+            else
+            end
+            imRange=firstIm:skipBy:endIm;
+            
+            if bitD==8 || bitD==16 || bitD==32
+                eval(['imType=''uint' num2str(bitD) '''' ';'])
+            else
+                imType='Double';
+            end
+            
+            importedStack=zeros(nImage,mImage,numel(imRange),imType);
+            
+            tic
+            if pImport==1
+                set(handles.feedbackString,'String',['Parallel Import Ongoing ...'])
+                pause(0.00000000000000001)
+                guidata(hObject, handles);
+                parfor i=1:numel(imRange)
+                    pImRange=imRange;
+                    importedStack(:,:,i)=imread([imPath tifFile],'Index',pImRange(i));
+                end
+            elseif pImport==0
+                set(handles.feedbackString,'String',['Importing ...'])
+                guidata(hObject, handles);        
+                for i=1:numel(imRange)
+                    if mod(i,500)==0
+                        set(handles.importButton,'String',[num2str(i) '/' ...
+                         num2str(numel(imRange))])
+                        pause(0.00000000000000001)
+                        guidata(hObject, handles);
+                    else
+                    end
+                    importedStack(:,:,i)=imread([imPath tifFile],'Index',imRange(i));
+                end
+            end
+            
+            assignin('base','importedStack',importedStack)
+            disp('yo2')
+            set(handles.importButton,'String','WS Import')
+            set(handles.importButton,'Enable','on')
+            set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ' Images'])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        catch
+            set(handles.importButton,'String','WS Import')
+            set(handles.importButton,'Enable','on')
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        end
+
+        
     
-    elseif hdfF==1
-        selectVal=get(handles.hdfPopSelector,'Value');
-        tDS=get(handles.hdfPopSelector,'String');
-        tDS_select=tDS{selectVal};
-        tP=evalin('base','metaData.importPath');
-        tH=evalin('base','metaData.hdfFile');
-        evalin('base','clear ans')
-        
-
-        tSInfo=h5info([tP tH],['/' tDS_select]);
-        dsSize=tSInfo.Dataspace.Size;
-        zOne=get(handles.zDimFlip,'Value');
-        assignin('base','hdfZDim',zOne);
-        evalin('base','metaData.hdfZDim=hdfZDim;,clear hdfZDim');
-        
-        tic
-        if zOne==1 && numel(dsSize)==3
-            
-            firstIm=str2num(get(handles.firstImageEntry,'string'));
-            endIm=str2num(get(handles.endImageEntry,'string'));
-            skipBy=fix(str2double(get(handles.skipFactorEntry,'String')));
-            cStride=(endIm-firstIm)+1;
-            tData=h5read([tP tH],['/' tDS_select],[firstIm 1 1],[cStride dsSize(2) dsSize(3)]);
-            tData=permute(tData,[3,2,1]);
-            dispSize=size(tData,3);
-        
-        
-        elseif zOne==0 && numel(dsSize)==3
-            
-            firstIm=str2num(get(handles.firstImageEntry,'string'));
-            endIm=str2num(get(handles.endImageEntry,'string'));
-
-            cStride=(endIm-firstIm)+1;
-            tData=h5read([tP tH],['/' tDS_select],[1 1 firstIm],[dsSize(1) dsSize(2) cStride]);
-            dispSize=size(tData,3);
-        
-        
-        elseif numel(dsSize)~=3
-            
-            tData=h5read([tP tH],['/' tDS_select]);
-            dispSize=numel(tData);
-        end
-        
-        assignin('base','tDS_select',tDS_select);
-        evalin('base','metaData.tDS_select=tDS_select;,clear tDS_select');
-
-        tdSplit=strsplit(tDS_select, '-');
-        tdUse='';
-        if numel(tdSplit)>1
-            for n=1:numel(tdSplit)
-                if n==1
-                    tdUse=[tdUse tdSplit{n}];
-                else
-                    tdUse=[tdUse '_' tdSplit{n}];
-                end
-            end
-        else
-            tdUse=tDS_select;
-        end
-                    
-        assignin('base',tdUse,tData);
-        clear tData
-        set(handles.importButton,'String','WS Import')
-        set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ...
-            ' Images'])
+    
+    elseif importType==2
+        set(handles.importButton,'Enable','off')
         pause(0.00000000000000001)
         guidata(hObject, handles);
-        iT=toc;
+        
+        try
+            selectVal=get(handles.hdfPopSelector,'Value');
+            tDS=get(handles.hdfPopSelector,'String');
+            tDS_select=tDS{selectVal};
+            tP=evalin('base','metaData.importPath');
+            tH=evalin('base','metaData.hdfFile');
+            evalin('base','clear ans')
+            
+
+            tSInfo=h5info([tP tH],['/' tDS_select]);
+            dsSize=tSInfo.Dataspace.Size;
+            zOne=get(handles.zDimFlip,'Value');
+            assignin('base','hdfZDim',zOne);
+            evalin('base','metaData.hdfZDim=hdfZDim;,clear hdfZDim');
+            
+            tic
+            if zOne==1 && numel(dsSize)==3
+                
+                firstIm=str2num(get(handles.firstImageEntry,'string'));
+                endIm=str2num(get(handles.endImageEntry,'string'));
+                skipBy=fix(str2double(get(handles.skipFactorEntry,'String')));
+                cStride=(endIm-firstIm)+1;
+                tData=h5read([tP tH],['/' tDS_select],[firstIm 1 1],[cStride dsSize(2) dsSize(3)]);
+                tData=permute(tData,[3,2,1]);
+                dispSize=size(tData,3);
+            
+            
+            elseif zOne==0 && numel(dsSize)==3
+                
+                firstIm=str2num(get(handles.firstImageEntry,'string'));
+                endIm=str2num(get(handles.endImageEntry,'string'));
+
+                cStride=(endIm-firstIm)+1;
+                tData=h5read([tP tH],['/' tDS_select],[1 1 firstIm],[dsSize(1) dsSize(2) cStride]);
+                dispSize=size(tData,3);
+            
+            
+            elseif numel(dsSize)~=3
+                
+                tData=h5read([tP tH],['/' tDS_select]);
+                dispSize=numel(tData);
+            end
+            
+            assignin('base','tDS_select',tDS_select);
+            evalin('base','metaData.tDS_select=tDS_select;,clear tDS_select');
+
+            tdSplit=strsplit(tDS_select, '-');
+            tdUse='';
+            if numel(tdSplit)>1
+                for n=1:numel(tdSplit)
+                    if n==1
+                        tdUse=[tdUse tdSplit{n}];
+                    else
+                        tdUse=[tdUse '_' tdSplit{n}];
+                    end
+                end
+            else
+                tdUse=tDS_select;
+            end
+                        
+            assignin('base',tdUse,tData);
+            clear tData
+            set(handles.importButton,'String','WS Import')
+            set(handles.importButton,'Enable','on')
+            set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ...
+                ' Images'])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        catch
+            set(handles.importButton,'String','WS Import')
+            set(handles.importButton,'Enable','on')
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+            iT=toc;
+        end
 
     end
     disp(['*** done with import, which took ' num2str(iT) ' seconds'])
@@ -458,7 +504,7 @@ function registerButton_Callback(hObject, eventdata, handles)
     % todo use imType to deal with non uint16
     imType=tCl.class;
     stackSize=evalin('base',['size(' regStackString ');']);
-    subpixelFactor=100;
+    subpixelFactor=50;
     try
         totalImagesPossible=stackSize(3);
     catch
@@ -840,7 +886,7 @@ function applyTransformsButton_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String','applying transforms ...')
     pause(0.000000001)
     guidata(hObject, handles);
-    evalin('base',[selectStack '_registered=applyTransformsToStack(' selectStack ',registeredTransforms);'])
+    evalin('base',[selectStack '=applyTransformsToStack(' selectStack ',registeredTransforms);'])
     set(handles.feedbackString,'String','done applying transforms')
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
@@ -888,7 +934,7 @@ function inspectStackButton_Callback(hObject, eventdata, handles)
     while pS==1 && i<=size(sP,3)
         axis square
         ii=(ii.*(1-mfactor))+sP(:,:,i).*mfactor;
-        h=imagesc(ii,[1 mPlt]);
+        h=imagesc(ii,[0 mPlt]);
         axis square
         colormap('jet')
         daspect([1 1 1])
@@ -919,7 +965,7 @@ function registrationWorkerEntry_Callback(hObject, eventdata, handles)
 function inferRunningButton_Callback(hObject, eventdata, handles)
 
 
-    evalin('base','inferedRunningData=inferRunFromRegistration(registeredTransforms(3,:));')
+    evalin('base','inferedRunningData=inferRunFromRegistration(registeredTransformations(3,:));')
     evalin('base','figure,plot(inferedRunningData),title(''normalized running data infered from reg data'')')
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
@@ -1204,14 +1250,15 @@ function registrationWorkerEntry_CreateFcn(hObject, eventdata, handles)
 
 % --- Executes on button press in binPixels.
 function binPixels_Callback(hObject, eventdata, handles)
+    set(handles.binPixels,'Enable','off');
+    try
+        binPix=str2num(get(handles.binPixelsEntry,'String'));
 
-    binPix=str2num(get(handles.binPixelsEntry,'String'));
+        selections = get(handles.workspaceVarBox,'String');
+            selectionsIndex = get(handles.workspaceVarBox,'Value');
+        s=evalin('base',['size(' selections{selectionsIndex} ');']);
+        if numel(s)>=2
 
-    selections = get(handles.workspaceVarBox,'String');
-        selectionsIndex = get(handles.workspaceVarBox,'Value');
-    s=evalin('base',['size(' selections{selectionsIndex} ');']);
-    if numel(s)>=2
-        if numel(s)==3
             set(handles.feedbackString,'String',['Binning Stack ...'])
             pause(0.00000000000000001);
             guidata(hObject, handles);
@@ -1219,16 +1266,15 @@ function binPixels_Callback(hObject, eventdata, handles)
             set(handles.feedbackString,'String',['finished stack binning ...'])
             pause(0.00000000000000001)
             guidata(hObject, handles);
-        elseif numel(s)==2
-            testBin=squeeze(mean(squeeze(mean(reshape(s,binPix,size(s,1)/binPix,binPix,size(s,2)/binPix))),2));
-            assignin('base',['binned_' selections{selectionsIndex}],testBin);
+
         else
         end
-    else
+
+        clear s testBin
+    catch
+        set(handles.binPixels,'Enable','on');
     end
-
-    clear s testBin
-
+    set(handles.binPixels,'Enable','on');
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function binPixelsEntry_Callback(hObject, eventdata, handles)
@@ -1315,6 +1361,18 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
     vars = evalin('base','who');
     set(handles.workspaceVarBox,'String',vars)
     
+    try
+        totalImages=evalin('base','numel(metaData.filteredFiles);');
+        set(handles.endImageEntry,'String',num2str(totalImages));
+    catch
+    end
+    
+    try
+        totalImages=evalin('base','size(metaData.hdfSize);');
+        set(handles.endImageEntry,'String',num2str(totalImages(3)));
+    catch
+    end
+    
 
     if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
         macHeaderSize=12;
@@ -1352,7 +1410,7 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
         'registerButton','setRegStackButton','templateButton','meanProjectButton',...
         'workspaceVarBox','setDirectoryButton','importButton','stackResizeButton',...
         'resizeStackXEntry','resizeStackYEntry','resizeStackZEntry','renameStringEntry',...
-        'saveEntryText','exportHDF'};
+        'saveEntryText','exportHDF','exportMPTiff'};
     
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
@@ -1501,17 +1559,135 @@ function exportHDF_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String',['Exported ' num2str(numel(imRange)) ' Images'])
     pause(0.00000000000000001)
     guidata(hObject, handles);
-
 function saveEntryText_Callback(hObject, eventdata, handles)
 function saveEntryText_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-function edit25_Callback(hObject, eventdata, handles)
-function edit25_CreateFcn(hObject, eventdata, handles)
+function renameSelectionEntry_Callback(hObject, eventdata, handles)
+function renameSelectionEntry_CreateFcn(hObject, eventdata, handles)
 
     if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
         set(hObject,'BackgroundColor','white');
     end
-function pushbutton41_Callback(hObject, eventdata, handles)
+function renameSelection_Callback(hObject, eventdata, handles)
+    renameString=get(handles.renameSelectionEntry,'String');
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    selectedItem=selections{selectionsIndex};
+    evalin('base',[renameString '=' selectedItem ';, clear ' selectedItem]);
+
+    refreshVarListButton_Callback(hObject, eventdata, handles)
+    selections = get(handles.workspaceVarBox,'String');
+    for n=1:numel(selections)
+        if strcmp(renameString,selections{n})==1
+            shiftSelection=n;
+            break
+        else
+            shiftSelection=1;
+        end
+    end
+        set(handles.workspaceVarBox,'Value',shiftSelection);
+    
+    guidata(hObject, handles);
+
+
+function exportMPTiff_Callback(hObject, eventdata, handles)
+
+    mPF=evalin('base','metaData.importType;');
+    fPath=evalin('base','metaData.importPath;');
+    tsPath=strsplit(fPath,filesep);
+    sPath=tsPath{1};
+    for n=2:numel(tsPath)-1
+        sPath=[sPath filesep tsPath{n}];
+    end
+    sPath=[sPath filesep];
+    assignin('base','sPath',sPath);
+
+    if strcmp(fPath(end),filesep)==0
+        fPath=[fPath filesep];
+    else
+    end 
+    
+    if mPF==0
+        filteredFiles=evalin('base','metaData.filteredFiles;');
+        dTypeStr=evalin('base','metaData.bitDepth;');
+        yDim=evalin('base','metaData.imSize(1);');
+        xDim=evalin('base','metaData.imSize(2);');
+    else
+    end
+
+    if mPF==1
+        tifFile=evalin('base','metaData.tifFile;');
+        bDepth=evalin('base','metaData.mpTifInfo(1).BitDepth;');
+        if bDepth==8
+            dTypeStr='uint8';
+        elseif bDepth==32
+            dTypeStr='uint32';
+        else
+            dTypeStr='uint16';
+        end
+        yDim=evalin('base','metaData.mpTifInfo(1).Height;');
+        xDim=evalin('base','metaData.mpTifInfo(1).Width;');
+    else
+    end
+
+    % create mp tiff
+
+        
+    imF=str2num(get(handles.firstImageEntry,'String'));
+    imS=str2num(get(handles.skipFactorEntry,'String'));
+    imL=str2num(get(handles.endImageEntry,'String'));
+
+    imRange=imF:imS:imL;
+    imageCount=numel(imRange);
+
+    
+    
+    
+    hdfSaveInfo=get(handles.saveEntryText,'string');
+    tStr=strsplit(hdfSaveInfo,',');
+
+
+    hdfName=[sPath tStr{1} '_' tStr{2} '.tif'];
+
+
+    disp(hdfName)
+    disp(tStr)
+    
+    
+
+    
+    set(handles.feedbackString,'String',['exporting to mp tiff ...'])
+    pause(0.00000000000000001)
+    guidata(hObject, handles);
+    tic
+
+    for g=1:imageCount
+        if mod(g,250)==0
+            set(handles.exportMPTiff,'String',[num2str(g) '/' num2str(imageCount)])
+            pause(0.00000000000000001)
+            guidata(hObject, handles);
+        else
+        end
+        if mPF==1
+            tempImported=imread([fPath tifFile],'Index',imRange(g));
+        else
+            tempImported=imread([filteredFiles(imRange(g)).folder filesep filteredFiles(imRange(g)).name]);
+        end
+        if g==1
+            imwrite(tempImported,hdfName);
+        else
+            imwrite(tempImported,hdfName,'WriteMode','append');
+        end
+    end
+    hdfExpTime=toc;
+    disp(['it took ' num2str(hdfExpTime) ' seconds to export'])
+
+        
+    clear tIm
+    set(handles.exportMPTiff,'String','To MP Tif')
+    set(handles.feedbackString,'String',['Exported ' num2str(numel(imRange)) ' Images'])
+    pause(0.00000000000000001)
+    guidata(hObject, handles);

@@ -267,7 +267,7 @@ if numel(convertablePaths)>0
                          tF(:,l)=gg(l:md.numChans:end);
                      end
                     for x=1:md.numChans
-                        rOffset=abs(8192-min(tF(:,x)));
+                        rOffset=min(tF(:,x))-abs(8192-min(tF(:,x)));
                         tty=tF(:,x);  %:mSamp:end);
                         taa=reshape(tty,xDim*2*mSamp,yDim/2)';
                         taa(:,1:xDim*mSamp)=fliplr(taa(:,1:xDim*mSamp));
@@ -275,7 +275,7 @@ if numel(convertablePaths)>0
                         tp2=taa(:,(xDim*3)+1:end);
                         tp3(1:2:yDim,1:xDim*3)=tp1;
                         tp3(2:2:yDim,1:xDim*3)=tp2;  
-                        tp3=uint16(squeeze(mean(reshape(tp3,yDim,mSamp,xDim),2))-rOffset);                     
+                        tp3=uint16(squeeze(mean(reshape(tp3,yDim,mSamp,xDim),2)));                     
                         frmWrt=frmWrt+1;
                         h5write(hdfName,hdfDSet,tp3,[1 1 frmWrt],[yDim xDim 1]);
                     end                        
