@@ -73,8 +73,8 @@ end
 parsedStruct.position=decodeShaftEncoder(parsedStruct.motionTracker,3);
 parsedStruct.velocity=nPointDeriv(parsedStruct.position,parsedStruct.sessionTime,1000);
 parsedStruct.velocity(find(isnan(parsedStruct.velocity)==1))=0;
-parsedStruct.binaryVelocity=binarizeResponse(bData.velocity,0.005);
-parsedStruct.motionBoutStarts=find(diff(binaryVelocity)>0.8);
+parsedStruct.binaryVelocity=binarizeResponse(parsedStruct.velocity,0.005);
+parsedStruct.motionBoutStarts=find(diff(parsedStruct.binaryVelocity)>0.8);
 
 
 

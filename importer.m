@@ -443,7 +443,8 @@ function workspaceVarBox_Callback(hObject, eventdata, handles)
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function meanProjectButton_Callback(hObject, eventdata, handles)
-
+    set(handles.meanProjectButton,'Enable','off')
+    try
     selections = get(handles.workspaceVarBox,'String');
     selectionsIndex = get(handles.workspaceVarBox,'Value');
 
@@ -460,9 +461,12 @@ function meanProjectButton_Callback(hObject, eventdata, handles)
 
     axes(handles.imageAxis)
     imagesc(uint16(mP))
-
+    set(handles.meanProjectButton,'Enable','on')
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
+    catch
+        set(handles.meanProjectButton,'Enable','on')
+    end
 function templateButton_Callback(hObject, eventdata, handles)
 
     selections = get(handles.workspaceVarBox,'String');
@@ -497,7 +501,8 @@ function setRegStackButton_Callback(hObject, eventdata, handles)
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function registerButton_Callback(hObject, eventdata, handles)
-
+    set(handles.registerButton,'Enable','off')
+    try
     regStackString=evalin('base','stackToRegister');
     regTemp=evalin('base','regTemplate');
     tCl=whos('regTemp');
@@ -543,8 +548,8 @@ function registerButton_Callback(hObject, eventdata, handles)
             evalin('base',[regStackString '(:,:,' num2str(n) ')=out2;,clear out2'])
 
             if mod(n,200)==0
-                set(handles.feedbackString,'String',['reg: ' num2str(n) ...
-                 ' of ' num2str(totalImagesPossible)])
+                set(handles.registerButton,'String',[num2str(n) ...
+                 '/' num2str(totalImagesPossible)])
                 pause(0.0000000000001);
                 guidata(hObject, handles);
             else
@@ -553,12 +558,17 @@ function registerButton_Callback(hObject, eventdata, handles)
     end
         
     t=toc;
+    set(handles.registerButton,'String','Register Stacks')
     set(handles.feedbackString,'String','finished registration')
+    set(handles.registerButton,'Enable','on')
     pause(0.0000000000001);
     guidata(hObject, handles);
     disp(['done with registration. it took ' num2str(t) ' seconds'])
     refreshVarListButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
+    catch
+        set(handles.registerButton,'Enable','on')
+    end
 function refreshVarListButton_Callback(hObject, eventdata, handles)
 
     vars = evalin('base','who');
@@ -641,51 +651,8 @@ function saveDirectoryButton_Callback(hObject, eventdata, handles)
     % Update handles structure
     guidata(hObject, handles);
 function stackObjectNameEntry_Callback(hObject, eventdata, handles)
-function diskMeanProjectButton_Callback(hObject, eventdata, handles)
-
-    firstIm=str2num(get(handles.firstImageEntry,'string'));
-    endIm=str2num(get(handles.endImageEntry,'string'));
-    imageCount=(endIm-firstIm)+1;
-    runFlag=1;
-    try 
-        imPath=evalin('base','metaData.importPath');
-    catch
-        disp('image path not set')
-        runFlag=0;
-    end
-
-    if runFlag
-        % if there is a string to filter on:
-        filterString={get(handles.fileFilterString,'String')};
-        imageType={'.tif'};
-        filteredFiles = dir([imPath filesep '*' filterString{1} '*' imageType{1}]);
-
-        if matlabpool('size')==0
-            matlabpool open
-        else
-        end
-
-        disp('projecting ...')
-
-        % seed the stack in the wspace
-        pS=uint32(imread([imPath filesep filteredFiles(1,1).name],'tif'));
-        % iterate the stack in the wspace
-        tic
-        parfor n=(firstIm+1):endIm
-            pS=imadd(pS,uint32(imread([imPath filesep filteredFiles(n,1).name],'tif')));
-        end
-        toc
-        pS=uint16(imdivide(pS,imageCount));
-        assignin('base','meanProjection',pS);
-        disp('done!')
 
 
-        refreshVarListButton_Callback(hObject, eventdata, handles)
-        % Update handles structure
-        guidata(hObject, handles)
-    else
-    end
-function compressStackToggle_Callback(hObject, eventdata, handles)
 function diskRegisterButton_Callback(hObject, eventdata, handles)
 
     % Let's save to a mat file ... the stack object should be fine, there could

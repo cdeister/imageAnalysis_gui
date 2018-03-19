@@ -1157,12 +1157,11 @@ function getGXcorButton_Callback(hObject, eventdata, handles)
         for n=1:nstack
             c=c+1;
             if (rem(n,50)==0)
-                set(handles.feedbackString,'String',['finished ' num2str(n)...
-                    ' of ' num2str(nstack) ' | ' num2str(round(100*(n./nstack))) '% done'])
+                set(handles.getGXcorButton,'String',[num2str(n) ' of ' num2str(nstack)])
                 pause(0.0000001);
                 guidata(hObject, handles);
             end
-
+            set(handles.getGXcorButton,'String','XCor')
             fnum=n;
             evalStr=['double(' selectStack '(:,:,' num2str(n) '))'];
             I=evalin('base',evalStr);
