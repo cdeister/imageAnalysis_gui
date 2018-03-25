@@ -363,7 +363,8 @@ function setDirectoryButton_Callback(hObject, eventdata, handles)
         end
 
         if mPF==0 && hdfF==0
-           
+            evalin('base','importType=0;');
+            evalin('base','metaData.importType=importType;,clear importType');
             imPath=uigetdir(lastPath);
             
             if imPath~=0

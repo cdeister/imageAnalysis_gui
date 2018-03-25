@@ -1,0 +1,46 @@
+lickSamps=find(aa.thresholdedLicks==1);
+waitOn=getStateSamps(aa.teensyStates,1,1);
+waitOff=getStateSamps(aa.teensyStates,1,0);
+waitDurs=waitOn-waitOff;
+figure
+subplot(1,2,1)
+hold all
+for n=1:aa.completedTrials
+        plot(aa.thresholdedLicks(waitOff(n)-2000:waitOff(n))*n,'ko')
+end
+subplot(1,2,2)
+hold all
+for n=1:aa.completedTrials
+        tRL=find(aa.thresholdedLicks(waitOff(n)+10:waitOff(n)+2500)==1);
+        if aa.contrasts(n)>0
+            if numel(tRL)==0
+                poolHM(n)=0;
+                poolFA(n)=NaN;
+            else
+                poolHM(n)=1;
+                poolFA(n)=NaN;
+            end
+        elseif aa.contrasts(n)==0
+            if numel(tRL)==0
+                poolHM(n)=NaN;
+                poolFA(n)=0;
+            else
+                poolHM(n)=NaN;
+                poolFA(n)=1;
+            end
+        end
+    
+end
+
+%%
+catchCount=find(poolFA>=0);
+stimCount=find(poolHM>=0);
+
+faRate=numel(find(poolFA==1))/numel(catchCount);
+hitRate=numel(find(poolHM==1))/numel(stimCount);
+%%
+figure,plot(nPointMean(poolFA',100))
+hold all,plot(nPointMean(poolHM',100))
+
+figure,plot(norminv(nPointMean(poolHM',100))./norminv(nPointMean(poolFA',100)))
+

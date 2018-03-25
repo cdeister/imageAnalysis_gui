@@ -60,7 +60,7 @@ parsedStruct.completedTrials=numel(parsedStruct.stimSamps);
 % This stuff is most likley to change with format changes.
 
 % contrasts as a fraction.
-attDataScalars=[0.1,1,1,0.001,0.001];
+attDataScalars=[1,1,1,0.001,0.001];
 attDataLabels={'contrasts','orientations','spatialFreqs','waitTimePads','trialDurs'};
 attDataNames={'contrasts','orientations','spatialFreqs','waitTimes','trialDurations'};
 

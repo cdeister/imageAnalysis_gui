@@ -13,7 +13,7 @@ cOrients=bData.orientations(1:numel(stimFrames));
 clear trigF
 clear tMu
 
-tR=8;
+tR=11;
 oList=unique(cOrients);
 for k=1:numel(oList)
 sFrames=find(cOrients==oList(k));
@@ -38,14 +38,14 @@ for n=1:numel(sFrames)
 end
 tMu(:,k)=mean(trigF,2);
 shuf_tMu(:,k)=mean(shuf_trigF,2);
-oScore(:,k)=trapz(tMu(40:60,k))-trapz(tMu(1:20,k));
+oScore(:,k)=trapz(smooth(tMu(40:60,k)))-smooth(trapz(tMu(1:20,k)));
 oScore_shuf(:,k)=trapz(shuf_tMu(40:60,k))-trapz(shuf_tMu(1:20,k));
 
 end
 eval(['figure(9' num2str(tR) ')'])
 subplot(2,1,1)
-hold all,plot(tMu-mean(tMu(1:25,:),1),'k-')
-hold all,plot(shuf_tMu-mean(shuf_tMu(1:25,:),1),'r-')
+hold all,plot(batchSmooth(tMu-mean(tMu(1:25,:),1)),'k-')
+hold all,plot(batchSmooth(shuf_tMu-mean(shuf_tMu(1:25,:),1)),'r-') 
 subplot(2,1,2)
 polarplot(deg2rad(oList),abs(oScore))
 hold all

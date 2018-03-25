@@ -2,6 +2,12 @@ function [out]=nPointMean(idata,np)
 
 idata(isnan(idata))=0;
 
+if numel(size(idata))==2 && size(idata,1)<size(idata,2)
+    idata=idata';
+else
+end
+    
+
 if np>0
     c1=fix(np./2);
     idata=padarray(idata,c1,'symmetric');
