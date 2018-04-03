@@ -34,7 +34,9 @@ chFind=@(b) chIndMap(find(strcmp(chStrMap,b)==1));
 
 % A) Parse the dataset.
 for n=1:numel(chStrMap)
-	eval(['parsedStruct.' chStrMap{n} '=csBData(chFind("' chStrMap{n} '"),:);'])
+    disp(n)
+    disp(['parsedStruct.' chStrMap{n} '=csBData(chFind(''' chStrMap{n} '''),:);'])
+	eval(['parsedStruct.' chStrMap{n} '=csBData(chFind(''' chStrMap{n} '''),:);'])
 end
 
 parsedStruct.sessionTime=parsedStruct.sessionTime/1000;
