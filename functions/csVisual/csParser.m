@@ -1,6 +1,6 @@
-function [parsedStruct,csBData,csBehavHDFInfo]=csParser(csBehaviorHDFPath,versionNum)
+operfunction [parsedStruct,csBData,csBehavHDFInfo]=csParser2(csBehaviorHDFPath,versionNum)
 
-% csParser, a function that parses behavior data from csDiscrim/csVisual
+% csParser2, a function that parses behavior data from csDiscrim/csVisual
 % arguments: "csBehaviorHDFPath" is a path to the hdf file you want to
 % parse. "versionNum" is an optional argument that isn't implemented yet.
 % You can also pass 0 arguments and a dialog to select an hdf will pop up.
@@ -8,7 +8,7 @@ function [parsedStruct,csBData,csBehavHDFInfo]=csParser(csBehaviorHDFPath,versio
 % function is intended to produce."csBData" is the raw dataset in the hdf
 % only. "csBehavHDFInfo" is the hdf5 library info.
 %
-% v0.2 -- Chris Deister - cdeister@brown.edu
+% v0.8 -- Chris Deister - cdeister@brown.edu
 
 if nargin==0
     [tHDF,tPth]=uigetfile('*.hdf','what what?');
@@ -26,7 +26,7 @@ csBData=h5read(csBehaviorHDFPath,curDatasetPath);
 % map of data labels and numerical indicies (for the data in the dataset only).
 chStrMap={'interrupts','sessionTime','stateTime','teensyStates','loadCell','lickSensor',...
     'motionTracker','scopeState','pythonStates','thresholdedLicks'};
-chIndMap=[1,2,3,4,5,6,7,8,9,10];
+chIndMap=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
 % simple anonymous function to easily index the channels by name. This allows flexibility.
 % use: chFind('interrupts') will return 1.
 chFind=@(b) chIndMap(find(strcmp(chStrMap,b)==1));

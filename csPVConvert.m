@@ -11,6 +11,8 @@
 % anything licenseable is covered under an MIT license contained in the Git
 % repository. 
 
+% odd lines
+
 %% get path
 clear convertablePaths subDirectories
 try
@@ -67,18 +69,28 @@ if numel(convertablePaths)>0
         % get frame count and times.
         md.volScan=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,35}.Attributes.value);
         md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
-        if md.volScan==0 
+        md.volumeCount=numel(xmlFile.PVScan.Sequence);
+
+        if md.volScan==0 || md.volumeCount==1
             md.frameCount=numel(xmlFile.PVScan.Sequence.Frame);
             md.absTime=zeros(md.frameCount,1);
             for q=1:md.frameCount
                 md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
             end
-%         elseif md.volScan==1
-%             md.volumeCount=numel(xmlFile.PVScan.Sequence);
-%             md.absTime=zeros(md.frameCount,1);
-%             for q=1:md.frameCount
-%                 md.absTime(q)=str2double(xmlFile.PVScan.Sequence.Frame{q}.Attributes.absoluteTime);
-%             end
+            
+        % ******* This is the stuff you want Fred.
+        elseif md.volScan==1 && md.volumeCount>1
+            md.volumeCount=numel(xmlFile.PVScan.Sequence);
+            md.framePerVolumeCount=numel(xmlFile.PVScan.Sequence{1, 1}.Frame);
+            md.frameCount = md.volumeCount * md.framePerVolumeCount;
+            md.absTime=zeros(md.frameCount,1);
+            tFrames  = 1;
+            for q=1:md.volumeCount
+                for g = 1: md.framePerVolumeCount
+                    md.absTime(tFrames)=str2double(xmlFile.PVScan.Sequence{1,q}.Frame{1,g}.Attributes.absoluteTime);
+                    tFrames = tFrames+1;
+                end
+            end
         end
             
 
@@ -136,9 +148,9 @@ if numel(convertablePaths)>0
         % create hdf set
         hdfDSet=['/' convertablePaths{h}];
         hdfDSetTime=['/' convertablePaths{h} '_absTime'];
-        
-        h5create(hdfName,hdfDSet,[yDim xDim md.frameCount],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
-        h5create(hdfName,hdfDSetTime,[md.frameCount 1],'Datatype','double');
+        effectiveFrameCount = md.numChans * md.frameCount;
+        h5create(hdfName,hdfDSet,[yDim xDim effectiveFrameCount],'Datatype','uint16','ChunkSize',[yDim xDim 1]);
+        h5create(hdfName,hdfDSetTime,[effectiveFrameCount 1],'Datatype','double');
         h5write(hdfName,hdfDSetTime,md.absTime,[1 1],[md.frameCount 1]);
 
         h5writeatt(hdfName,hdfDSet,'scanType',md.scanType);
@@ -232,7 +244,7 @@ if numel(convertablePaths)>0
             end
             disp(['******* done with dataset: wrote ' num2str(frmWrt) ' frames to your hdf'])
         
-        elseif strcmp(md.scanType,'ResonantGalvo') && md.volScan==0
+        elseif strcmp(md.scanType,'ResonantGalvo')
             clear tF
             frmWrt=0;
             lastExtra=[];
@@ -277,7 +289,12 @@ if numel(convertablePaths)>0
                         tp3(2:2:yDim,1:xDim*3)=tp2;  
                         tp3=uint16(squeeze(mean(reshape(tp3,yDim,mSamp,xDim),2)));                     
                         frmWrt=frmWrt+1;
-                        h5write(hdfName,hdfDSet,tp3,[1 1 frmWrt],[yDim xDim 1]);
+                        if frmWrt<=effectiveFrameCount
+                            h5write(hdfName,hdfDSet,tp3,[1 1 frmWrt],[yDim xDim 1]);
+                        else
+                            extraFrames(:,:,frmWrt-effectiveFrameCount)=tp3;
+                        end
+         
                     end                        
                     if mod(k,5000)==0
                         disp(['finished ' num2str(k) '/' num2str(totalFramesInRawChunk) ' in chunk ' num2str(n) '/' num2str(numel(rawNames))])

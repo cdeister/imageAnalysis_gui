@@ -1353,7 +1353,7 @@ function typeSelectorMenu_Callback(hObject, eventdata, handles)
 function pushbutton38_Callback(hObject, eventdata, handles)
 function loadCSHDF_Callback(hObject, eventdata, handles)
     try
-        evalin('base','bData=csParser();')
+        evalin('base','bData=csParser2();')
         bvars = evalin('base','fieldnames(bData)');
         set(handles.csListbox,'String',bvars)
         guidata(hObject, handles);
