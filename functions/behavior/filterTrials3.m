@@ -24,6 +24,7 @@ else
 end
 % 
 disp(['done loading session ' behavSessions{jj}])
+%%
 getBehavioralStuff
 % filterTrials
 % 

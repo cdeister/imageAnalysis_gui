@@ -524,10 +524,12 @@ function registerButton_Callback(hObject, eventdata, handles)
     tic
     if pImport
         regTempC=regTemp;
+        disp("debug");
         set(handles.feedbackString,'String',' par registration started ...')
         pause(0.0000000000001);
         guidata(hObject, handles);
         parfor n=1:totalImagesPossible
+            disp(totalImagesPossible)
             imReg=evalin('base',[regStackString '(:,:,' num2str(n) ');']);
             [out1,out2]=dftregistration(fft2(regTempC),fft2(imReg),subpixelFactor);
             assignin('base',['registeredTransformations(:,' num2str(n) ')'],out1);

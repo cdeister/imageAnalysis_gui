@@ -1,3 +1,19 @@
+%% once you have somaticF data and neuropilF data you can correct.
+somaticF_original = somaticF;
+somaticF_hnp = somaticF - (0.8*neuropilF);
+somaticF = somaticF - (0.232*neuropilF);
+
+% add an offset, so we don't get negative values for df/f
+% the offset will affect df/f so we will rescale later by the error. 
+% the error is the ratio of the original mean and the scalar.
+somaticF = somaticF + 10000;
+
+%% once we have df/f we fix
+scaleError = 10000/nanmean(nanmean(somaticF_original));
+somaticF_DF=somaticF_DF*scaleError;
+somaticF_DFBU=somaticF_DF;
+
+
 %% first we figure out when each trial's first frame actually starts
 % we will import each trial, detect the first frame trigger and log the
 % frame that was in.
@@ -13,6 +29,7 @@ for n=firstTrial:firstTrial+(numTrials-1)
     
     tempCross = find(diff(data(:,5))<-0.5);
     firstFrame_BehaviorSample = tempCross(1)+1;
+    secondFrame_BehaviorSample = tempCross(2)+1;
 
     firstFrameTime(n-(firstTrial-1)) = firstFrame_BehaviorSample*behavoiorSampleRate;
     clear data tempCross
@@ -22,8 +39,8 @@ disp('finished calculating offsets')
 % start scanning after it received our trigger. 
 
 %% make frame clock
-framesPerTrial = 60;
-frameInterval = 0.121786770904064;
+framesPerTrial = 50;
+frameInterval = 0.102839618725182;
 frameClock = frameInterval:frameInterval:framesPerTrial*frameInterval;
 % add the offset
 frameClock = frameClock+firstFrameTime(1);
@@ -34,18 +51,8 @@ syncTimes = session.relative_trial_start_times;
 stimTimes = (syncTimes+syncDur)+0.001;
 
 
-%% once you have somaticF data and neuropilF data you can correct.
-somaticF_original = somaticF;
-somaticF = somaticF - (0.8*neuropilF);
-% add an offset, so we don't get negative values for df/f
-% the offset will affect df/f so we will rescale later by the error. 
-% the error is the ratio of the original mean and the scalar.
-somaticF = somaticF + 10000;
 
-%% once we have df/f we fix
-scaleError = 10000/mean(mean(somaticF_original));
-somaticF_DF=somaticF_DF*scaleError;
-
+%%
 
 fData = somaticF_DF;
 
@@ -69,7 +76,7 @@ hold all
 plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 1],'r-')
 
 %% example: all trials for a single cell
-exampleCell = 4;
+exampleCell = 2;
 figure
 hold all
 for n=1:numTrials
@@ -80,7 +87,7 @@ plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 1],'r-')
 
 
 %% example: take mean for a cells 
-exampleCell = 30;
+exampleCell = 4;
 exampleMean = mean(squeeze(trialF(exampleCell,:,:)),2);
 
 figure
@@ -90,7 +97,7 @@ plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 0.4],'r-')
 
 %% example: take mean for a cell, but only max stim amps
 
-exampleCell = 19;
+exampleCell = 20;
 stimAmp = -4;
 trialsWithStim =find(session.stim_amplitude <= stimAmp);
 trialsWithNoStim =find(session.stim_amplitude == 0);

@@ -1,4 +1,10 @@
-tN=31;
+%%
+traces.dfs_npc = somaticF_DF;
+
+%%
+traces.ogSomaticF_DF = somaticF_DF;
+%%
+tN=1;
 close all
 tTrace=traces.dfs_npc(tN,:)';
 oTrace=traces.dfs_npc(tN,:)';
@@ -9,8 +15,9 @@ tMedian=median(tTrace);
 
 % is the median above or below 0?
 medDif=tMedian-0;
-pMedian=median(cTrace);
+
 cTrace=tTrace-medDif;
+pMedian=median(cTrace);
 cMin=min(cTrace);
 
 
@@ -88,6 +95,10 @@ cTrace(cTrace<noiseRange2)=pMedian;
 traces.dfs_npc(g,:)=cTrace;
 end
 
+%%
+somaticF_DF = traces.dfs_npc;
+%%
+somaticF_DF = traces.ogSomaticF_DF;
 
 
 

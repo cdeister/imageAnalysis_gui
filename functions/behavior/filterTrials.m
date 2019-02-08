@@ -2,32 +2,30 @@
 stimTimes=session.relative_trial_start_times;
 stimAmps=session.stim_amplitude(1:numel(stimTimes));
 
-%
-f = normpdf([-100:100],0,10); 
-f = f./sum(f); 
-trialFilter.boxWidth=fix(timingParams.numTrials./10);
+% Smooth the responses in order to determine trends in engagement.
+trialFilter.binWidth = 50;
+trialFilter.convKern = normpdf([-1*trialFilter.binWidth:trialFilter.binWidth],0,((trialFilter.binWidth*2)/10)); 
+trialFilter.convKern = trialFilter.convKern./sum(trialFilter.convKern); 
+% trialFilter.boxWidth=fix(timingParams.numTrials./10);
 % f=ones(1,trialFilter.boxWidth);
 
 % --- these are variables that one might want to change
 trialFilter.preLickThreshold=-0.5; %(in seconds)
 trialFilter.tooEarly=0.05; % licks that occur to early after the stim (in seconds)
-trialFilter.smoothHit=nanconv(session.behavior.hits,f);
+%---- end user variables.
+
+trialFilter.smoothHit=nanconv(session.behavior.hits,trialFilter.convKern);
 trialFilter.engThreshold=((max(trialFilter.smoothHit)-min(trialFilter.smoothHit))/3)+min(trialFilter.smoothHit); %0.4;   %<--- the red line in the plot
 trialFilter.engagedTrials=find(trialFilter.smoothHit>trialFilter.engThreshold);
 trialFilter.disengagedTrials=find(trialFilter.smoothHit<=trialFilter.engThreshold);
-
-trialFilter.smoothCrit=crtiloc(nanconv(session.behavior.hits,f),...
-	nanconv(session.behavior.falsepos,f));
-%---- end user variables.
-
+trialFilter.smoothCrit=crtiloc(nanconv(session.behavior.hits,trialFilter.convKern),nanconv(session.behavior.falsepos,trialFilter.convKern));
 
 
 
 %
-for n=1:numel(session.trial_start_times),
+for n=1:numel(session.trial_start_times)
     trialFilter.preLickNumberByTrial(:,n)= ...
-        numel(find(session.lick_times{1,n}>=trialFilter.preLickThreshold & ...
-        session.lick_times{1,n}<0.02));
+        numel(find(session.lick_times{1,n}>=trialFilter.preLickThreshold & session.lick_times{1,n}<trialFilter.tooEarly));
 end
 
 trialFilter.trialsWithPreLicks=find(trialFilter.preLickNumberByTrial>0);
@@ -92,8 +90,8 @@ xlabel('trial number')
 title('engagement threshold and convolved hits')
 legend('smoothed hit raster','engagement threshold')
 
-figure,plot(crtiloc(nanconv(session.behavior.hits,ones(1,trialFilter.boxWidth)),...
-	nanconv(session.behavior.falsepos,ones(1,trialFilter.boxWidth))))
+figure,plot(crtiloc(nanconv(session.behavior.hits,ones(1,trialFilter.binWidth)),...
+	nanconv(session.behavior.falsepos,ones(1,trialFilter.binWidth))))
 
 
 %% Make Psychometric Curve After
@@ -422,3 +420,8 @@ shiftVals.threshDif=psychometrics.f_threshold-psychometrics.unfiltered.threshold
 
 shiftVals.maxDif=max(psychometrics.hitRate)-max(psychometrics.unfiltered.hitRate);
 shiftVals.faDif=psychometrics.hitRate(end)-psychometrics.unfiltered.hitRate(end)
+
+
+
+%%
+deets = [psychometrics.threshold,psychometrics.slope,psychometrics.f_threshold,psychometrics.f_slope,psychometrics.f_nthreshold,psychometrics.f_nslope,psychometrics.rt_all,psychometrics.rt_weak,psychometrics.rt_strong,psychometrics.rt_fa,psychometrics.strongDP,psychometrics.weakDP]
