@@ -4,7 +4,8 @@ stimAmps=session.stim_amplitude(1:numel(stimTimes));
 
 % Smooth the responses in order to determine trends in engagement.
 trialFilter.binWidth = 50;
-trialFilter.convKern = normpdf([-1*trialFilter.binWidth:trialFilter.binWidth],0,((trialFilter.binWidth*2)/10)); 
+trialFilter.convKern = normpdf(-1*fix(trialFilter.binWidth/2):fix(trialFilter.binWidth/2),...
+    0,((trialFilter.binWidth)/10)); 
 trialFilter.convKern = trialFilter.convKern./sum(trialFilter.convKern); 
 % trialFilter.boxWidth=fix(timingParams.numTrials./10);
 % f=ones(1,trialFilter.boxWidth);
