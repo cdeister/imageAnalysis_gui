@@ -521,22 +521,31 @@ function registerButton_Callback(hObject, eventdata, handles)
     evalin('base',['registeredTransformations=zeros(4,' num2str(totalImagesPossible) ');']);
     pImport=get(handles.parallelizeRegistrationToggle,'Value');
 
+
     tic
     if pImport
         regTempC=regTemp;
-        disp("debug");
+        disp("par import starting");
+        disp(num2str(totalImagesPossible))
         set(handles.feedbackString,'String',' par registration started ...')
         pause(0.0000000000001);
         guidata(hObject, handles);
+        imsReg=evalin('base',regStackString);
+        rTransforms = zeros(4,totalImagesPossible);
         parfor n=1:totalImagesPossible
-            disp(totalImagesPossible)
-            imReg=evalin('base',[regStackString '(:,:,' num2str(n) ');']);
-            [out1,out2]=dftregistration(fft2(regTempC),fft2(imReg),subpixelFactor);
-            assignin('base',['registeredTransformations(:,' num2str(n) ')'],out1);
-            assignin('base',[regStackString '(:,:,' num2str(n) ')'],uint16(abs(ifft2(out2))));
-
+            disp(num2str(n))
+            
+            [out1,out2]=dftregistration(fft2(regTempC),fft2(imsReg(:,:,n)),subpixelFactor);
+            rTransforms(:,n) = out1;
+            imsReg(:,:,n) = uint16(abs(ifft2(out2)));
+           
         end
-        clear regTempC
+        
+        assignin('base',regStackString,imsReg);
+        assignin('base','registeredTransformations',rTransforms);
+        
+        clear regTempC imsReg rTransforms
+        disp("par import done");
     else
         set(handles.feedbackString,'String','registration started ...')
         pause(0.0000000000001);

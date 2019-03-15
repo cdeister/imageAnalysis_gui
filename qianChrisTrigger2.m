@@ -13,7 +13,6 @@ scaleError = 10000/nanmean(nanmean(somaticF_original));
 somaticF_DF=somaticF_DF*scaleError;
 somaticF_DFBU=somaticF_DF;
 
-
 %% first we figure out when each trial's first frame actually starts
 % we will import each trial, detect the first frame trigger and log the
 % frame that was in.
@@ -40,7 +39,7 @@ disp('finished calculating offsets')
 
 %% make frame clock
 framesPerTrial = 70;
-frameInterval = 0.102839618725182;
+frameInterval = 0.100151818131243;
 % 0.108262479936572
 frameClock = frameInterval:frameInterval:framesPerTrial*frameInterval;
 % add the offset
@@ -51,102 +50,59 @@ syncDur = session.sync_duration;
 syncTimes = session.relative_trial_start_times;
 stimTimes = (syncTimes+syncDur)+0.001;
 
-
-
-%%
-
-fData = somaticF_DF;
-
-
-%% group f by trials
+%% group f by trials and trigger
 % cell x frame x trial
 % thus, cell2's 2nd trial is addressed as:
 % squeeze(trialF(2,:,2))
+clear trigF trialF
+fData = somaticF_DF;
+bFrames = 12;
+sFrames = 30;
+
+
+trialClock = frameInterval:frameInterval:(bFrames+sFrames)*frameInterval;
 
 for n =1:numTrials
-    trialF(:,:,n) = fData(:,((n-1)*framesPerTrial)...
-    +1:n*framesPerTrial);
+    trialF(:,:,n) = fData(:,((n-1)*framesPerTrial)+1:n*framesPerTrial);
+    tFrame = floor((stimTimes(n)/frameInterval)+firstFrameTime(n));
+    tFrame = tFrame + ((n-1)*framesPerTrial);
+    trigF(:,:,n) = fData(:,tFrame-bFrames:tFrame+(sFrames-1));
 end
 
-%% example: single trial for a single cell
-exampleTrial = 12;
-exampleCell = 47;
-figure(675)
-hold all
-plot(frameClock,squeeze(trialF(exampleCell,:,exampleTrial)))
-hold all
-plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 1],'r-')
-
-%% example: all trials for a single cell
-exampleCell = 47;
-figure
-hold all
-for n=1:numTrials
-    plot(frameClock,squeeze(trialF(exampleCell,:,n)))
-end
-hold all
-plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 1],'r-')
-%% trigger to stim
-curCell = 1;
-baselineFrames = 5;
-stimFrames = 20;
-cTrial = 20;
-tFrame = floor((stimTimes(cTrial)/frameInterval)+firstFrameTime(cTrial));
-trigF = trialF(curCell,tFrame-baselineFrames:tFrame+stimFrames);
-
-
-
-%% example: take mean for a cells 
-exampleCell = 47;
-exampleMean = mean(squeeze(trialF(exampleCell,:,:)),2);
-
-figure
-plot(frameClock,exampleMean)
-hold all
-plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 0.4],'r-')
-
-%% example: take mean for a cell, but only max stim amps
-
-exampleCell = 47;
-stimAmp = -4;
-trialsWithStim =find(session.stim_amplitude <= stimAmp);
-trialsWithNoStim =find(session.stim_amplitude == 0);
-
-exampleMeanBig = mean(squeeze(trialF(exampleCell,:,trialsWithStim)),2);
-exampleMeanNone = mean(squeeze(trialF(exampleCell,:,trialsWithNoStim)),2);
-
-figure
-plot(frameClock,exampleMeanBig,'ko-')
-hold all
-plot(frameClock,exampleMeanNone,'bo-')
-plot([stimTimes(exampleTrial) stimTimes(exampleTrial)],[0 0.4],'r-')
+figure,plot(squeeze(trigF(:,:,1))')
+hold all,plot([bFrames-1 bFrames-1],[-1 3],'r-')
 
 %% now we look for stimulus cells:
-baselineFrames = 11:16;
-stimFrames = 27:31;
+
+stimAmp = -9;
+stimAmp2 = -5;
+% stimAmp = -5;
+% stimAmp2 = -3;
+% stimAmp = -2;
+% stimAmp2 = -0.5;
+
+
+% session.stim_amplitude = session.stim_amplitude(1:190)
+trialsWithStim1 =find(session.stim_amplitude >= stimAmp);
+trialsWithStim2 =find(session.stim_amplitude < stimAmp2);
+trialsWithStim = intersect(trialsWithStim1,trialsWithStim2);
+trialsWithNoStim =find(session.stim_amplitude == 0);
+
+baselineFrames = 4:9;
+stimFrames = 12:18;
+% 18 for inter
 numCells = size(somaticF,1);
 
 % we can now integrate in the baseline window and stim window
 for n=1:numCells
-    baselineMeans(n,:) = trapz(squeeze(trialF(n,baselineFrames,:)));
-    stimMeans(n,:) = trapz(squeeze(trialF(n,stimFrames,:)));
+    baselineMeans(n,:) = trapz(squeeze(trigF(n,baselineFrames,:)));
+    stimMeans(n,:) = trapz(squeeze(trigF(n,stimFrames,:)));
 end
-
-%% now look at difference in baseline and stimulus window 
-% with and without stims
 stimDelta = stimMeans(:,:)-baselineMeans(:,:);
-
-% now we can filter by stim amplitude
-exampleCell = 4;
-withStim = stimDelta(exampleCell,trialsWithStim);
-withNoStim = stimDelta(exampleCell,trialsWithNoStim);
-
-
-% plot the distributions, one should be to the right
-figure,nhist({withNoStim,withStim},'box')
+figure,nhist({baselineMeans,stimMeans,stimMeans-baselineMeans},'box')
 
 %% now lets do stats
-
+clear stimPVals
 for n=1:numCells
     withStim = stimDelta(n,trialsWithStim);
     withNoStim = stimDelta(n,trialsWithNoStim);
@@ -161,27 +117,28 @@ end
 stimCutOff = 0.05;
 stimulusResponsiveCells = find(stimPVals<stimCutOff);
 
-
 %% now we can look at the responsive cells
 
-
+clear stimPSTH nostimPSTH zPSTH
 for n=1:numel(stimulusResponsiveCells)
-    stimPSTH(:,n) = mean(squeeze(trialF(stimulusResponsiveCells(n),:,trialsWithStim)),2);
-    nostimPSTH(:,n) = mean(squeeze(trialF(stimulusResponsiveCells(n),:,trialsWithNoStim)),2);
+    stimPSTH(:,n) = mean(squeeze(trigF(stimulusResponsiveCells(n),:,trialsWithStim)),2);
+    nostimPSTH(:,n) = mean(squeeze(trigF(stimulusResponsiveCells(n),:,trialsWithNoStim)),2);
+
 end
 
-
+zPSTH = (stimPSTH-repmat(median(nostimPSTH),42,1))./repmat(std(nostimPSTH),42,1);
+evokedScore = trapz(zPSTH(13:22,:))-trapz(zPSTH(2:8,:));
 figure
-pBounds = [0 1];
+pBounds = [0 2];
 subplot(1,2,1)
 hold all
-plot(frameClock,nostimPSTH)
+plot(trialClock,nostimPSTH,'o-')
 ylim([0 pBounds(2)])
-plot([2 2],[0 pBounds(2)],'k:')
+plot([trialClock(bFrames-2) trialClock(bFrames-1)],[0 pBounds(2)],'k:')
 title('without stim')
 subplot(1,2,2)
 hold all
-plot(frameClock,stimPSTH)
+plot(trialClock,stimPSTH,'o-')
 ylim([0 pBounds(2)])
-plot([2 2],[0 pBounds(2)],'k:')
+plot([trialClock(bFrames-2) trialClock(bFrames-1)],[0 pBounds(2)],'k:')
 title('with stim')

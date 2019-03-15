@@ -2,7 +2,10 @@
 % Converts Bruker multiphoton scanning microscope raw data and stores data
 % in an hdf5 container.
 %
-% 
+% NOTE: modified on 2-15-2019 for new scope. XMLs are too rig dependent.
+% Need to abstract these things. For instance PMT Gain has two entries vs.
+% 4 etc. 
+%
 % Note: Image datasets are of dimension: [frameNum xDim yDim]
 % Leading with frameNum ensures maximal compatibility with existing 
 % python hdf5 routines.
@@ -30,13 +33,17 @@ for h=1:numel(subDirectories)
     else
     end
 end
+try
 subDirectories=subDirectories(nonDorDirs);
+catch
+    subDirectories=[];
+end
 
 goodDirs=0;
 convertablePaths={};
 for h=1:numel(subDirectories)
     tDir=dir([fPath filesep subDirectories{h} filesep 'CYCLE*RAWDATA*']);
-    if numel(tDir)>0 && strcmp(subDirectories{h}(1:5),'Singl')==0
+    if numel(tDir)>0 && strcmp(subDirectories{h}(1:4),'Sing')==0
         goodDirs=goodDirs+1;
         convertablePaths{goodDirs}=subDirectories{h};
     else
@@ -67,7 +74,12 @@ if numel(convertablePaths)>0
         disp(['... xml parsed in ' num2str(toc) ' seconds'])
         
         % get frame count and times.
-        md.volScan=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,35}.Attributes.value);
+        try
+            md.volScan=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,35}.Attributes.value);
+        catch
+            md.volScan=0;
+        end
+            
         md.scanType=xmlFile.PVScan.PVStateShard.PVStateValue{1,1}.Attributes.value;
         md.volumeCount=numel(xmlFile.PVScan.Sequence);
 
@@ -104,30 +116,28 @@ if numel(convertablePaths)>0
             md.frameDelta=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,10}.Attributes.value);
             md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,25}.Attributes.value);
             md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,17}.Attributes.value);
-            md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,1}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,2}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,3}.Attributes.value)];
-            md.pmtGain=[0,0,0,0];
+%             md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,1}.Attributes.value),...
+%             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,2}.Attributes.value);
+%             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,19}.IndexedValue{1,3}.Attributes.value);
+            md.pmtGain=[0,0];
             md.numChans=1;
             md.resMultiSamp=0;
         else
             md.dwelltime=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,5}.Attributes.value);
             md.frameDelta=0;
-            md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,21}.Attributes.value);
-            md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,13}.Attributes.value);
-            md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,1}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,2}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,3}.Attributes.value)];
-            md.pmtGain=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,1}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,2}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,3}.Attributes.value),...
-            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,22}.IndexedValue{1,4}.Attributes.value)];
+            md.dimPixels=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,17}.Attributes.value);
+            md.dimLines=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,9}.Attributes.value);
+%             md.pixelSizeXYZ=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,1}.Attributes.value),...
+%             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,2}.Attributes.value),...
+%             str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,15}.IndexedValue{1,3}.Attributes.value)];
+            md.pmtGain=[str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,18}.IndexedValue{1,1}.Attributes.value),...
+            str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,18}.IndexedValue{1,2}.Attributes.value)];
             md.numChans=numel(find(md.pmtGain>0));
             md.resMultiSamp=0;
         end
         
         if strcmp(md.scanType,'ResonantGalvo')
-            md.resMultiSamp=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,27}.Attributes.value);
+            md.resMultiSamp=str2double(xmlFile.PVScan.PVStateShard.PVStateValue{1,23}.Attributes.value);
         else
         end
             
@@ -160,7 +170,7 @@ if numel(convertablePaths)>0
         h5writeatt(hdfName,hdfDSet,'frameRate',md.frameDelta);
         h5writeatt(hdfName,hdfDSet,'scanLines',md.dimLines);
         h5writeatt(hdfName,hdfDSet,'scanPixels',md.dimPixels);
-        h5writeatt(hdfName,hdfDSet,'pixelSizeXYZ',md.pixelSizeXYZ);
+%         h5writeatt(hdfName,hdfDSet,'pixelSizeXYZ',md.pixelSizeXYZ);
         h5writeatt(hdfName,hdfDSet,'frameCount',md.frameCount);
         h5writeatt(hdfName,hdfDSet,'pmtGains',md.pmtGain);
         h5writeatt(hdfName,hdfDSet,'numChans',md.numChans);

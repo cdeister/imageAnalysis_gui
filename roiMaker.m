@@ -1809,7 +1809,7 @@ function clusterMaskBtn_Callback(hObject, eventdata, handles)
         thrMask(cpixel,cline)=1;
     end
     
-    minROISize=5;
+    minROISize=7;
     pROIs=bwboundaries(thrMask,'holes');
     pROIsizes=fix(cellfun(@numel,pROIs)/2);
     

@@ -64,16 +64,16 @@ end
 %bsDistb=mean(bsDistb,numel(bsDistb),1);
 
 %% two metrics (t-test; rank test eq)
-dataToBSt=withStim;
-dataToBSt2=withNoStim;
+dataToBSt=grpA;
+dataToBSt2=grpB;
 
-bReps=10000;
+bReps=1000;
 tic
 clear a
 clear bsDist
 for n=1:bReps
     a=shuffleTrialsSimp(1:numel(dataToBSt));
-    b=shuffleTrialsSimp(1:numel(dataToBSt2))
+    b=shuffleTrialsSimp(1:numel(dataToBSt2));
     bsDist(:,n)=nanmedian(dataToBSt(a))-nanmedian(dataToBSt2(b));
 end
 toc
