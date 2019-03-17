@@ -1,13 +1,10 @@
 %% auto template
-tempSize = 5;
+tempSize = 10;
 lowImages = find(importedImages_meanLuminance<quantile(importedImages_meanLuminance,0.15));
 consecLow = find(diff(lowImages)==1);
 startIm = fix(numel(consecLow)/2);
 
-templateImages = randi(numel(lowImages),1,tempSize);
-% templateImages=consecLow(startIm:startIm+(tempSize-1));
-
-regTemplate = mean(importedImages(:,:,templateImages),3);
+regTemplate = importedImages(:,:,consecLow(startIm):consecLow(startIm);
 
 %% once you have somaticF data and neuropilF data you can correct.
 somaticF_original = somaticF;

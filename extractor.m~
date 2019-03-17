@@ -1340,16 +1340,18 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     
     
     fBLs=slidingBaseline(fData,500,blCutOffs);
-
-    assignin('base',[selectedType 'F_nonBL'],fData)
-    
-    fData = fData - fBLs;
-    dfTemp = fData./fBLs;
     scaleError = 10000/nanmean(nanmean(fData));
+    
+    dfTemp = fData./fBLs;
     dfTemp=dfTemp*scaleError;
     
+    
+
+    assignin('base',[selectedType 'F_nonBL'],fData)
+    fData = fData - fBLs;
     assignin('base',[selectedType 'F'],fData)
-    assignin('base',[selectedType 'F_DF'],dfTemp)
+    fData = fData./fBLs;
+    assignin('base',[selectedType 'F_DF'],fData)
 
     set(handles.feedbackString,'String',['Done With: ' selectedType])
     pause(0.0000000000001);

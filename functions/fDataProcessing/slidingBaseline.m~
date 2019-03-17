@@ -15,28 +15,20 @@ end
 halfInd=fix(windowSize/2);
 
 
-
+padD=zeros(numel(out)+windowSize,1);
 padD=zeros(size(data,1),size(data,2)+windowSize);
-disp(size(padD))
+
 
 padD(:,halfInd+1:end-halfInd)=data;
 padD(:,1:halfInd)=data(:,halfInd+1:(halfInd+1)+(halfInd-1));
 padD(:,end-(halfInd-1):end)=data(:,end-(halfInd-1):end);
-disp(size(padD))
 
 startQuant=halfInd;
 if size(data,1)>1
-    for n=1:size(data,2)
-        td=padD(:,(n+startQuant)-startQuant:(n+startQuant)+(startQuant-1));
-        aa=quantile(td,quantileThresh,2);
-        out(:,n)=diag(aa);
-    end
-else
-    for n=1:size(data,2)
-        td=padD(:,(n+startQuant)-startQuant:(n+startQuant)+(startQuant-1));
-        aa=quantile(td,quantileThresh);
-        out(:,n)=aa;
-    end
+for n=1:numel(out)
+    td=padD(:,(n+startQuant)-startQuant:(n+startQuant)+(startQuant-1));
+    aa=quantile(td,quantileThresh,2);
+    out(:,n)=diag(aa);
 end
 
 

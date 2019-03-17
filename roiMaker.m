@@ -1370,7 +1370,7 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     nstack=min(imsToCor,numImages);
     corStack=evalin('base',['double(' corStackName '(:,:,1:' num2str(nstack) '));']);
 
-    [x,y]=ginput(1);
+    [x,y]=csginput(1);
     %iterative region growing
     ref= (squeeze(corStack(ceil(y),ceil(x),:) ));
 

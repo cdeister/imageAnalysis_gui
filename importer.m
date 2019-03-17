@@ -488,24 +488,14 @@ function templateButton_Callback(hObject, eventdata, handles)
     guidata(hObject, handles);
 function setRegStackButton_Callback(hObject, eventdata, handles)
 
-    selections = get(handles.workspaceVarBox,'String');
-    selectionsIndex = get(handles.workspaceVarBox,'Value');
-    if numel(selectionsIndex)>1
-        disp('you can only set one primary stack to register')
-    elseif numel(selectionsIndex)==0
-        disp('you must select a stack to register')
-    else
-        assignin('base','stackToRegister',selections{selectionsIndex});
-    end
-
-    vars = evalin('base','who');
-    set(handles.workspaceVarBox,'String',vars)
-    refreshVarListButton_Callback(hObject, eventdata, handles)
-    guidata(hObject, handles);
 function registerButton_Callback(hObject, eventdata, handles)
     set(handles.registerButton,'Enable','off')
+    
+    selections = get(handles.workspaceVarBox,'String');
+    selectionsIndex = get(handles.workspaceVarBox,'Value');
+    regStackString = selections{selectionsIndex};
     try
-    regStackString=evalin('base','stackToRegister');
+ 
     regTemp=evalin('base','regTemplate');
     tCl=whos('regTemp');
     % todo use imType to deal with non uint16
@@ -1671,3 +1661,59 @@ function exportMPTiff_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String',['Exported ' num2str(numel(imRange)) ' Images'])
     pause(0.00000000000000001)
     guidata(hObject, handles);
+
+
+function templateSize_Callback(hObject, eventdata, handles)
+
+
+function templateSize_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function autoTemplateBtn_Callback(hObject, eventdata, handles)
+selections = get(handles.workspaceVarBox,'String');
+selectionsIndex = get(handles.workspaceVarBox,'Value');
+stackToPlot=selections{selectionsIndex};
+
+evalin('base',['for n=1:size(' stackToPlot ',3),' stackToPlot '_meanLuminance(:,n)=mean2(' stackToPlot '(:,:,n));,end'])
+evalin('base','clear n')
+mlP=evalin('base',[stackToPlot '_meanLuminance;']);
+    
+tempSize = str2num(get(handles.templateSize,'string'));
+lowImages = find(mlP<quantile(mlP,0.15));
+consecLow = find(diff(lowImages)==1);
+
+startIm = fix(numel(consecLow)/2);
+
+templateImages = randi(numel(lowImages),1,tempSize);
+assignin('base','templateImages',templateImages);
+curImg = evalin('base',[stackToPlot '(:,:,templateImages);']);
+regTemplate = evalin('base',['mean(' stackToPlot '(:,:,templateImages),3);']);
+assignin('base','regTemplate',regTemplate);
+refreshVarListButton_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);
+
+
+function autoImport_Callback(hObject, eventdata, handles)
+
+importButton_Callback(hObject, eventdata, handles)
+
+refreshVarListButton_Callback(hObject, eventdata, handles)
+
+selections = get(handles.workspaceVarBox,'String');
+cSelect=find(strcmp(selections,'importedImages')==1);
+selectionsIndex = set(handles.workspaceVarBox,'Value',cSelect(1));
+
+autoTemplateBtn_Callback(hObject, eventdata, handles)
+
+selections = get(handles.workspaceVarBox,'String');
+cSelect=find(strcmp(selections,'importedImages')==1);
+selectionsIndex = set(handles.workspaceVarBox,'Value',cSelect(1));
+
+registerButton_Callback(hObject, eventdata, handles)
+disp('done with auto')
