@@ -1114,25 +1114,17 @@ function playStackMovButton_Callback(hObject, eventdata, handles)
     end
 function roiThresholdEntry_Callback(hObject, eventdata, handles)
 
-    roiTh=str2num(get(handles.roiThresholdEntry,'String'));
-    axes(handles.roiPreviewWindow);
-    
-   
-    currentImage = evalin('base','metaData.currentImage');
-    imagesc(im2bw(currentImage,roiTh),[0 2]),colormap jet
-    assignin('base','candidateRoi',im2bw(currentImage,roiTh))
-    assignin('base','cMask',im2bw(currentImage,roiTh))
-    assignin('base','candidateRoi_rawVals',currentImage)
-    evalin('base','metaData.currentMask=cMask;');
-    evalin('base','metaData.candidateRoi=candidateRoi;')
-    evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
-
-
-    % % Update handles structure
-    % guidata(hObject, handles);
-    roisDisplayToggle(hObject, eventdata, handles,1)
-    refreshVarListButton_Callback(hObject, eventdata, handles);
-    guidata(hObject, handles);
+    prevAt=evalin('base','exist(''metaData'',''var'')');
+    if prevAt
+        currentROI=evalin('base','metaData.candidateRoi_rawVals');
+        roiTh=str2num(get(handles.roiThresholdEntry,'String'));
+        axes(handles.roiPreviewWindow);
+        imagesc(im2bw(currentROI,roiTh),[0 2]),colormap('jet')
+        assignin('base','candidateRoi',im2bw(currentROI,roiTh))
+        assignin('base','candidateRoi_rawVals',currentROI)
+        evalin('base','metaData.candidateRoi=candidateRoi;')
+        evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
+    end
 
 
     refreshVarListButton_Callback(hObject, eventdata, handles);
@@ -1420,7 +1412,7 @@ function localXCorButton_Callback(hObject, eventdata, handles)
     assignin('base','candidateRoi',im2bw(currentImage,roiTh))
     assignin('base','cMask',im2bw(currentImage,roiTh))
     assignin('base','candidateRoi_rawVals',currentImage)
-    evalin('base','metaData.currentMask=cMask;');
+    assignin('base','metaData.currentMask',);
     evalin('base','metaData.candidateRoi=candidateRoi;')
     
     evalin('base','metaData.candidateRoi_rawVals=candidateRoi_rawVals;')
@@ -1710,7 +1702,6 @@ function autoMaskBtn_Callback(hObject, eventdata, handles)
     cMask=imbinarize(cImage,'adaptive','sensitivity',binaryThreshold);
     assignin('base','cMask',cMask);
     evalin('base','metaData.currentMask=cMask; ')
-    
     
     
     loadMeanProjectionButton_Callback(hObject,eventdata,handles,cMask)

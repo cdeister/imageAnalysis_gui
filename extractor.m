@@ -1330,7 +1330,7 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String',['Baselining: ' selectedType])
     pause(0.0000000000001);
     guidata(hObject, handles);
-    
+    ogData = evalin('base','somaticF_original');
     fData = evalin('base',[selectedType 'F']);
     fData = fData + 10000;
    
@@ -1345,7 +1345,7 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     
     fData = fData - fBLs;
     dfTemp = fData./fBLs;
-    scaleError = 10000/nanmean(nanmean(fData));
+    scaleError = 10000/nanmean(nanmean(ogData));
     dfTemp=dfTemp*scaleError;
     
     assignin('base',[selectedType 'F'],fData)
