@@ -1,4 +1,4 @@
-function [parsedStruct,csBData,csBehavHDFInfo]=csParser2(csBehaviorHDFPath)
+function [parsedStruct,csSessionData,csBehavHDFInfo]=csParser2(csBehaviorHDFPath)
 
 % csParser2, a function that parses behavior data from csDiscrim/csVisual
 % arguments: "csBehaviorHDFPath" is a path to the hdf file you want to

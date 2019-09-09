@@ -64,17 +64,16 @@ end
 %bsDistb=mean(bsDistb,numel(bsDistb),1);
 
 %% two metrics (t-test; rank test eq)
-dataToBSt=grpA;
-dataToBSt2=grpB;
-
+dataToBSt=dpWkG1(25:31,:);
+dataToBSt2=dpWkG2(25:31,:);
 bReps=1000;
 tic
 clear a
 clear bsDist
-for n=1:bReps
+parfor n=1:bReps
     a=shuffleTrialsSimp(1:numel(dataToBSt));
     b=shuffleTrialsSimp(1:numel(dataToBSt2));
-    bsDist(:,n)=nanmedian(dataToBSt(a))-nanmedian(dataToBSt2(b));
+    bsDist(:,n)=nanmean(dataToBSt(a))-nanmean(dataToBSt2(b));
 end
 toc
 disp('#$#$#$#$ your are strapped #$#$#$#$')

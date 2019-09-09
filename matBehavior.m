@@ -22,7 +22,7 @@ function varargout = matBehavior(varargin)
 
 % Edit the above text to modify the response to help matBehavior
 
-% Last Modified by GUIDE v2.5 09-Feb-2019 17:01:58
+% Last Modified by GUIDE v2.5 29-Apr-2019 00:56:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -406,7 +406,9 @@ psychometrics.nonNormCurve_y=1./(1+exp((fN.v5-psychometrics.fitCurve_x)/fN.k));
 % hold all,plot(psychometrics.fitCurve_x,psychometrics.normCurve_y,'r-')
 psychometrics.threshold=f.v5;
 psychometrics.slope=f.k;
-if timingParams.numTrials<20;
+set(handles.pCurve_V5,'String',num2str(psychometrics.threshold));
+set(handles.pCurve_k,'String',num2str(psychometrics.slope));
+if timingParams.numTrials<20
     psychometrics.threshold=NaN;
     psychometrics.slope=NaN;
 else
@@ -616,6 +618,9 @@ psychometrics.weakCrit=-0.5*(norminv(wHR)+norminv(fAR));
 	set(handles.strongCritEstimate,'String',num2str(psychometrics.strongCrit));
 	set(handles.weakDPEstimate,'String',num2str(psychometrics.weakDP));
 	set(handles.weakCritEstimate,'String',num2str(psychometrics.weakCrit));
+    set(handles.weakCritEstimate,'String',num2str(psychometrics.weakCrit));
+    set(handles.faEntry,'String',num2str(fAR));
+    set(handles.strongHR,'String',num2str(sHR));
 
 
 if numel(strongResponses)<psychometrics.minDPTrials
@@ -727,6 +732,10 @@ function btn_addToPool_Callback(hObject, eventdata, handles)
 	poolData(8,curEntry) = str2num(get(handles.weakCritEstimate,'String'));
 	poolData(9,curEntry) = str2num(get(handles.weakOnlyTrialCount,'String'));
 	poolData(10,curEntry) = str2num(get(handles.catchTrialCount,'String'));
+    poolData(11,curEntry) = str2num(get(handles.strongHR,'String'));
+    poolData(12,curEntry) = str2num(get(handles.faEntry,'String'));
+    poolData(13,curEntry) = str2num(get(handles.pCurve_V5,'String'));
+    poolData(14,curEntry) = str2num(get(handles.pCurve_k,'String'));
 
 	assignin('base',['pooled_' curSubject],poolData);
 	size(poolData)
@@ -797,6 +806,66 @@ function catchTrialCount_Callback(hObject, eventdata, handles)
 
 
 function catchTrialCount_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function strongHR_Callback(hObject, eventdata, handles)
+
+
+function strongHR_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function faEntry_Callback(hObject, eventdata, handles)
+
+
+function faEntry_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function pCurve_V5_Callback(hObject, eventdata, handles)
+
+
+function pCurve_V5_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function pCurve_Max_Callback(hObject, eventdata, handles)
+
+
+function pCurve_Max_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function pCurve_k_Callback(hObject, eventdata, handles)
+
+
+function pCurve_k_CreateFcn(hObject, eventdata, handles)
 
 % Hint: edit controls usually have a white background on Windows.
 %       See ISPC and COMPUTER.

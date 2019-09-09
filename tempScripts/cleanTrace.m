@@ -4,7 +4,7 @@ traces.dfs_npc = somaticF_DF;
 %%
 traces.ogSomaticF_DF = somaticF_DF;
 %%
-tN=1;
+tN=10;
 close all
 tTrace=traces.dfs_npc(tN,:)';
 oTrace=traces.dfs_npc(tN,:)';
@@ -25,7 +25,7 @@ cMin=min(cTrace);
 % begin by assuming the median to zero correction is the initial noise bounds
 noiseRange=[abs(medDif) -abs(medDif)];
 noiseSamples=cTrace(cTrace<noiseRange(1));
-noiseStd=5*std(noiseSamples);
+noiseStd=10*std(noiseSamples);
 
 if cMin<noiseRange(2)
     cTrace(cTrace<(noiseRange(2)-noiseStd))=noiseRange(2);

@@ -142,7 +142,15 @@ f=numel(find(hR==0));
 r=numel(find(hR==1));
 
 trialFilter.dPrimeEst=norminv(h/(h+m))-norminv(f/(f+r));
-
+trialFilter.critEst=-0.5*(norminv(h/(h+m))+norminv(f/(f+r)));
+trialFilter.hrEst = h/(h+m);
+trialFilter.faEst = f/(f+r);
+if trialFilter.faEst == 0
+    trialFilter.faEst = 0.001;
+    trialFilter.dPrimeEst=norminv(h/(h+m))-norminv(trialFilter.faEst);
+    trialFilter.critEst=-0.5*(norminv(h/(h+m))+norminv(trialFilter.faEst));
+else
+end
 
 clear('sA','hT','hR','sB','h','m','f','r')
 
@@ -158,8 +166,8 @@ psychometrics.normHitRate=smooth(psychometrics.nonNormHitRate./max(psychometrics
 
 psychometrics.fitCurve_x=0:0.1:max(-1*psychometrics.stimAmplitudes);
 
-f = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',psychometrics.nonNormHitRate,bFit,'Robust','on','StartPoint', [12 6]);
-fN = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',psychometrics.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
+[f,psychometrics.fg,psychometrics.fo] = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',psychometrics.nonNormHitRate,bFit,'Robust','on','StartPoint', [12 6]);
+[fN,psychometrics.fNg,psychometrics.fNo] = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',psychometrics.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
 
 psychometrics.normCurve_y=1./(1+exp((f.v5-psychometrics.fitCurve_x)/f.k));
 psychometrics.nonNormCurve_y=1./(1+exp((fN.v5-psychometrics.fitCurve_x)/fN.k));
@@ -195,15 +203,25 @@ elseif badFitFlag==1
     psychometrics.nonNormCurve_y=NaN(size(psychometrics.fitCurve_x));
 end
  
+try
+    psychometrics.f_threshold=f.v5;
+    psychometrics.f_slope=f.k;
+catch
+    psychometrics.f_threshold=NaN;
+    psychometrics.f_slope=NaN;
+end
 
-psychometrics.f_threshold=f.v5;
-psychometrics.f_slope=f.k;
+try
+    psychometrics.f_nthreshold=fN.v5;
+    psychometrics.f_nslope=fN.k;
+catch
+    psychometrics.f_threshold=NaN;
+    psychometrics.f_slope=NaN;
 
-psychometrics.f_nthreshold=fN.v5;
-psychometrics.f_nslope=fN.k;
+end
 
 %% Make Psychometric Curve Before
-
+try
 psychometrics.unfiltered.stimBoundaries=[-7,-4,-3,-1.75,-0.05];
 
 % temp
@@ -260,20 +278,20 @@ psychometrics.unfiltered.normHitRate=smooth(psychometrics.unfiltered.nonNormHitR
 
 psychometrics.unfiltered.fitCurve_x=0:0.1:max(-1*psychometrics.unfiltered.stimAmplitudes);
 
-f = fit(-1*psychometrics.unfiltered.stimAmplitudes(find(isnan(psychometrics.unfiltered.hitRate)==0))',psychometrics.unfiltered.nonNormHitRate,bFit,'Robust','on','StartPoint', [12 6]);
-fN = fit(-1*psychometrics.unfiltered.stimAmplitudes(find(isnan(psychometrics.unfiltered.hitRate)==0))',psychometrics.unfiltered.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
+fB = fit(-1*psychometrics.unfiltered.stimAmplitudes(find(isnan(psychometrics.unfiltered.hitRate)==0))',psychometrics.unfiltered.nonNormHitRate,bFit,'Robust','on','StartPoint', [12 6]);
+fNB = fit(-1*psychometrics.unfiltered.stimAmplitudes(find(isnan(psychometrics.unfiltered.hitRate)==0))',psychometrics.unfiltered.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
 
-psychometrics.unfiltered.normCurve_y=1./(1+exp((f.v5-psychometrics.unfiltered.fitCurve_x)/f.k));
-psychometrics.unfiltered.nonNormCurve_y=1./(1+exp((fN.v5-psychometrics.unfiltered.fitCurve_x)/fN.k));
+psychometrics.unfiltered.normCurve_y=1./(1+exp((fB.v5-psychometrics.unfiltered.fitCurve_x)/fB.k));
+psychometrics.unfiltered.nonNormCurve_y=1./(1+exp((fNB.v5-psychometrics.unfiltered.fitCurve_x)/fNB.k));
 
 % now plot the stimulus response function (psychometric curve)
 % figure,plot(-1*psychometrics.unfiltered.stimAmplitudes(find(isnan(psychometrics.unfiltered.nonNormHitRate)==0)),psychometrics.unfiltered.normHitRate,'ko')
 % hold all,plot(psychometrics.unfiltered.fitCurve_x,psychometrics.unfiltered.normCurve_y,'r-')
-psychometrics.unfiltered.threshold=f.v5;
-psychometrics.unfiltered.slope=f.k;
+psychometrics.unfiltered.threshold=fB.v5;
+psychometrics.unfiltered.slope=fB.k;
 
-psychometrics.unfiltered.nthreshold=fN.v5;
-psychometrics.unfiltered.nslope=fN.k;
+psychometrics.unfiltered.nthreshold=fNB.v5;
+psychometrics.unfiltered.nslope=fNB.k;
 
 if timingParams.numTrials<20;
     psychometrics.unfiltered.threshold=NaN;
@@ -301,7 +319,8 @@ elseif badFitFlag==1
     psychometrics.unfiltered.nonNormCurve_y=NaN(size(psychometrics.unfiltered.fitCurve_x));
 end
  
-
+catch
+end
 
 %% ratio of pre-lick to none
 trialFilter.lickNoLickRatio=numel(trialFilter.trialsWithPreLicks)./numel(trialFilter.trialsWithNoPreLicks);
@@ -309,8 +328,9 @@ trialFilter.lickNoLickRatio=numel(trialFilter.trialsWithPreLicks)./numel(trialFi
 %% strong vs. weak dprime
 % find weak and strong trials
 clear strongHits strongMisses weakHits weakMisses fAs cRs
-strongResponses=find(trialFilter.stimAmps<-6.5);
-weakResponses=find(trialFilter.stimAmps>-3.5 & trialFilter.stimAmps<=-0.5);
+strongResponses=find(trialFilter.stimAmps<=-5);
+weakResponses=find(trialFilter.stimAmps>-3 & trialFilter.stimAmps<=-0.75);
+%weakResponses=find(trialFilter.stimAmps>-3.5 & trialFilter.stimAmps<=-0.5);
 noiseResponses=find(trialFilter.stimAmps==0);
 
 strongHits=find(trialFilter.hitTrials(strongResponses)==1);
@@ -326,6 +346,8 @@ psychometrics.rt_weak=nanmean(trialFilter.reactionTimes(weakHits));
 psychometrics.rt_strong=nanmean(trialFilter.reactionTimes(strongHits));
 psychometrics.rt_fa=nanmean(trialFilter.reactionTimes(fAs));
 
+psychometrics.strongCounts = (numel(strongHits)+numel(strongMisses));
+psychometrics.weakCounts = (numel(weakHits)+numel(weakMisses));
 
 if numel(fAs)==0
     fAs=[999];
@@ -411,18 +433,18 @@ legend(['engaged only; dprime=' num2str(trialFilter.dPrimeEst,'%.2f')],['engaged
 else
     disp('fits no good; too few trials')
 end
-
-%%
-shiftVals.n_slopeDif=psychometrics.f_nslope-psychometrics.unfiltered.nslope;
-shiftVals.slopeDif=psychometrics.f_slope-psychometrics.unfiltered.slope;
-
-shiftVals.n_threshDif=psychometrics.f_nthreshold-psychometrics.unfiltered.nthreshold;
-shiftVals.threshDif=psychometrics.f_threshold-psychometrics.unfiltered.threshold;
-
-shiftVals.maxDif=max(psychometrics.hitRate)-max(psychometrics.unfiltered.hitRate);
-shiftVals.faDif=psychometrics.hitRate(end)-psychometrics.unfiltered.hitRate(end)
-
-
-
-%%
-deets = [psychometrics.threshold,psychometrics.slope,psychometrics.f_threshold,psychometrics.f_slope,psychometrics.f_nthreshold,psychometrics.f_nslope,psychometrics.rt_all,psychometrics.rt_weak,psychometrics.rt_strong,psychometrics.rt_fa,psychometrics.strongDP,psychometrics.weakDP]
+% 
+% %%
+% shiftVals.n_slopeDif=psychometrics.f_nslope-psychometrics.unfiltered.nslope;
+% shiftVals.slopeDif=psychometrics.f_slope-psychometrics.unfiltered.slope;
+% 
+% shiftVals.n_threshDif=psychometrics.f_nthreshold-psychometrics.unfiltered.nthreshold;
+% shiftVals.threshDif=psychometrics.f_threshold-psychometrics.unfiltered.threshold;
+% 
+% shiftVals.maxDif=max(psychometrics.hitRate)-max(psychometrics.unfiltered.hitRate);
+% shiftVals.faDif=psychometrics.hitRate(end)-psychometrics.unfiltered.hitRate(end)
+% 
+% 
+% 
+% %%
+% deets = [psychometrics.threshold,psychometrics.slope,psychometrics.f_threshold,psychometrics.f_slope,psychometrics.f_nthreshold,psychometrics.f_nslope,psychometrics.rt_all,psychometrics.rt_weak,psychometrics.rt_strong,psychometrics.rt_fa,psychometrics.strongDP,psychometrics.weakDP]

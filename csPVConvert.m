@@ -42,7 +42,7 @@ end
 goodDirs=0;
 convertablePaths={};
 for h=1:numel(subDirectories)
-    tDir=dir([fPath filesep subDirectories{h} filesep 'CYCLE*RAWDATA*']);
+    tDir=dir([fPath filesep subDirectories{h} filesep 'CYCLE*']);
     if numel(tDir)>0 && strcmp(subDirectories{h}(1:4),'Sing')==0
         goodDirs=goodDirs+1;
         convertablePaths{goodDirs}=subDirectories{h};

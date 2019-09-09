@@ -192,7 +192,7 @@ function importButton_Callback(hObject, eventdata, handles)
         end
         
     elseif importType==1  % The user wants multi-page tif. This import is a bit different.
-        disp('yo')
+        
         set(handles.importButton,'Enable','off')
         pause(0.00000000000000001)
         guidata(hObject, handles);
@@ -248,7 +248,6 @@ function importButton_Callback(hObject, eventdata, handles)
             end
             
             assignin('base','importedStack',importedStack)
-            disp('yo2')
             set(handles.importButton,'String','WS Import')
             set(handles.importButton,'Enable','on')
             set(handles.feedbackString,'String',['Imported ' num2str(dispSize) ' Images'])
@@ -522,15 +521,16 @@ function registerButton_Callback(hObject, eventdata, handles)
         guidata(hObject, handles);
         imsReg=evalin('base',regStackString);
         rTransforms = zeros(4,totalImagesPossible);
+        disp("starting par import")
         parfor n=1:totalImagesPossible
-            disp(num2str(n))
+            
             
             [out1,out2]=dftregistration(fft2(regTempC),fft2(imsReg(:,:,n)),subpixelFactor);
             rTransforms(:,n) = out1;
             imsReg(:,:,n) = uint16(abs(ifft2(out2)));
            
         end
-        
+        disp("finnished par import")
         assignin('base',regStackString,imsReg);
         assignin('base','registeredTransformations',rTransforms);
         

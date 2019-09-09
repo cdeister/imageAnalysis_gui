@@ -125,6 +125,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
 
     tempF=zeros(numel(rois),imCount);
     regFlag=get(handles.diskRegFlag,'Value');
+    disp(regFlag)
     disp(['about to extract, this should take ~ ' ...
     	num2str((numel(rois)*.0004*imCount)./60) ' minutes'])
     cc=clock;
@@ -142,7 +143,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
     if regFlag==1
         template=double(evalin('base','regTemplate'));
         regTransforms=zeros(4,imCount);
-        fTemplate=fft2(template);
+%         fTemplate=fft2(template);
     else
     end
     
@@ -154,6 +155,11 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
                 impImage=h5read([tP tH],['/' tDS_select],[1 1 n],[hdfSize(1) hdfSize(2) 1]);
             else 
                 impImage=imread([imPath filesep fileList(n).name]);
+                tSize = numel(size(impImage));
+                if tSize == 3
+                    impImage = squeeze(impImage(:,:,1));
+                else
+                end
             end
 
             if binImagesToggle
@@ -165,6 +171,7 @@ function diskExtractButton_Callback(hObject, eventdata, handles)
 
 
             % register it (if we want).
+            disp(regFlag)
             if regFlag==1
                 [out1,out2]=dftregistration(fTemplate,fft2(impImage),50);
                 regTransforms(:,n)=out1;
@@ -333,8 +340,13 @@ function plotROI(hObject, eventdata, handles)
     
     % plot main trace
     pltDF=get(handles.plotAsDFToggle,'Value');
+    pltClean = get(handles.cleanTraceToggle,'Value');
     if pltDF
-        mainTrace=evalin('base',[mainType 'F_DF(' num2str(mainTypeID) ',:);']);
+        if pltClean
+            mainTrace=evalin('base',[mainType 'F_DF_Clean(' num2str(mainTypeID) ',:);']);
+        else
+            mainTrace=evalin('base',[mainType 'F_DF(' num2str(mainTypeID) ',:);']);
+        end
     else
         mainTrace=evalin('base',[mainType 'F(' num2str(mainTypeID) ',:);']);
     end
@@ -420,7 +432,12 @@ function plotROI(hObject, eventdata, handles)
         for k=1:numel(tracesToGrab)
             pltDF=get(handles.plotAsDFToggle,'Value');
             if pltDF
-                allTraces=vertcat(allTraces,evalin('base',[tracesToGrab{k} 'F_DF;']));
+                if pltClean
+                    allTraces=vertcat(allTraces,evalin('base',[tracesToGrab{k} 'F_DF_Clean;']));
+                else
+                    allTraces=vertcat(allTraces,evalin('base',[tracesToGrab{k} 'F_DF;']));
+                end
+                
             else
                 allTraces=vertcat(allTraces,evalin('base',[tracesToGrab{k} 'F;']));
             end
@@ -1269,7 +1286,8 @@ function extractor_OpeningFcn(hObject, eventdata, handles, varargin)
     'relatedPixelCountReturn','groupCounter','killGroupBtn','killFirstBtn','keepFirstBtn',...
     'groupMarkerBtn','killSelectedBtn','rcBtn_generic','deleteFlagged','flagROIButton','importerBtn',...
     'roiMakerBtn','loadCSHDF','csListbox','plotCSVar','setImageTime','setCSTime','refreshCSVarBtn',...
-    'plotNormToggle','upSampleTrimImages','plotScaleEntry','binByToggle','binByEntry'};
+    'plotNormToggle','upSampleTrimImages','plotScaleEntry','binByToggle','binByEntry','neuropilCorrectBtn',...
+    'neuropilScaleEntry'};
 
     for n=1:numel(uiElements)
         eval(['handles.' uiElements{n} '.FontSize=macFontSize;'])
@@ -1321,7 +1339,7 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     pause(0.0000000000001);
     guidata(hObject, handles);
         
-    frmWinSize=num2str(get(handles.movBaselineWinEntry,'String'));
+    frmWinSize=str2num(get(handles.movBaselineWinEntry,'String'));
    
     typeID=get(handles.typeSelectorMenu,'Value');
     tString=get(handles.typeSelectorMenu,'String');
@@ -1330,26 +1348,31 @@ function slidingBaselineBtn_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String',['Baselining: ' selectedType])
     pause(0.0000000000001);
     guidata(hObject, handles);
-    ogData = evalin('base','somaticF_original');
+    try
+        ogData = evalin('base','somaticF_original');
+    catch
+        evalin('base','somaticF_original = somaticF;');
+        ogData = evalin('base','somaticF_original');
+    end
     fData = evalin('base',[selectedType 'F']);
     fData = fData + 10000;
+    scaleError = 10000/nanmean(nanmean(ogData));
    
     fBLs = zeros(size(fData));
     
     blCutOffs = computeQunatileCutoffs(fData); %F_BLCutOffs
     
     
-    fBLs=slidingBaseline(fData,500,blCutOffs);
+    fBLs=slidingBaseline(fData,frmWinSize,blCutOffs);
 
     assignin('base',[selectedType 'F_nonBL'],fData)
     
     fData = fData - fBLs;
     dfTemp = fData./fBLs;
-    scaleError = 10000/nanmean(nanmean(ogData));
-    dfTemp=dfTemp*scaleError;
+
     
     assignin('base',[selectedType 'F'],fData)
-    assignin('base',[selectedType 'F_DF'],dfTemp)
+    assignin('base',[selectedType 'F_DF'],dfTemp*scaleError)
 
     set(handles.feedbackString,'String',['Done With: ' selectedType])
     pause(0.0000000000001);
@@ -1542,20 +1565,36 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-function autoFix_Callback(hObject, eventdata, handles)
+function neuropilCorrectBtn_Callback(hObject, eventdata, handles)
 
 aa=evalin('base','somaticF');
 bb=evalin('base','neuropilF');
+scF = str2num(get(handles.neuropilScaleEntry,'String'));
 % once you have somaticF data and neuropilF data you can correct.
 assignin('base','somaticF_original',aa);
-aa = aa - (0.80*bb);
+disp(scF)
+aa = aa - (scF*bb);
 
 
 % add an offset, so we don't get negative values for df/f
 % the offset will affect df/f so we will rescale later by the error. 
 % the error is the ratio of the original mean and the scalar.
 
-aa=nPointMean(aa',4);
-
 assignin('base','somaticF',aa');
+
 clear aa
+
+
+function neuropilScaleEntry_Callback(hObject, eventdata, handles)
+
+
+function neuropilScaleEntry_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function cleanTraceToggle_Callback(hObject, eventdata, handles)
