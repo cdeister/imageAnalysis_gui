@@ -8,13 +8,13 @@ analyzedBehavior.reactionTimes=zeros(numel(session.lick_times),1);
 analyzedBehavior.windowLicks=cell(numel(session.lick_times),1);
 
 for k=1:numel(session.lick_times)
-    if numel(session.lick_times{1,k})==0;
+    if numel(session.lick_times{1,k})==0
         analyzedBehavior.responseRaster(k,1)=0;
     else
         for j=1:numel(session.lick_times)
             localVector=session.lick_times{1,k};
             analyzedBehavior.windowLicks{k}=localVector(localVector>0 & localVector<session.reward_duration);
-            if numel(analyzedBehavior.windowLicks{k}~=0)
+            if numel(analyzedBehavior.windowLicks{k}) ~= 0
                 analyzedBehavior.reactionTimes(k)=analyzedBehavior.windowLicks{k}(1);
                 analyzedBehavior.responseRaster(k,1)=1;
             else

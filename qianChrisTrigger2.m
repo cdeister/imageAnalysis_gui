@@ -2,30 +2,30 @@
 
 
 %% once you have somaticF data and neuropilF data you can correct.
-somaticF_original = somaticF;
-somaticF = somaticF - (0.80*neuropilF);
+%somaticF_original = somaticF;
+%somaticF = somaticF - (0.80*neuropilF);
 
 
 % add an offset, so we don't get negative values for df/f
 % the offset will affect df/f so we will rescale later by the error. 
 % the error is the ratio of the original mean and the scalar.
-somaticF = somaticF + 10000;
+%somaticF = somaticF + 10000;
 
-%% once we have df/f we fix
-somaticF = nPointMean(somaticF',4);
-somaticF = somaticF';
-%
-% once we have df/f we fix
-blCutOffs = computeQunatileCutoffs(somaticF);
-somaticF_BLs=slidingBaseline(somaticF,500,blCutOffs);
-%
-somaticF_DF = (somaticF - somaticF_BLs)./somaticF_BLs;
-
-%
-somaticF_DFBU=somaticF_DF;    
-scaleError = 10000/nanmean(nanmean(somaticF_original));
-somaticF_DF=somaticF_DF*scaleError;
-somaticF_DFBU=somaticF_DF;
+% %% once we have df/f we fix
+% somaticF = nPointMean(somaticF',4);
+% somaticF = somaticF';
+% %
+% % once we have df/f we fix
+% blCutOffs = computeQunatileCutoffs(somaticF);
+% somaticF_BLs=slidingBaseline(somaticF,500,blCutOffs);
+% %
+% somaticF_DF = (somaticF - somaticF_BLs)./somaticF_BLs;
+% 
+% %
+% somaticF_DFBU=somaticF_DF;    
+% scaleError = 10000/nanmean(nanmean(somaticF_original));
+% somaticF_DF=somaticF_DF*scaleError;
+% somaticF_DFBU=somaticF_DF;
 
 %% first we figure out when each trial's first frame actually starts
 % we will import each trial, detect the first frame trigger and log the
@@ -54,7 +54,8 @@ disp('finished calculating offsets')
 %% make frame clock
 framesPerTrial = 70;
 frameInterval = 0.100151818131243;
-frameInterval = frameDelta;
+frameDelta = frameInterval;
+% frameInterval = frameDelta;
 % 0.108262479936572
 frameClock = frameInterval:frameInterval:framesPerTrial*frameInterval;
 % add the offset
@@ -66,6 +67,7 @@ syncTimes = session.relative_trial_start_times;
 stimTimes = (syncTimes+syncDur)+0.001;
 
 %% event estimation (foopsi)
+frameInterval = 0.100151818131243;
 eventThreshold = 0.02;
 noiseFac = -20;
 for n=1:size(somaticF_DF,1)
@@ -87,7 +89,7 @@ end
 % thus, cell2's 2nd trial is addressed as:
 % squeeze(trialF(2,:,2)5
 clear trigF trialF
-fData = somaticF_DF_Clean;
+fData = somaticF_DF;
 bFrames = 12;
 sFrames = 30;
 
@@ -249,7 +251,7 @@ nanmean(somaticF_DF_Event_MedFreq(setdiff(1:size(somaticF,1),stimulusResponsiveC
 %%
 
 %% show a trace
-tNum = 16;
+tNum = 44;
 figure,plot(somaticF_DF_Events(tNum,:))
 hold all,plot(somaticF_DF_Clean(tNum,:))
 hold all,plot(somaticF_DF(tNum,:))

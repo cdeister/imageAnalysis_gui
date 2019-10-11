@@ -999,6 +999,9 @@ function killSelectedBtn_Callback(hObject, eventdata, handles)
     tString=selectedSplit(1);
     tID=str2double(selectedSplit(2));
     deleteROI(tID,tString);
+    disp([tString{1} '_'  num2str(tID)])
+    evalin('base',['try,killedROIs = horzcat(killedROIs,"' tString{1} '_' num2str(tID) '");, catch, killedROIs = {};,killedROIs = horzcat(killedROIs,"' tString{1} '_'  num2str(tID) '");,end']);
+
     genericDispalyTypeToggle(hObject, eventdata, handles)
     
     if selectionsIndex>1
@@ -1581,6 +1584,7 @@ aa = aa - (scF*bb);
 % the error is the ratio of the original mean and the scalar.
 
 assignin('base','somaticF',aa');
+evalin('base',"somaticF = somaticF';")
 
 clear aa
 
@@ -1598,3 +1602,17 @@ end
 
 
 function cleanTraceToggle_Callback(hObject, eventdata, handles)
+
+
+function oopsiBtn_Callback(hObject, eventdata, handles)
+
+    evalin('base','frameInterval = 0.100151818131243;')
+    evalin('base','eventThreshold = 0.02;')
+    evalin('base','noiseFac = -20;');
+    evalin('base','for n=1:size(somaticF_DF,1),[somaticF_DF_Clean(n,:),eventEstimate(n,:),dOptions{n}]=deconvolveCa(transpose(somaticF_DF(n,:)),''foopsi'',''ar1'', ''smin'', noiseFac);,somaticF_DF_Events(n,:)=zeros(size(eventEstimate(n,:)));,tInds = find(eventEstimate(n,:)>=eventThreshold);,somaticF_DF_Events(n,tInds)=1;,somaticF_DF_Event_Times{n}=find(diff(somaticF_DF_Events(n,:)==1))*frameInterval;,somaticF_DF_Event_ITIs{n}=diff(somaticF_DF_Event_Times{n});,somaticF_DF_Event_Freq{n}=1./somaticF_DF_Event_ITIs{n};,somaticF_DF_Event_MuFreq(:,n)=nanmean(1./somaticF_DF_Event_ITIs{n});,somaticF_DF_Event_MedFreq(:,n)=nanmedian(1./somaticF_DF_Event_ITIs{n});,end')
+    disp("oopsi")
+        
+
+
+refreshWSVarsBtn_Callback(hObject, eventdata, handles)
+guidata(hObject, handles);

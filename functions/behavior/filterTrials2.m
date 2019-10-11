@@ -2,22 +2,29 @@
 close all
 stimTimes=session.relative_trial_start_times;
 stimAmps=session.stim_amplitude(1:numel(stimTimes));
-
-%
-gKern= normpdf([-100:100],0,20); 
-gKern = gKern./max(gKern); 
+sThreshold = 2.5;
+trialFilter.kernType = 0;
 
 trialFilter.boxWidth=fix(timingParams.numTrials./8);
-gKern=ones(1,trialFilter.boxWidth)./trialFilter.boxWidth;
+
+% box or gaussian filter
+if trialFilter.kernType == 1
+    gKern= normpdf([-trialFilter.boxWidth*8:trialFilter.boxWidth*8],0,trialFilter.boxWidth/8); 
+    gKern = gKern./max(gKern);
+%     sThreshold = 1.5;
+elseif trialFilter.kernType == 0
+    gKern=ones(1,trialFilter.boxWidth)./trialFilter.boxWidth;
+end
 
 %ones(1,trialFilter.boxWidth)
 % --- these are variables that one might want to change
 trialFilter.preLickThreshold=-0.5; %(in seconds)
-trialFilter.tooEarly=0.025; % licks that occur to early after the stim (in seconds)
+trialFilter.tooEarly=0.1; % licks that occur too early after the stim (in seconds)
 trialFilter.smoothHit=nanconv(session.behavior.hits,gKern);
-trialFilter.engThreshold=(max(trialFilter.smoothHit)-min(trialFilter.smoothHit))/2;
+
+trialFilter.engThreshold=(max(trialFilter.smoothHit)-min(trialFilter.smoothHit))/sThreshold;
 trialFilter.engThreshold=(trialFilter.engThreshold+min(trialFilter.smoothHit));
-max(trialFilter.smoothHit)/3.5; %0.4;   %<--- the red line in the plot
+% max(trialFilter.smoothHit)/3.5; %0.4;   %<--- the red line in the plot
 trialFilter.engagedTrials=find(trialFilter.smoothHit>trialFilter.engThreshold);
 trialFilter.smoothAmps=nanconv(session.stim_amplitude,gKern);
 trialFilter.smoothDPrime=dprime(nanconv(session.behavior.hits,gKern),...
@@ -26,35 +33,44 @@ trialFilter.smoothCrit=crtiloc(nanconv(session.behavior.hits,gKern),...
 	nanconv(session.behavior.falsepos,gKern));
 %---- end user variables.
 
-figure
-subplot(1,2,1)
-plot(trialFilter.smoothAmps',smooth(fixgaps(trialFilter.smoothCrit))','bo')
-[aa,bb]=corr(trialFilter.smoothAmps',trialFilter.smoothHit')
-ylim([0 1])
 
-subplot(1,2,2)
-plot(trialFilter.smoothAmps(trialFilter.engagedTrials)',smooth(fixgaps(trialFilter.smoothCrit(trialFilter.engagedTrials)))','ko')
-[aa,bb]=corr(trialFilter.smoothAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials)')
-ylim([0 1])
+% fixSizePre = numel(trialFilter.smoothAmps)-numel(nanconv(session.behavior.hits,gKern))+1;
+% fixSizeEnd = numel(trialFilter.smoothAmps);
+% fixAmps = trialFilter.smoothAmps(fixSizePre:fixSizeEnd)
+% fixCrit = trialFilter.smoothCrit(fixSizePre:fixSizeEnd);
 
-figure
-subplot(1,2,1)
-plot(trialFilter.smoothAmps',trialFilter.smoothHit','bo')
-[aa,bb]=corr(trialFilter.smoothAmps',trialFilter.smoothHit')
-ylim([0 1])
 
-subplot(1,2,2)
-plot(trialFilter.smoothAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials)','ko')
-[aa,bb]=corr(trialFilter.smoothAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials)')
-ylim([0 1])
+% figure
+% subplot(1,2,1)
+% plot(fixAmps',smooth(fixgaps(trialFilter.smoothCrit))','bo')
+% 
+% 
+% [aa,bb]=corr(fixAmps',trialFilter.smoothHit')
+% ylim([0 1])
+% 
+% subplot(1,2,2)
+% plot(fixAmps(trialFilter.engagedTrials)',smooth(fixgaps(trialFilter.smoothCrit(trialFilter.engagedTrials+fixSizePre)))','ko')
+% % [aa,bb]=corr(trialFilter.smoothAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials)')
+% ylim([0 1])
+% 
+% figure
+% subplot(1,2,1)
+% plot(fixAmps',trialFilter.smoothHit','bo')
+% % [aa,bb]=corr(trialFilter.smoothAmps(fixSizePre:fixSizeEnd)',trialFilter.smoothHit')
+% ylim([0 1])
+% 
+% subplot(1,2,2)
+% plot(fixAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials+fixSizePre)','ko')
+% % [aa,bb]=corr(trialFilter.smoothAmps(trialFilter.engagedTrials)',trialFilter.smoothHit(trialFilter.engagedTrials)')
+% ylim([0 1])
 
 %---------------------
 
 %
-for n=1:numel(session.trial_start_times),
+for n=1:numel(session.trial_start_times)
     trialFilter.preLickNumberByTrial(:,n)= ...
         numel(find(session.lick_times{1,n}>=trialFilter.preLickThreshold & ...
-        session.lick_times{1,n}<0.02));
+        session.lick_times{1,n}<trialFilter.tooEarly));
 end
 
 trialFilter.trialsWithPreLicks=find(trialFilter.preLickNumberByTrial>0);
@@ -114,7 +130,10 @@ title('engagement threshold and convolved hits')
 legend('smoothed hit raster','engagement threshold')
 
 trialFilter.smoothCrit(isinf(trialFilter.smoothCrit))=NaN;
-interpCrit=fixgaps(trialFilter.smoothCrit);
+try
+    interpCrit=fixgaps(trialFilter.smoothCrit);
+catch
+end
 figure,plot(interpCrit)
 
 
@@ -189,7 +208,8 @@ psychometrics.normHitRate=smooth(psychometrics.nonNormHitRate./max(psychometrics
 
 psychometrics.fitCurve_x=0:0.5:max(-1*psychometrics.stimAmplitudes);
 
-f = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',psychometrics.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
+f = fit(-1*psychometrics.stimAmplitudes(find(isnan(psychometrics.hitRate)==0))',...
+    psychometrics.normHitRate,bFit,'Robust','on','StartPoint', [12 6]);
 psychometrics.normCurve_y=1./(1+exp((f.v5-psychometrics.fitCurve_x)/f.k));
 psychometrics.nonNormCurve_y=psychometrics.normCurve_y*max(smooth(psychometrics.hitRate'));
 
@@ -198,7 +218,7 @@ psychometrics.nonNormCurve_y=psychometrics.normCurve_y*max(smooth(psychometrics.
 % hold all,plot(psychometrics.fitCurve_x,psychometrics.normCurve_y,'r-')
 psychometrics.threshold=f.v5;
 psychometrics.slope=f.k;
-if timingParams.numTrials<20;
+if timingParams.numTrials<20
     psychometrics.threshold=NaN;
     psychometrics.slope=NaN;
 else
