@@ -698,7 +698,7 @@ function diskRegisterButton_Callback(hObject, eventdata, handles)
             registeredTransformations(:,n)=out1;
         end
         % shave the pad and write out
-        assignin('base','registeredTransforms',registeredTransformations(:,firstIm:endIm))
+        assignin('base','registeredTransformations',registeredTransformations(:,firstIm:endIm))
 
     elseif saveTiffFlag==1
         % pre-alloc the stack
@@ -709,7 +709,7 @@ function diskRegisterButton_Callback(hObject, eventdata, handles)
             registeredImages(:,:,n)=abs(ifft2(out2));
         end
         % shave the pad and write out
-        assignin('base','registeredTransforms',registeredTransformations(:,firstIm:endIm))
+        assignin('base','registeredTransformations',registeredTransformations(:,firstIm:endIm))
         assignin('base',['registeredStack_' filterString],uint16(registeredImages(:,:,firstIm:endIm)))
     end
 
@@ -856,7 +856,7 @@ function applyTransformsButton_Callback(hObject, eventdata, handles)
     set(handles.feedbackString,'String','applying transforms ...')
     pause(0.000000001)
     guidata(hObject, handles);
-    evalin('base',[selectStack '=applyTransformsToStack(' selectStack ',registeredTransforms);'])
+    evalin('base',[selectStack '=applyTransformsToStack(' selectStack ',registeredTransformations);'])
     set(handles.feedbackString,'String','done applying transforms')
 
     refreshVarListButton_Callback(hObject, eventdata, handles)
@@ -1344,10 +1344,11 @@ function importer_OpeningFcn(hObject, eventdata, handles, varargin)
     end
     
 
-    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
+    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64') || strcmp(computer,'MACA64')
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;
+
 
     elseif strcmp(computer,'PCWIN64') 
         macHeaderSize=8;

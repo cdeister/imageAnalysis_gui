@@ -59,7 +59,7 @@ function roiMaker_OpeningFcn(hObject, eventdata, handles, varargin)
     evalin('base','metaData.lastMax=lastMax;,clear lastMax');
 
 
-    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64')
+    if strcmp(computer,'MACI64') || strcmp(computer,'GLNXA64') || strcmp(computer,'MACA64')
         macHeaderSize=12;
         macFontSize=11;
         macUIDecSize=10;
